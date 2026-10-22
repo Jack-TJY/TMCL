@@ -6,5 +6,13 @@
   "COMMON_INTERNAL": "An internal error occurred, please report it",
   "COMMON_IO": "Failed to read or write file {path}",
   "COMMON_JSON": "Invalid data format",
-  "COMMON_LOG_INIT": "Failed to initialize logging"
+  "COMMON_LOG_INIT": "Failed to initialize logging",
+  "GAME_VERSION_JSON_INVALID": "The metadata of version {version} is invalid",
+  "GAME_VERSION_NOT_FOUND": "Version {version} was not found",
+  "NET_CONNECT": "Cannot connect to {url}",
+  "NET_HASH_MISMATCH": "File verification failed for {url}",
+  "NET_HTTP_STATUS": "Server returned {status} for {url}",
+  "NET_REQUEST": "Network request failed for {url}",
+  "NET_SIZE_MISMATCH": "File size mismatch for {url}",
+  "NET_TIMEOUT": "Connection timed out: {url}"
 }
