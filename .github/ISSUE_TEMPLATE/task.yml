@@ -1,0 +1,68 @@
+name: 开发任务 / Task
+description: PLAN.md 中的步骤或子任务，供认领与跟踪（AGENTS.md §7）
+title: "[M?-??] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        标题格式 `[步骤ID] 简短描述`，例如 `[M1-04] 游戏文件补全`；子任务用 `M1-04a`。
+        认领后在本 Issue 评论“已认领：<Agent 名>，分支 <分支名>”，并加 `status:claimed` 标签。
+  - type: input
+    id: step
+    attributes:
+      label: 步骤 ID
+      placeholder: 例如 M1-04 或 M1-04a
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      options:
+        - P0
+        - P1
+        - P2
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标
+      description: 摘自 PLAN.md 或子任务说明
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: 文件范围
+      description: 认领者在 PR 存续期间拥有的路径，一行一个
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收
+      description: 逐条列出
+    validations:
+      required: true
+  - type: input
+    id: depends
+    attributes:
+      label: 依赖
+      placeholder: 例如 M0-05、M1-01；无则填“无”
+    validations:
+      required: true
+  - type: dropdown
+    id: size
+    attributes:
+      label: 规模
+      options:
+        - S（约 0.5 天）
+        - M（约 2 天）
+        - L（约 5 天）
+  - type: textarea
+    id: notes
+    attributes:
+      label: 备注
+      description: 外部阻塞、契约影响、需要维护者决定的事项等
