@@ -132,7 +132,7 @@ pub struct TaskCtx {
 ### 3.5 数据目录
 
 ```
-<data_root>/                 # 默认：系统应用数据目录下的 TMCL；exe 旁有 tmcl.portable 文件时为便携模式
+<data_root>/                 # 固定为启动器安装目录下的 tmcl-data/（macOS 为 TMCL.app 旁）
 ├─ config.json               # 启动器设置（schema 字段做版本迁移）
 ├─ tmcl.db                   # SQLite：账号元数据、缓存、实例索引
 ├─ shared/{versions,libraries,assets}/   # 多实例共享的游戏文件
@@ -144,6 +144,8 @@ pub struct TaskCtx {
 ├─ cache/
 └─ logs/                     # 启动器日志（已脱敏），保留 7 天
 ```
+
+数据根目录固定为**启动器安装目录下的 `tmcl-data/`**：Windows / Linux 为 exe 所在目录，macOS 为 `TMCL.app` 所在目录（不写进应用包，避免破坏签名）。不使用系统应用数据目录（如 `%LOCALAPPDATA%`），也不设便携模式。因此安装目录必须可写：Windows 采用 NSIS 当前用户模式安装，安装到 Program Files 的 MSI 不适用；AppImage 的挂载目录只读，需要特殊处理，留到 M1-16 解决。安装目录不可写时返回 `COMMON_DATA_DIR_UNAVAILABLE`。详见 [contracts/data-layout.md](contracts/data-layout.md)。
 
 `instance.json`（schema 1）：
 
@@ -219,8 +221,8 @@ pub struct TaskCtx {
 ### M0-05 tmcl-common 基础库
 - **目标**：实现第 3.1、3.4、3.5、3.6 节的公共能力。
 - **文件**：`core/common/src/{error.rs,paths.rs,config.rs,task.rs,log.rs,db.rs}`、`core/common/migrations/0001_common_init.sql`、`docs/contracts/{errors.md,data-layout.md}`。
-- **输入 → 输出**：无 → `AppError`/`ErrorCode`、`DataPaths::resolve()`（含便携模式）、`Config::load/save`（原子写：先写临时文件再 rename）、`TaskCtx`/`ProgressSink`、`init_logging()`（tracing + 脱敏 + 按天滚动）、`Db::open()`（rusqlite + 迁移）。
-- **验收**：单元测试覆盖：便携模式判定、配置损坏时回退默认值并备份原文件、脱敏（含 `--accessToken xxx` 形式）、迁移可重复执行。
+- **输入 → 输出**：无 → `AppError`/`ErrorCode`、`DataPaths::resolve()`（安装目录下 `tmcl-data/`）、`Config::load/save`（原子写：先写临时文件再 rename）、`TaskCtx`/`ProgressSink`、`init_logging()`（tracing + 脱敏 + 按天滚动）、`Db::open()`（rusqlite + 迁移）。
+- **验收**：单元测试覆盖：数据目录解析、配置损坏时回退默认值并备份原文件、脱敏（含 `--accessToken xxx` 形式）、迁移可重复执行。
 - **依赖**：M0-01 · **规模**：M
 
 ### M0-06 IPC 契约与类型生成
@@ -403,7 +405,8 @@ M1 可以拆成四条并行泳道（详见第 10 节）：**下载**（M1-01→0
 ### M1-16 打包与发布配置
 - **目标**：三平台可安装的 Alpha 包。
 - **文件**：`src-tauri/tauri.conf.json`（bundle、标识符 `io.github.<用户名>.tmcl`）、`src-tauri/icons/`（原创图标，不使用 Mojang 素材）、`ui/src/pages/about/`、`scripts/gen-licenses.*`。
-- **功能**：Windows NSIS 安装包（中英双语安装界面）、macOS dmg、Linux AppImage + deb；“关于”页显示版本、GPL-3.0、第三方许可证列表（`cargo-about` + 前端依赖许可证汇总）。
+- **功能**：Windows NSIS 安装包（中英双语安装界面，当前用户模式，保证安装目录可写）、macOS dmg、Linux AppImage + deb；“关于”页显示版本、GPL-3.0、第三方许可证列表（`cargo-about` + 前端依赖许可证汇总）。
+- **要点**：数据放在安装目录下的 `tmcl-data/`（§3.5），安装目录必须可写。MSI 默认装到 Program Files，不作为分发格式；AppImage 运行时挂载目录只读，需确定数据放在 `.AppImage` 文件旁（`$APPIMAGE` 所在目录）等方案并同步更新 `docs/contracts/data-layout.md`。
 - **验收**：在三个平台的干净虚拟机上安装、启动、卸载；macOS 未签名时 README 写明打开方式。
 - **依赖**：M0-03 · **规模**：M
 
