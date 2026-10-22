@@ -1,0 +1,19 @@
+# gitleaks 配置：在默认规则之上加 TMCL 自己的规则（AGENTS.md §11，M0-08）。
+# 本文件属于 .gitignore 密钥规则段的配套，修改需维护者同意。
+
+[extend]
+useDefault = true
+
+# 任何 .env 文件都不应进入仓库，无论内容是什么。
+[[rules]]
+id = "tmcl-env-file"
+description = "Committed .env file"
+path = '''(^|/)\.env(\.[^/]*)?$'''
+
+# 构建期密钥以 KEY=值 的形式出现在任何文件里都算泄露。
+[[rules]]
+id = "tmcl-build-secret"
+description = "TMCL build-time secret assignment"
+regex = '''(?i)\b(TMCL_MS_CLIENT_ID|TMCL_CURSEFORGE_API_KEY)\s*[=:]\s*["']?([0-9a-z][0-9a-z\-_.$]{15,})'''
+secretGroup = 2
+keywords = ["tmcl_ms_client_id", "tmcl_curseforge_api_key"]

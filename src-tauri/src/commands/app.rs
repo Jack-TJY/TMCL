@@ -45,8 +45,7 @@ pub async fn app_info() -> Result<AppInfo, AppError> {
         version: env!("CARGO_PKG_VERSION").to_owned(),
         os: std::env::consts::OS.to_owned(),
         arch: std::env::consts::ARCH.to_owned(),
-        // M0-08 接入构建期密钥注入后改为读取 tmcl-auth 的开关。
-        ms_login_enabled: false,
+        ms_login_enabled: tmcl_auth::ms_login_enabled(),
     })
 }
 
@@ -112,7 +111,7 @@ mod tests {
         let info = tauri::async_runtime::block_on(app_info()).unwrap();
         assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
         assert_eq!(info.os, std::env::consts::OS);
-        assert!(!info.ms_login_enabled);
+        assert_eq!(info.ms_login_enabled, tmcl_auth::ms_login_enabled());
     }
 
     #[test]

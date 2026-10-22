@@ -22,6 +22,7 @@ tauri-build = { workspace = true }
 [dependencies]
 serde = { workspace = true }
 tauri = { workspace = true }
+tmcl-auth = { path = "../core/auth" }
 tmcl-common = { path = "../core/common" }
 tokio = { workspace = true }
 tracing = { workspace = true }
