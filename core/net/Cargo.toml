@@ -8,3 +8,18 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha1 = { workspace = true }
+tmcl-common = { path = "../common" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+[features]
+# 导出 `testing` 模块（本地 HTTP 测试服务器），只应出现在 dev-dependencies 中。
+test-util = ["tokio/net"]
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tmcl-net = { path = ".", features = ["test-util"] }
