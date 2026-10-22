@@ -1,0 +1,2 @@
+// 应用清单，嵌入所有链接目标，见 build.rs。
+1 24 "app.manifest"

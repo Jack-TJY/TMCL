@@ -16,7 +16,18 @@ name = "tmcl"
 path = "src/main.rs"
 
 [build-dependencies]
+embed-resource = { workspace = true }
 tauri-build = { workspace = true }
 
 [dependencies]
+serde = { workspace = true }
 tauri = { workspace = true }
+tmcl-common = { path = "../core/common" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+ts-rs = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tauri = { workspace = true, features = ["test"] }
+tempfile = { workspace = true }

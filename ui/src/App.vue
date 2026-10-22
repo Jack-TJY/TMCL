@@ -1,8 +1,11 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import DemoTask from "./components/DemoTask.vue";
+</script>
 
 <template>
   <main class="shell">
     <h1>TMCL</h1>
+    <DemoTask />
   </main>
 </template>
 
@@ -21,6 +24,7 @@ body {
 
 .shell {
   display: flex;
+  flex-direction: column;
   height: 100%;
   align-items: center;
   justify-content: center;
