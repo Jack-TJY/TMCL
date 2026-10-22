@@ -17,6 +17,8 @@ use crate::log::redact;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
+    /// 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$`。
+    AuthOfflineInvalidName,
     /// 任务被用户或上层取消。
     CommonCancelled,
     /// 配置文件的 `schema` 高于当前程序支持的版本。
@@ -37,6 +39,8 @@ pub enum ErrorCode {
     GameVersionJsonInvalid,
     /// 版本清单中没有该版本。
     GameVersionNotFound,
+    /// 无法启动游戏进程（Java 路径无效或无权限）。
+    LaunchSpawnFailed,
     /// 无法连接服务器（DNS、TCP 或 TLS 失败）。
     NetConnect,
     /// 下载文件的 SHA1 与期望值不一致。
@@ -55,6 +59,7 @@ impl ErrorCode {
     /// 返回序列化后的错误码字符串，例如 `COMMON_IO`。
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::AuthOfflineInvalidName => "AUTH_OFFLINE_INVALID_NAME",
             Self::CommonCancelled => "COMMON_CANCELLED",
             Self::CommonConfigSchemaUnsupported => "COMMON_CONFIG_SCHEMA_UNSUPPORTED",
             Self::CommonDataDirUnavailable => "COMMON_DATA_DIR_UNAVAILABLE",
@@ -65,6 +70,7 @@ impl ErrorCode {
             Self::CommonLogInit => "COMMON_LOG_INIT",
             Self::GameVersionJsonInvalid => "GAME_VERSION_JSON_INVALID",
             Self::GameVersionNotFound => "GAME_VERSION_NOT_FOUND",
+            Self::LaunchSpawnFailed => "LAUNCH_SPAWN_FAILED",
             Self::NetConnect => "NET_CONNECT",
             Self::NetHashMismatch => "NET_HASH_MISMATCH",
             Self::NetHttpStatus => "NET_HTTP_STATUS",
@@ -154,6 +160,7 @@ mod tests {
     #[test]
     fn as_str_matches_serde() {
         for code in [
+            ErrorCode::AuthOfflineInvalidName,
             ErrorCode::CommonCancelled,
             ErrorCode::CommonConfigSchemaUnsupported,
             ErrorCode::CommonDataDirUnavailable,
@@ -164,6 +171,7 @@ mod tests {
             ErrorCode::CommonLogInit,
             ErrorCode::GameVersionJsonInvalid,
             ErrorCode::GameVersionNotFound,
+            ErrorCode::LaunchSpawnFailed,
             ErrorCode::NetConnect,
             ErrorCode::NetHashMismatch,
             ErrorCode::NetHttpStatus,
