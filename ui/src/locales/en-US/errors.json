@@ -1,4 +1,5 @@
 {
+  "AUTH_OFFLINE_INVALID_NAME": "Username must be 3–16 letters, digits or underscores",
   "COMMON_CANCELLED": "The operation was cancelled",
   "COMMON_CONFIG_SCHEMA_UNSUPPORTED": "Config file version {schema} is not supported (supported: {supported})",
   "COMMON_DATA_DIR_UNAVAILABLE": "Cannot access data directory {path}",
@@ -9,6 +10,7 @@
   "COMMON_LOG_INIT": "Failed to initialize logging",
   "GAME_VERSION_JSON_INVALID": "The metadata of version {version} is invalid",
   "GAME_VERSION_NOT_FOUND": "Version {version} was not found",
+  "LAUNCH_SPAWN_FAILED": "Failed to start Java: {java}",
   "NET_CONNECT": "Cannot connect to {url}",
   "NET_HASH_MISMATCH": "File verification failed for {url}",
   "NET_HTTP_STATUS": "Server returned {status} for {url}",
