@@ -1,0 +1,51 @@
+# === Secrets (never commit: Microsoft Client ID etc.) ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# === Rust / Tauri ===
+target/
+src-tauri/target/
+src-tauri/gen/schemas/
+**/*.rs.bk
+*.pdb
+
+# === Node / frontend ===
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+.svelte-kit/
+.next/
+.nuxt/
+*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# === Logs / temp ===
+logs/
+*.log
+*.tmp
+coverage/
+
+# === Editor / OS ===
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Local launcher test data (game files, accounts) ===
+.minecraft/
+/test-data/
