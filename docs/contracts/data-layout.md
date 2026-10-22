@@ -68,3 +68,14 @@
 
 - `init_logging(&paths.logs_dir(), &LogOptions)` 初始化全局 `tracing`：文件名 `tmcl.<YYYY-MM-DD>.log`，按天滚动，保留 7 个文件。
 - 所有输出（文件与 stderr）都经过脱敏层：`access_token`、`refresh_token`（含 camelCase）、`Authorization`、`x-api-key` 的值以及 `--accessToken` 后的参数替换为 `***`。`AppError::with_detail` 也会脱敏。
+
+## 5. tmcl.db
+
+- 打开时启用 `journal_mode=WAL`、`foreign_keys=ON`、`busy_timeout=5s`。
+- 迁移文件放在 `core/common/migrations/NNNN_<模块>_<描述>.sql`，在 `core/common/src/db.rs` 的 `MIGRATIONS` 末尾追加一行登记；已发布的迁移不得修改。
+- 迁移记录在 `schema_migrations(version, name, applied_at)`；每条迁移在独立事务中执行，失败整体回滚，重复执行安全。
+- 访问令牌、刷新令牌不进数据库，只存系统密钥库（键名 `tmcl:account:<account-id>`）。
+
+| 版本 | 文件 | 内容 |
+| --- | --- | --- |
+| 1 | `0001_common_init.sql` | `kv(key, value, updated_at)` 通用键值表 |
