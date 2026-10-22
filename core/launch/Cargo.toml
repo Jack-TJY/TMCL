@@ -1,0 +1,10 @@
+[package]
+name = "tmcl-launch"
+description = "TMCL core: 启动参数拼装、进程管理、日志流。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]

@@ -1,0 +1,10 @@
+[package]
+name = "tmcl-net"
+description = "TMCL core: HTTP 客户端、下载引擎、下载源与镜像。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
