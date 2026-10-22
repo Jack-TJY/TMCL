@@ -1,0 +1,10 @@
+[package]
+name = "tmcl-loader"
+description = "TMCL core: Fabric / Quilt / Forge / NeoForge 安装。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]

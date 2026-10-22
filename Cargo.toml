@@ -1,0 +1,24 @@
+[workspace]
+resolver = "3"
+members = [
+    "core/auth",
+    "core/common",
+    "core/game",
+    "core/instance",
+    "core/java",
+    "core/launch",
+    "core/loader",
+    "core/net",
+    "src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/Jack-TJY/TMCL"
+publish = false
+
+[workspace.dependencies]
+tauri = { version = "2.12", features = [] }
+tauri-build = { version = "2.7", features = [] }

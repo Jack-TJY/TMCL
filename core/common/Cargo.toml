@@ -1,0 +1,10 @@
+[package]
+name = "tmcl-common"
+description = "TMCL core: 错误码、路径、配置、日志脱敏、任务与进度、SQLite。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]

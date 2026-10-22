@@ -1,0 +1,10 @@
+[package]
+name = "tmcl-game"
+description = "TMCL core: 版本清单、版本 JSON、依赖库/资源/natives 补全。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]

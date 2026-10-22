@@ -1,0 +1,10 @@
+[package]
+name = "tmcl-instance"
+description = "TMCL core: 实例 CRUD、导入导出。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]

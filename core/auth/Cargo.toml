@@ -1,0 +1,10 @@
+[package]
+name = "tmcl-auth"
+description = "TMCL core: 微软 / 离线 / authlib-injector 账号。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
