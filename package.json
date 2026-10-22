@@ -9,12 +9,13 @@
     "typecheck": "pnpm --dir ui typecheck",
     "tauri": "tauri",
     "gen:bindings": "node scripts/gen-bindings.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "lint": "pnpm --dir ui lint",
     "format": "pnpm --dir ui format && cargo fmt --all",
     "format:check": "pnpm --dir ui format:check",
     "test": "pnpm --dir ui test",
     "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace",
-    "check:ui": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "check:ui": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm i18n:check && pnpm test",
     "check": "pnpm check:rust && pnpm check:ui"
   },
   "devDependencies": {

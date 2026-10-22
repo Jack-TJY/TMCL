@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import DemoTask from "./components/DemoTask.vue";
+import LocaleSwitcher from "./components/LocaleSwitcher.vue";
 </script>
 
 <template>
   <main class="shell">
     <h1>TMCL</h1>
     <DemoTask />
+    <LocaleSwitcher />
   </main>
 </template>
 

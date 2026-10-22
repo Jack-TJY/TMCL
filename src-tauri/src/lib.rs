@@ -19,14 +19,15 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // app
         commands::app::app_demo_task,
         commands::app::app_info,
+        // settings
+        commands::settings::settings_get_locale,
+        commands::settings::settings_set_locale,
     ]
 }
 
 /// 在给定的 builder 上注册状态与命令；测试中配合 mock runtime 使用。
 fn setup<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
-    builder
-        .manage(AppState::default())
-        .invoke_handler(handlers())
+    builder.manage(AppState::new()).invoke_handler(handlers())
 }
 
 /// 构建并运行 Tauri 应用。

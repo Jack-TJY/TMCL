@@ -27,6 +27,8 @@
 | --- | --- | --- | --- |
 | `app_info` | 无 | `AppInfo { version, os, arch, ms_login_enabled }` | 版本号、平台与功能开关 |
 | `app_demo_task` | `AppDemoTaskArgs { steps, step_ms, fail_at? }` | `TaskStarted` | 演示任务：`steps` 1–100、`step_ms` ≤ 5000，越界返回 `COMMON_INTERNAL`；走到 `fail_at` 步时以 `failed` 结束 |
+| `settings_get_locale` | 无 | `SettingsLocale { locale: string \| null }` | `config.json` 中保存的界面语言；尚无可用的 `config.json`（首次启动或文件损坏）时为 `null`，由前端按系统语言选择后写回 |
+| `settings_set_locale` | `SettingsSetLocaleArgs { locale }` | 无 | 写入界面语言，其他设置不变；`locale` 须为由字母、数字、连字符组成的 BCP 47 标签（≤ 35 字符），否则返回 `COMMON_INTERNAL` |
 
 ## 3. 事件
 
