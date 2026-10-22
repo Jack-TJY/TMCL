@@ -31,18 +31,18 @@ describe("initLocale", () => {
   });
 
   it("uses the saved locale", async () => {
-    tauriInvoke.mockResolvedValueOnce({ locale: "zh-CN" });
+    tauriInvoke.mockResolvedValueOnce({ language: "zh-CN" });
     await initLocale(["en-US"]);
     expect(currentLocale()).toBe("zh-CN");
     expect(tauriInvoke).toHaveBeenCalledTimes(1);
   });
 
   it("picks the system language on first launch and saves it", async () => {
-    tauriInvoke.mockResolvedValueOnce({ locale: null }).mockResolvedValueOnce(null);
+    tauriInvoke.mockResolvedValueOnce({ language: null }).mockResolvedValueOnce(null);
     await initLocale(["zh-Hans-CN"]);
     expect(currentLocale()).toBe("zh-CN");
-    expect(tauriInvoke).toHaveBeenLastCalledWith("settings_set_locale", {
-      args: { locale: "zh-CN" },
+    expect(tauriInvoke).toHaveBeenLastCalledWith("settings_set_language", {
+      args: { language: "zh-CN" },
     });
   });
 
@@ -64,8 +64,8 @@ describe("setLocale", () => {
     expect(composer.t("common.language.label")).toBe("Language");
     await setLocale("zh-CN");
     expect(composer.t("common.language.label")).toBe("界面语言");
-    expect(tauriInvoke).toHaveBeenLastCalledWith("settings_set_locale", {
-      args: { locale: "zh-CN" },
+    expect(tauriInvoke).toHaveBeenLastCalledWith("settings_set_language", {
+      args: { language: "zh-CN" },
     });
   });
 

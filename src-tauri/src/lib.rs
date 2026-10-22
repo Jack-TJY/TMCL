@@ -20,8 +20,8 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::app::app_demo_task,
         commands::app::app_info,
         // settings
-        commands::settings::settings_get_locale,
-        commands::settings::settings_set_locale,
+        commands::settings::settings_get_language,
+        commands::settings::settings_set_language,
     ]
 }
 

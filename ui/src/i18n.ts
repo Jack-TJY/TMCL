@@ -1,7 +1,7 @@
 // 界面国际化（PLAN.md M0-07）：文案按模块拆分为 locales/<语言>/<模块>.json，
 // 文件名即 key 的第一段，例如 common.json 中的 `language.label` 用 `common.language.label` 引用。
 import { createI18n, type Composer, type LocaleMessageValue } from "vue-i18n";
-import { settingsGetLocale, settingsSetLocale } from "./api/settings";
+import { settingsGetLanguage, settingsSetLanguage } from "./api/settings";
 import type { AppError } from "./bindings/AppError";
 
 /** 支持的界面语言；新增语言时同时新增 `locales/<语言>/` 目录。 */
@@ -81,7 +81,7 @@ function apply(locale: Locale) {
 export async function initLocale(systemLocales: readonly string[] = navigator.languages) {
   let saved: string | null;
   try {
-    saved = (await settingsGetLocale()).locale;
+    saved = (await settingsGetLanguage()).language;
   } catch {
     apply(resolveLocale(systemLocales));
     return;
@@ -93,13 +93,13 @@ export async function initLocale(systemLocales: readonly string[] = navigator.la
   const locale = resolveLocale(saved ? [saved, ...systemLocales] : systemLocales);
   apply(locale);
   // 写回失败不影响使用，下次启动会再次按系统语言选择。
-  await settingsSetLocale({ locale }).catch(() => undefined);
+  await settingsSetLanguage({ language: locale }).catch(() => undefined);
 }
 
 /** 切换界面语言：界面立即更新，并写入 `config.json`。写入失败时抛出 AppError。 */
 export async function setLocale(locale: Locale) {
   apply(locale);
-  await settingsSetLocale({ locale });
+  await settingsSetLanguage({ language: locale });
 }
 
 /** 把后端返回的 AppError 渲染为当前语言的文案（key 为 `errors.<CODE>`）。 */

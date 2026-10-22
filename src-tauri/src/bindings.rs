@@ -12,7 +12,7 @@ use tmcl_common::{AppError, TaskFinished, TaskProgress};
 use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo};
-use crate::commands::settings::{SettingsLocale, SettingsSetLocaleArgs};
+use crate::commands::settings::{SettingsLanguage, SettingsSetLanguageArgs};
 use crate::events::TaskStarted;
 
 /// 置为 `1` 时测试改为写入生成物。
@@ -35,8 +35,8 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     AppDemoTaskArgs::export_all(&cfg)?;
     AppInfo::export_all(&cfg)?;
     // settings
-    SettingsLocale::export_all(&cfg)?;
-    SettingsSetLocaleArgs::export_all(&cfg)?;
+    SettingsLanguage::export_all(&cfg)?;
+    SettingsSetLanguageArgs::export_all(&cfg)?;
     Ok(())
 }
 

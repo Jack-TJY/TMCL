@@ -1,14 +1,14 @@
 // `settings_*` 命令封装。
-import type { SettingsLocale } from "../bindings/SettingsLocale";
-import type { SettingsSetLocaleArgs } from "../bindings/SettingsSetLocaleArgs";
+import type { SettingsLanguage } from "../bindings/SettingsLanguage";
+import type { SettingsSetLanguageArgs } from "../bindings/SettingsSetLanguageArgs";
 import { invoke } from "./invoke";
 
-/** 读取已保存的界面语言；首次启动时 `locale` 为 `null`。 */
-export function settingsGetLocale(): Promise<SettingsLocale> {
-  return invoke<SettingsLocale>("settings_get_locale");
+/** 读取已保存的界面语言；首次启动时 `language` 为 `null`。 */
+export function settingsGetLanguage(): Promise<SettingsLanguage> {
+  return invoke<SettingsLanguage>("settings_get_language");
 }
 
 /** 把界面语言写入 `config.json`。 */
-export function settingsSetLocale(args: SettingsSetLocaleArgs): Promise<void> {
-  return invoke<void>("settings_set_locale", { args });
+export function settingsSetLanguage(args: SettingsSetLanguageArgs): Promise<void> {
+  return invoke<void>("settings_set_language", { args });
 }
