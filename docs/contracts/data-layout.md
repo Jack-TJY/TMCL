@@ -1,0 +1,70 @@
+# 数据目录与 config.json
+
+> 契约文档（受保护）。依据 [PLAN.md §3.5、§3.6](../PLAN.md)，实现于 `core/common/src/{paths.rs,config.rs,db.rs}`。
+
+## 1. 数据根目录 `<data_root>`
+
+由 `DataPaths::resolve()` 决定，固定为**启动器安装目录下的 `tmcl-data/`**（维护者 2026-10-22 决定，取代 PLAN.md §3.5 中“系统应用数据目录 + 便携模式”的写法）：
+
+| 平台 | 安装目录 | `<data_root>` |
+| --- | --- | --- |
+| Windows / Linux | exe 所在目录 | `<exe 所在目录>/tmcl-data/` |
+| macOS | `TMCL.app` 所在目录（不写进应用包，避免破坏签名） | `<.app 所在目录>/tmcl-data/` |
+
+- 安装目录不可写时，`DataPaths::ensure_dirs()` 返回 `COMMON_DATA_DIR_UNAVAILABLE`。打包配置需保证默认安装到用户可写的位置（例如 NSIS 的 `currentUser` 模式）。
+
+## 2. 目录结构
+
+```
+<data_root>/
+├─ config.json               # 启动器设置，见第 3 节
+├─ tmcl.db                   # SQLite，见第 5 节
+├─ shared/
+│  ├─ versions/              # 多实例共享的版本文件
+│  ├─ libraries/
+│  └─ assets/
+├─ java/<runtime-name>/      # 启动器下载的 Java
+├─ instances/<instance-id>/
+│  ├─ instance.json          # 结构见 PLAN.md §3.5
+│  └─ game/                  # --gameDir
+├─ ui/
+│  ├─ layout.json            # 主页组件布局
+│  └─ backgrounds/           # 用户背景图
+├─ cache/                    # 可随时清空
+└─ logs/                     # 启动器日志，已脱敏
+```
+
+代码中一律通过 `DataPaths` 的方法取路径（`config_file()`、`instance_game_dir(id)` 等），不手写拼接。`DataPaths::ensure_dirs()` 创建上述固定目录，可重复调用。
+
+## 3. config.json
+
+当前 `schema` 为 **1**。所有字段都有默认值；缺失字段取默认值，未知字段被忽略。
+
+```json
+{
+  "schema": 1,
+  "locale": "zh-CN",
+  "theme": "system",
+  "download": {
+    "max_concurrency": 16
+  }
+}
+```
+
+| 字段 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `schema` | 整数 | `1` | 结构版本，写入时总是当前版本 |
+| `locale` | 字符串 | `"zh-CN"` | 界面语言，BCP 47 标签 |
+| `theme` | `"system"` \| `"light"` \| `"dark"` | `"system"` | 界面主题 |
+| `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
+
+读写规则：
+
+1. **读取**：文件不存在 → 默认值，不写盘。JSON 损坏、字段类型错误、`schema` 为 0 或高于当前版本 → 把原文件重命名为 `config.json.corrupt-<unix 毫秒>`，回退默认值，并在返回值 `LoadedConfig::backup` 中给出备份路径供界面提示。只有读取或备份本身失败时返回错误。
+2. **写入**：原子写。先写同目录 `config.json.<pid>.tmp` 并 `fsync`，再 rename 覆盖。
+3. **迁移**：结构变化时提升 `schema`，在 `config::migrate` 中按顺序追加 `n → n+1` 的迁移步骤并补测试（AGENTS.md §6.2 第 5 条）。新增带默认值的字段不需要提升 `schema`，但需在本表追加。
+
+## 4. 日志
+
+- `init_logging(&paths.logs_dir(), &LogOptions)` 初始化全局 `tracing`：文件名 `tmcl.<YYYY-MM-DD>.log`，按天滚动，保留 7 个文件。
+- 所有输出（文件与 stderr）都经过脱敏层：`access_token`、`refresh_token`（含 camelCase）、`Authorization`、`x-api-key` 的值以及 `--accessToken` 后的参数替换为 `***`。`AppError::with_detail` 也会脱敏。
