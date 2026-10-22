@@ -8,6 +8,7 @@
     "build": "pnpm --dir ui build",
     "typecheck": "pnpm --dir ui typecheck",
     "tauri": "tauri",
+    "gen:bindings": "node scripts/gen-bindings.mjs",
     "lint": "pnpm --dir ui lint",
     "format": "pnpm --dir ui format && cargo fmt --all",
     "format:check": "pnpm --dir ui format:check",
