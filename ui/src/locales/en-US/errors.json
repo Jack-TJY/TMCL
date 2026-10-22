@@ -1,0 +1,10 @@
+{
+  "COMMON_CANCELLED": "The operation was cancelled",
+  "COMMON_CONFIG_SCHEMA_UNSUPPORTED": "Config file version {schema} is not supported (supported: {supported})",
+  "COMMON_DATA_DIR_UNAVAILABLE": "Cannot access data directory {path}",
+  "COMMON_DB": "Database error",
+  "COMMON_INTERNAL": "An internal error occurred, please report it",
+  "COMMON_IO": "Failed to read or write file {path}",
+  "COMMON_JSON": "Invalid data format",
+  "COMMON_LOG_INIT": "Failed to initialize logging"
+}

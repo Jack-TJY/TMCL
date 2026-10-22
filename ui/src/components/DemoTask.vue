@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // M0-06 的 IPC 演示：显示 app_info，并运行 app_demo_task 展示进度与结构化错误。
-// 界面文字待 M0-07 的 i18n 框架就绪后迁移。
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { onBeforeUnmount, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { appDemoTask, appInfo, DEMO_TASK_KIND } from "../api/app";
 import { onTaskFinished, onTaskProgress } from "../api/events";
 import { toAppError } from "../api/invoke";
@@ -10,6 +10,9 @@ import type { AppDemoTaskArgs } from "../bindings/AppDemoTaskArgs";
 import type { AppError } from "../bindings/AppError";
 import type { AppInfo } from "../bindings/AppInfo";
 import type { TaskState } from "../bindings/TaskState";
+import { formatError } from "../i18n";
+
+const { t } = useI18n();
 
 const info = ref<AppInfo | null>(null);
 const running = ref(false);
@@ -63,17 +66,24 @@ async function start(overrides: Partial<AppDemoTaskArgs> = {}) {
 
 <template>
   <section class="demo">
-    <p v-if="info">TMCL {{ info.version }} · {{ info.os }}/{{ info.arch }}</p>
+    <p v-if="info">{{ t("common.demo.version", { ...info }) }}</p>
     <progress :value="done" :max="total || 1" />
     <p>
-      {{ done }} / {{ total }}<span v-if="result"> · {{ result }}</span>
+      {{ done }} / {{ total }}<span v-if="result"> · {{ t(`common.demo.state.${result}`) }}</span>
     </p>
     <div class="actions">
-      <button :disabled="running" @click="start()">app_demo_task</button>
-      <button :disabled="running" @click="start({ fail_at: 10 })">fail_at = 10</button>
-      <button :disabled="running" @click="start({ steps: 0 })">steps = 0</button>
+      <button :disabled="running" @click="start()">{{ t("common.demo.run") }}</button>
+      <button :disabled="running" @click="start({ fail_at: 10 })">
+        {{ t("common.demo.failAt", { step: 10 }) }}
+      </button>
+      <button :disabled="running" @click="start({ steps: 0 })">
+        {{ t("common.demo.invalidArgs") }}
+      </button>
     </div>
-    <pre v-if="error">{{ error }}</pre>
+    <template v-if="error">
+      <p class="error">{{ formatError(error) }}</p>
+      <pre>{{ error }}</pre>
+    </template>
   </section>
 </template>
 

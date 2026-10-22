@@ -24,7 +24,7 @@ serde = { workspace = true }
 tauri = { workspace = true }
 tmcl-auth = { path = "../core/auth" }
 tmcl-common = { path = "../core/common" }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }
 ts-rs = { workspace = true }
 

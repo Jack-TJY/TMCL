@@ -1,0 +1,16 @@
+{
+  "language": {
+    "label": "界面语言"
+  },
+  "demo": {
+    "version": "TMCL {version} · {os}/{arch}",
+    "run": "运行演示任务",
+    "failAt": "在第 {step} 步失败",
+    "invalidArgs": "使用无效参数",
+    "state": {
+      "succeeded": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    }
+  }
+}
