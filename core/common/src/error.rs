@@ -33,6 +33,18 @@ pub enum ErrorCode {
     CommonJson,
     /// 日志系统初始化失败。
     CommonLogInit,
+    /// 无法连接服务器（DNS、TCP 或 TLS 失败）。
+    NetConnect,
+    /// 下载文件的 SHA1 与期望值不一致。
+    NetHashMismatch,
+    /// 服务器返回了非 2xx 状态码。
+    NetHttpStatus,
+    /// 其他 HTTP 请求错误（请求构造、响应读取、解码等）。
+    NetRequest,
+    /// 下载文件的大小与期望值不一致。
+    NetSizeMismatch,
+    /// 连接或读取超时。
+    NetTimeout,
 }
 
 impl ErrorCode {
@@ -47,6 +59,12 @@ impl ErrorCode {
             Self::CommonIo => "COMMON_IO",
             Self::CommonJson => "COMMON_JSON",
             Self::CommonLogInit => "COMMON_LOG_INIT",
+            Self::NetConnect => "NET_CONNECT",
+            Self::NetHashMismatch => "NET_HASH_MISMATCH",
+            Self::NetHttpStatus => "NET_HTTP_STATUS",
+            Self::NetRequest => "NET_REQUEST",
+            Self::NetSizeMismatch => "NET_SIZE_MISMATCH",
+            Self::NetTimeout => "NET_TIMEOUT",
         }
     }
 }
@@ -138,6 +156,12 @@ mod tests {
             ErrorCode::CommonIo,
             ErrorCode::CommonJson,
             ErrorCode::CommonLogInit,
+            ErrorCode::NetConnect,
+            ErrorCode::NetHashMismatch,
+            ErrorCode::NetHttpStatus,
+            ErrorCode::NetRequest,
+            ErrorCode::NetSizeMismatch,
+            ErrorCode::NetTimeout,
         ] {
             let json = serde_json::to_string(&code).unwrap();
             assert_eq!(json, format!("\"{}\"", code.as_str()));
