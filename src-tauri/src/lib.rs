@@ -95,7 +95,7 @@ mod tests {
         let (_app, webview) = mock_app();
         let info = invoke(&webview, "app_info", json!({})).unwrap();
         assert_eq!(info["os"], std::env::consts::OS);
-        assert_eq!(info["ms_login_enabled"], false);
+        assert_eq!(info["ms_login_enabled"], tmcl_auth::ms_login_enabled());
     }
 
     #[test]

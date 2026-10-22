@@ -47,7 +47,8 @@ TMCL 是一个开源、跨平台的我的世界（Java 版）启动器。下载�
    TMCL_MS_CLIENT_ID=你的-client-id
    ```
 
-3. 构建时读取该变量。没有配置时，微软登录不可用，其余功能不受影响。
+3. 构建时由 `core/auth/build.rs` 读取：环境变量 `TMCL_MS_CLIENT_ID` 优先，其次是 `.env.local`。没有配置或格式不是 GUID 时，微软登录不可用，其余功能不受影响；应用的 `app_info` 会返回 `ms_login_enabled: false`。
+4. 第一次新建 `.env.local` 后执行一次 `cargo clean -p tmcl-auth`，之后修改或删除该文件会自动触发重新构建。
 
 自行构建和分发 TMCL 的开发者需要使用自己的 Client ID。
 
@@ -88,6 +89,8 @@ Microsoft login needs an Azure application Client ID, which is **never committed
 ```
 TMCL_MS_CLIENT_ID=your-client-id
 ```
+
+The `TMCL_MS_CLIENT_ID` environment variable takes precedence over `.env.local`. After creating `.env.local` for the first time, run `cargo clean -p tmcl-auth` once; later edits are picked up automatically.
 
 Anyone building and distributing TMCL should register and use their own Client ID. Without it, Microsoft login is disabled and everything else still works.
 
