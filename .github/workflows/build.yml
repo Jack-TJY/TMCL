@@ -1,0 +1,80 @@
+# 手动触发或推送 v* tag 时在三平台出安装包，产物上传为 workflow artifact。
+# 发布到 GitHub Releases 与更新签名在 M1-16 中接入。
+# 本文件是受保护文件（AGENTS.md §5.1），修改需维护者同意。
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  bundle:
+    name: bundle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: tmcl-windows
+            bundles: |
+              target/release/bundle/nsis/*.exe
+              target/release/bundle/msi/*.msi
+          - os: macos-latest
+            artifact: tmcl-macos
+            bundles: |
+              target/release/bundle/dmg/*.dmg
+          - os: ubuntu-22.04
+            artifact: tmcl-linux
+            bundles: |
+              target/release/bundle/appimage/*.AppImage
+              target/release/bundle/deb/*.deb
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install Rust toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 构建期密钥只在这里注入（AGENTS.md §11）。fork 的 PR 或未配置 Secret 时为空，
+      # 构建照常通过，微软登录处于禁用状态。
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          TMCL_MS_CLIENT_ID: ${{ secrets.TMCL_MS_CLIENT_ID }}
+        with:
+          tauriScript: pnpm tauri
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.bundles }}
+          if-no-files-found: error
