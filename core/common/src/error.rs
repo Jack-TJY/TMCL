@@ -33,6 +33,10 @@ pub enum ErrorCode {
     CommonJson,
     /// 日志系统初始化失败。
     CommonLogInit,
+    /// 版本 JSON 格式错误或缺少必需字段。
+    GameVersionJsonInvalid,
+    /// 版本清单中没有该版本。
+    GameVersionNotFound,
     /// 无法连接服务器（DNS、TCP 或 TLS 失败）。
     NetConnect,
     /// 下载文件的 SHA1 与期望值不一致。
@@ -59,6 +63,8 @@ impl ErrorCode {
             Self::CommonIo => "COMMON_IO",
             Self::CommonJson => "COMMON_JSON",
             Self::CommonLogInit => "COMMON_LOG_INIT",
+            Self::GameVersionJsonInvalid => "GAME_VERSION_JSON_INVALID",
+            Self::GameVersionNotFound => "GAME_VERSION_NOT_FOUND",
             Self::NetConnect => "NET_CONNECT",
             Self::NetHashMismatch => "NET_HASH_MISMATCH",
             Self::NetHttpStatus => "NET_HTTP_STATUS",
@@ -156,6 +162,8 @@ mod tests {
             ErrorCode::CommonIo,
             ErrorCode::CommonJson,
             ErrorCode::CommonLogInit,
+            ErrorCode::GameVersionJsonInvalid,
+            ErrorCode::GameVersionNotFound,
             ErrorCode::NetConnect,
             ErrorCode::NetHashMismatch,
             ErrorCode::NetHttpStatus,
