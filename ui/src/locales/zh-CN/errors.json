@@ -6,5 +6,13 @@
   "COMMON_INTERNAL": "发生内部错误，请反馈给开发者",
   "COMMON_IO": "读写文件失败 {path}",
   "COMMON_JSON": "数据格式错误",
-  "COMMON_LOG_INIT": "日志系统初始化失败"
+  "COMMON_LOG_INIT": "日志系统初始化失败",
+  "GAME_VERSION_JSON_INVALID": "版本 {version} 的描述文件已损坏",
+  "GAME_VERSION_NOT_FOUND": "找不到版本 {version}",
+  "NET_CONNECT": "无法连接到服务器 {url}",
+  "NET_HASH_MISMATCH": "文件校验失败 {url}",
+  "NET_HTTP_STATUS": "服务器返回错误 {status}：{url}",
+  "NET_REQUEST": "网络请求失败 {url}",
+  "NET_SIZE_MISMATCH": "文件大小不符 {url}",
+  "NET_TIMEOUT": "连接超时 {url}"
 }
