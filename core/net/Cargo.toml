@@ -16,6 +16,10 @@ tmcl-common = { path = "../common" }
 tokio = { workspace = true }
 tracing = { workspace = true }
 
+[features]
+# 导出 `testing` 模块（本地 HTTP 测试服务器），只应出现在 dev-dependencies 中。
+test-util = ["tokio/net"]
+
 [dev-dependencies]
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["net"] }
+tmcl-net = { path = ".", features = ["test-util"] }

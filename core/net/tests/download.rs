@@ -1,78 +1,14 @@
-//! 下载模块的离线测试：用本地 TCP 端口起一个最小 HTTP 服务器。
+//! 下载模块的离线测试，使用 `tmcl_net::testing::TestServer`。
 
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use sha1::{Digest, Sha1};
 use tmcl_common::{ErrorCode, TaskCtx, VecSink};
+use tmcl_net::testing::TestServer;
 use tmcl_net::{DownloadItem, HttpClient, download_all, download_one, is_valid};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-
-/// 按路径返回固定内容的服务器，记录收到的请求数。
-struct TestServer {
-    base: String,
-    hits: Arc<AtomicUsize>,
-}
-
-impl TestServer {
-    async fn start(routes: HashMap<&'static str, Vec<u8>>) -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let base = format!("http://{}", listener.local_addr().unwrap());
-        let hits = Arc::new(AtomicUsize::new(0));
-        let routes = Arc::new(routes);
-        let counter = hits.clone();
-        tokio::spawn(async move {
-            loop {
-                let Ok((mut socket, _)) = listener.accept().await else {
-                    return;
-                };
-                let routes = routes.clone();
-                let counter = counter.clone();
-                tokio::spawn(async move {
-                    let mut buf = Vec::new();
-                    let mut chunk = [0u8; 1024];
-                    while !buf.windows(4).any(|w| w == b"\r\n\r\n") {
-                        let n = socket.read(&mut chunk).await.unwrap_or(0);
-                        if n == 0 {
-                            return;
-                        }
-                        buf.extend_from_slice(&chunk[..n]);
-                    }
-                    counter.fetch_add(1, Ordering::SeqCst);
-                    let request = String::from_utf8_lossy(&buf);
-                    let path = request.split_whitespace().nth(1).unwrap_or("/").to_owned();
-                    let response = match routes.get(path.as_str()) {
-                        Some(body) => {
-                            let mut r = format!(
-                                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                                body.len()
-                            )
-                            .into_bytes();
-                            r.extend_from_slice(body);
-                            r
-                        }
-                        None => b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-                            .to_vec(),
-                    };
-                    let _ = socket.write_all(&response).await;
-                    let _ = socket.shutdown().await;
-                });
-            }
-        });
-        Self { base, hits }
-    }
-
-    fn url(&self, path: &str) -> String {
-        format!("{}{}", self.base, path)
-    }
-
-    fn hits(&self) -> usize {
-        self.hits.load(Ordering::SeqCst)
-    }
-}
 
 fn sha1_hex(data: &[u8]) -> String {
     Sha1::digest(data)
@@ -185,7 +121,7 @@ async fn size_mismatch_is_reported() {
 
 #[tokio::test]
 async fn http_error_status_is_mapped() {
-    let server = TestServer::start(HashMap::new()).await;
+    let server = TestServer::start(HashMap::<String, Vec<u8>>::new()).await;
     let dir = tempfile::tempdir().unwrap();
     let client = HttpClient::new().unwrap();
     let items = vec![item(&server, "/missing", dir.path(), b"x")];

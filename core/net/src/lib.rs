@@ -4,6 +4,8 @@
 
 pub mod client;
 pub mod download;
+#[cfg(feature = "test-util")]
+pub mod testing;
 
 pub use client::{HttpClient, USER_AGENT};
 pub use download::{
