@@ -15,7 +15,8 @@ body,
 }
 
 body {
-  font-family: "Segoe UI Variable", "Segoe UI", system-ui, "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-family:
+    "Segoe UI Variable", "Segoe UI", system-ui, "Microsoft YaHei", "PingFang SC", sans-serif;
 }
 
 .shell {
