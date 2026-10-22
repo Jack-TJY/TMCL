@@ -1,0 +1,6 @@
+# 只使用 stable 选项，保证 `cargo fmt --check` 在固定工具链上结果稳定。
+edition = "2024"
+style_edition = "2024"
+max_width = 100
+use_field_init_shorthand = true
+use_try_shorthand = true

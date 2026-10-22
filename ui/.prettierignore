@@ -1,0 +1,4 @@
+dist/
+coverage/
+# ts-rs 生成物，禁止手改
+src/bindings/

@@ -1,0 +1,4 @@
+# 测试代码中允许 unwrap / expect；非测试代码的可失败路径禁止使用（AGENTS.md §10.2）。
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-dbg-in-tests = true

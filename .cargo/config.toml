@@ -1,0 +1,4 @@
+# 常用检查命令的别名，与 `pnpm check` 中的 Rust 部分一致。
+[alias]
+lint = "clippy --workspace --all-targets -- -D warnings"
+fmt-check = "fmt --all -- --check"
