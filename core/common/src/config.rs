@@ -18,7 +18,7 @@ use crate::error::{AppError, AppResult, ErrorCode};
 use crate::paths::write_atomic;
 
 /// 当前程序写出的 `config.json` 结构版本。
-pub const CONFIG_SCHEMA: u32 = 1;
+pub const CONFIG_SCHEMA: u32 = 2;
 
 /// 界面主题偏好。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
@@ -56,7 +56,7 @@ pub struct Config {
     /// 结构版本，见 [`CONFIG_SCHEMA`]。
     pub schema: u32,
     /// 界面语言，BCP 47 标签，例如 `zh-CN`、`en-US`。
-    pub locale: String,
+    pub language: String,
     /// 界面主题。
     pub theme: ThemeMode,
     /// 下载设置。
@@ -67,7 +67,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             schema: CONFIG_SCHEMA,
-            locale: "zh-CN".to_owned(),
+            language: "zh-CN".to_owned(),
             theme: ThemeMode::default(),
             download: DownloadConfig::default(),
         }
@@ -160,13 +160,25 @@ pub fn migrate(mut value: Value) -> AppResult<Value> {
             .with_param("schema", schema)
             .with_param("supported", CONFIG_SCHEMA));
     }
-    // 目前只有 schema 1。提升 schema 时按顺序追加迁移步骤，例如：
-    // if schema == 1 { migrate_1_to_2(&mut value); schema = 2; }
+    let mut schema = schema;
+    if schema == 1 {
+        migrate_1_to_2(&mut value);
+        schema = 2;
+    }
     debug_assert_eq!(schema, CONFIG_SCHEMA);
     if let Some(object) = value.as_object_mut() {
         object.insert("schema".to_owned(), Value::from(CONFIG_SCHEMA));
     }
     Ok(value)
+}
+
+/// schema 1 → 2：界面语言字段 `locale` 改名为 `language`。
+fn migrate_1_to_2(value: &mut Value) {
+    if let Some(object) = value.as_object_mut()
+        && let Some(locale) = object.remove("locale")
+    {
+        object.entry("language").or_insert(locale);
+    }
 }
 
 fn backup_path(path: &Path) -> PathBuf {
@@ -196,7 +208,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.json");
         let config = Config {
-            locale: "en-US".to_owned(),
+            language: "en-US".to_owned(),
             theme: ThemeMode::Dark,
             download: DownloadConfig { max_concurrency: 4 },
             ..Config::default()
@@ -231,7 +243,7 @@ mod tests {
     fn newer_schema_is_backed_up() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.json");
-        fs::write(&path, br#"{"schema": 99, "locale": "en-US"}"#).unwrap();
+        fs::write(&path, br#"{"schema": 99, "language": "en-US"}"#).unwrap();
         let loaded = Config::load(&path).unwrap();
         assert_eq!(loaded.config, Config::default());
         assert!(loaded.backup.is_some());
@@ -239,16 +251,16 @@ mod tests {
 
     #[test]
     fn unsupported_schema_error_code() {
-        let err = Config::parse(br#"{"schema": 2}"#).unwrap_err();
+        let err = Config::parse(br#"{"schema": 3}"#).unwrap_err();
         assert_eq!(err.code, ErrorCode::CommonConfigSchemaUnsupported);
-        assert_eq!(err.params.get("schema").map(String::as_str), Some("2"));
+        assert_eq!(err.params.get("schema").map(String::as_str), Some("3"));
     }
 
     #[test]
     fn partial_file_fills_defaults_and_ignores_unknown() {
-        let config = Config::parse(br#"{"schema": 1, "theme": "light", "future": true}"#).unwrap();
+        let config = Config::parse(br#"{"schema": 2, "theme": "light", "future": true}"#).unwrap();
         assert_eq!(config.theme, ThemeMode::Light);
-        assert_eq!(config.locale, "zh-CN");
+        assert_eq!(config.language, "zh-CN");
         assert_eq!(config.download.max_concurrency, 16);
     }
 
@@ -264,6 +276,14 @@ mod tests {
         let loaded = Config::load(&path).unwrap();
         assert_eq!(loaded.config, Config::default());
         assert!(loaded.backup.is_some());
+    }
+
+    #[test]
+    fn schema_1_locale_is_renamed_to_language() {
+        let config = Config::parse(br#"{"schema": 1, "locale": "en-US"}"#).unwrap();
+        assert_eq!(config.language, "en-US");
+        let value = migrate(serde_json::json!({"schema": 1, "locale": "en-US"})).unwrap();
+        assert_eq!(value, serde_json::json!({"schema": 2, "language": "en-US"}));
     }
 
     #[test]

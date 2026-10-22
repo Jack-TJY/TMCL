@@ -38,12 +38,12 @@
 
 ## 3. config.json
 
-当前 `schema` 为 **1**。所有字段都有默认值；缺失字段取默认值，未知字段被忽略。
+当前 `schema` 为 **2**。所有字段都有默认值；缺失字段取默认值，未知字段被忽略。
 
 ```json
 {
-  "schema": 1,
-  "locale": "zh-CN",
+  "schema": 2,
+  "language": "zh-CN",
   "theme": "system",
   "download": {
     "max_concurrency": 16
@@ -53,8 +53,8 @@
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `schema` | 整数 | `1` | 结构版本，写入时总是当前版本 |
-| `locale` | 字符串 | `"zh-CN"` | 界面语言，BCP 47 标签 |
+| `schema` | 整数 | `2` | 结构版本，写入时总是当前版本 |
+| `language` | 字符串 | `"zh-CN"` | 界面语言，BCP 47 标签 |
 | `theme` | `"system"` \| `"light"` \| `"dark"` | `"system"` | 界面主题 |
 | `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
 
@@ -63,6 +63,12 @@
 1. **读取**：文件不存在 → 默认值，不写盘。JSON 损坏、字段类型错误、`schema` 为 0 或高于当前版本 → 把原文件重命名为 `config.json.corrupt-<unix 毫秒>`，回退默认值，并在返回值 `LoadedConfig::backup` 中给出备份路径供界面提示。只有读取或备份本身失败时返回错误。
 2. **写入**：原子写。先写同目录 `config.json.<pid>.tmp` 并 `fsync`，再 rename 覆盖。
 3. **迁移**：结构变化时提升 `schema`，在 `config::migrate` 中按顺序追加 `n → n+1` 的迁移步骤并补测试（AGENTS.md §6.2 第 5 条）。新增带默认值的字段不需要提升 `schema`，但需在本表追加。
+
+迁移历史：
+
+| 迁移 | 内容 |
+| --- | --- |
+| 1 → 2 | `locale` 改名为 `language`（与 PLAN.md M0-07 一致）；已有 `language` 时丢弃 `locale` |
 
 ## 4. 日志
 
