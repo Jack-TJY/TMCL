@@ -88,5 +88,18 @@
     "pack": "实例包（.tmclpack）",
     "confirm": "导入",
     "started": "正在导入，可在任务中心查看进度"
+  },
+  "launch": {
+    "action": "启动",
+    "running": "运行中",
+    "recent": "开始游戏：{name}",
+    "log": "游戏日志",
+    "failed": "无法启动“{name}”：{reason}"
+  },
+  "crash": {
+    "title": "“{name}”崩溃了",
+    "content": "游戏异常退出（退出码 {code}），可查看日志了解原因。",
+    "viewLog": "查看日志",
+    "close": "关闭"
   }
 }

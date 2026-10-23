@@ -88,5 +88,18 @@
     "pack": "Instance pack (.tmclpack)",
     "confirm": "Import",
     "started": "Importing. Track progress in the task center."
+  },
+  "launch": {
+    "action": "Play",
+    "running": "Running",
+    "recent": "Play {name}",
+    "log": "Game log",
+    "failed": "Couldn't start \"{name}\": {reason}"
+  },
+  "crash": {
+    "title": "\"{name}\" crashed",
+    "content": "The game exited unexpectedly (exit code {code}). Check the log for details.",
+    "viewLog": "View log",
+    "close": "Close"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "title": "游戏日志 · {name}",
+  "search": "搜索日志",
+  "count": "{shown} / {total} 行",
+  "copy": "复制",
+  "copied": "已复制日志",
+  "copyFailed": "复制失败",
+  "export": "导出",
+  "kill": "强制结束",
+  "killFailed": "无法结束游戏进程",
+  "empty": "暂无日志",
+  "noMatch": "没有匹配的日志",
+  "failed": "启动失败",
+  "status": {
+    "starting": "启动中",
+    "running": "运行中",
+    "exited": "已退出（{code}）",
+    "crashed": "已崩溃（{code}）",
+    "failed": "启动失败"
+  }
+}

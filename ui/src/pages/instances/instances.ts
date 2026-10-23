@@ -56,6 +56,11 @@ export function groupNames(list: InstanceSummary[], locale?: string): string[] {
   return [...names].sort((a, b) => a.localeCompare(b, locale));
 }
 
+/** 最近可启动的实例（列表中第一个未损坏的实例），没有时为 `null`。 */
+export function mostRecent(list: InstanceSummary[]): InstanceSummary | null {
+  return list.find((i) => i.error === null) ?? null;
+}
+
 /**
  * 把一行参数文本拆成参数数组：按空白分隔，双引号内的空白保留，引号本身去掉。
  * 例如 `-Dfoo="a b" -Xss2m` → `["-Dfoo=a b", "-Xss2m"]`。
