@@ -1,18 +1,20 @@
 <script setup lang="ts">
 // 首页（PLAN.md M1-18）：组件组成的 12 列栅格。右上角“编辑”进入编辑模式，
-// 可删除、拖动、拉伸组件；“完成”保存，“取消”或 Esc 放弃本次修改。
-import { ArrowReset20Regular, Edit20Regular } from "@vicons/fluent";
+// 可添加、删除、拖动、拉伸组件与修改组件设置；“完成”保存，“取消”或 Esc 放弃本次修改。
+import { Add20Regular, ArrowReset20Regular, Edit20Regular } from "@vicons/fluent";
 import { GridItem, GridLayout } from "grid-layout-plus";
 import { NButton, NEmpty, NIcon, NSpin, useMessage } from "naive-ui";
-import { computed, onBeforeUnmount, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { onBeforeRouteLeave } from "vue-router";
 import type { AppError } from "../../bindings/AppError";
 import { formatError } from "../../i18n";
-import { useLayoutStore } from "../../stores/layout";
+import { useLayoutStore, type HomeItem } from "../../stores/layout";
 import { findWidget } from "../../widgets/registry";
 import WidgetFrame from "../../widgets/WidgetFrame.vue";
 import { widgetComponent } from "./widgetComponent";
+import WidgetLibrary from "./WidgetLibrary.vue";
+import WidgetSettingsDialog from "./WidgetSettingsDialog.vue";
 
 /** 行高与间距（px）：窗口最小宽度下一列约 60 px，与行高接近，组件大致按正方形格子排布。 */
 const ROW_HEIGHT = 64;
@@ -21,6 +23,9 @@ const MARGIN = 12;
 const { t } = useI18n();
 const message = useMessage();
 const layout = useLayoutStore();
+
+const libraryOpen = ref(false);
+const configuring = ref<HomeItem | null>(null);
 
 const items = computed(() =>
   layout.items.flatMap((item) => {
@@ -45,8 +50,13 @@ async function finish() {
   }
 }
 
+function add(type: string) {
+  if (layout.add(type)) libraryOpen.value = false;
+}
+
 function onKeydown(e: KeyboardEvent) {
-  if (e.key !== "Escape" || !layout.editing) return;
+  // 组件库或设置对话框打开时，Esc 只关闭它们。
+  if (e.key !== "Escape" || !layout.editing || libraryOpen.value || configuring.value) return;
   e.preventDefault();
   layout.cancelEdit();
 }
@@ -62,6 +72,12 @@ onBeforeRouteLeave(() => layout.cancelEdit());
     <header class="home-header">
       <h1 class="page-title">{{ t("shell.nav.home") }}</h1>
       <div v-if="layout.editing" class="home-toolbar">
+        <NButton :disabled="!layout.canAdd" @click="libraryOpen = true">
+          <template #icon>
+            <NIcon><Add20Regular /></NIcon>
+          </template>
+          {{ t("home.addWidget") }}
+        </NButton>
         <NButton @click="layout.resetToDefault()">
           <template #icon>
             <NIcon><ArrowReset20Regular /></NIcon>
@@ -114,7 +130,12 @@ onBeforeRouteLeave(() => layout.cancelEdit());
         :max-w="item.maxW"
         :max-h="item.maxH"
       >
-        <WidgetFrame :def="def" :editing="layout.editing" @remove="layout.remove(item.i)">
+        <WidgetFrame
+          :def="def"
+          :editing="layout.editing"
+          @configure="configuring = item"
+          @remove="layout.remove(item.i)"
+        >
           <component
             :is="widgetComponent(def)"
             :uid="item.i"
@@ -125,6 +146,13 @@ onBeforeRouteLeave(() => layout.cancelEdit());
         </WidgetFrame>
       </GridItem>
     </GridLayout>
+
+    <WidgetLibrary v-model:show="libraryOpen" @add="add" />
+    <WidgetSettingsDialog
+      :item="configuring"
+      @close="configuring = null"
+      @save="(settings) => configuring && layout.setSettings(configuring.i, settings)"
+    />
   </div>
 </template>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 组件外框（docs/contracts/widgets.md 第 6 节）：Win11 风格卡片 + 标题栏；
-// 编辑模式下标题栏右侧显示删除按钮，内容区被遮罩覆盖，整张卡片都可拖动。
-import { Delete20Regular } from "@vicons/fluent";
+// 编辑模式下标题栏右侧显示设置与删除按钮，内容区被遮罩覆盖，整张卡片都可拖动。
+import { Delete20Regular, Settings20Regular } from "@vicons/fluent";
 import { NButton, NIcon, NTooltip } from "naive-ui";
 import { useI18n } from "vue-i18n";
 import type { WidgetDefinition } from "./types";
@@ -12,6 +12,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
+  configure: [];
   remove: [];
 }>();
 
@@ -24,6 +25,22 @@ const { t } = useI18n();
       <NIcon :size="16" class="widget-icon"><component :is="def.icon" /></NIcon>
       <h2 class="widget-title">{{ t(def.titleKey) }}</h2>
       <div v-if="editing" class="widget-tools">
+        <NTooltip v-if="def.settingsSchema?.length">
+          <template #trigger>
+            <NButton
+              quaternary
+              circle
+              size="small"
+              :aria-label="t('home.widget.configure')"
+              @click="emit('configure')"
+            >
+              <template #icon>
+                <NIcon><Settings20Regular /></NIcon>
+              </template>
+            </NButton>
+          </template>
+          {{ t("home.widget.configure") }}
+        </NTooltip>
         <NTooltip>
           <template #trigger>
             <NButton

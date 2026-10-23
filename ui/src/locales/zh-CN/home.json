@@ -1,6 +1,7 @@
 {
   "edit": "编辑",
   "editHint": "拖动组件调整位置，拖动右下角调整大小；按 Esc 放弃本次修改。",
+  "addWidget": "添加组件",
   "reset": "恢复默认布局",
   "cancel": "取消",
   "done": "完成",
@@ -10,6 +11,16 @@
   "skipped": "有 {count} 个组件无法读取，已跳过",
   "saveFailed": "保存主页布局失败：{error}",
   "widget": {
+    "configure": "组件设置",
     "remove": "删除组件"
+  },
+  "library": {
+    "title": "添加组件",
+    "add": "添加"
+  },
+  "settings": {
+    "title": "{name}设置",
+    "save": "确定",
+    "latestInstance": "最近游玩的实例"
   }
 }

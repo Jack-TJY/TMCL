@@ -1,11 +1,13 @@
 // 主页组件登记表（AGENTS.md §5.2 共享文件）：一行登记一个组件，按组件 ID 字母排序。
 // 新增组件：新建 `widgets/<id>/` 目录，在下面两处各加一行。
+import account from "./account";
 import quickActions from "./quick-actions";
 import type { WidgetDefinition } from "./types";
 
 // 保持一行一个组件，便于并行追加（prettier 会把短数组折成一行）。
 // prettier-ignore
 export const WIDGETS: readonly WidgetDefinition[] = [
+  account,
   quickActions,
 ];
 
