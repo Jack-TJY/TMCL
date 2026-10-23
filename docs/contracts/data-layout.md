@@ -27,6 +27,7 @@
 ├─ instances/<instance-id>/
 │  ├─ instance.json          # 结构见 PLAN.md §3.5
 │  └─ game/                  # --gameDir
+├─ trash/<unix 秒>-<instance-id>/  # 已删除的实例，7 天后清理
 ├─ ui/
 │  ├─ layout.json            # 主页组件布局
 │  └─ backgrounds/           # 用户背景图
@@ -85,3 +86,4 @@
 | 版本 | 文件 | 内容 |
 | --- | --- | --- |
 | 1 | `0001_common_init.sql` | `kv(key, value, updated_at)` 通用键值表 |
+| 2 | `0002_instance_index.sql` | `instance_index`：实例列表缓存，启动时按 `instance.json` 的修改时间与大小对账 |

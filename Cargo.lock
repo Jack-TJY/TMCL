@@ -3947,6 +3947,17 @@ dependencies = [
 [[package]]
 name = "tmcl-instance"
 version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "time",
+ "tmcl-common",
+ "tracing",
+ "ts-rs",
+ "uuid",
+]
 
 [[package]]
 name = "tmcl-java"
