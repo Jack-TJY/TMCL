@@ -21,7 +21,47 @@ use crate::tasks::TaskManager;
 pub const TASK_PROGRESS: &str = "task:progress";
 /// 任务结束，负载 [`TaskFinished`]，每个任务恰好一次。
 pub const TASK_FINISHED: &str = "task:finished";
-// `game:log`、`game:exited`（M1-07）与 `auth:device-code`（M0-10）由对应步骤在此追加。
+/// 游戏输出，负载 [`GameLog`]，同一来源的连续行最多每 100 ms 批量推送一次。
+pub const GAME_LOG: &str = "game:log";
+/// 游戏进程退出，负载 [`GameExited`]，每次启动恰好一次。
+pub const GAME_EXITED: &str = "game:exited";
+// `auth:device-code`（M0-10）由对应步骤在此追加。
+
+/// 游戏输出的来源。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "lowercase")]
+pub enum GameLogStream {
+    /// 标准输出。
+    Stdout,
+    /// 标准错误。
+    Stderr,
+}
+
+/// `game:log` 的负载：一批同一来源的日志行，访问令牌已替换为 `***`。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct GameLog {
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 游戏进程 ID。
+    pub pid: u32,
+    /// 来源。
+    pub stream: GameLogStream,
+    /// 日志行（不含换行符）。
+    pub lines: Vec<String>,
+}
+
+/// `game:exited` 的负载。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct GameExited {
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 游戏进程 ID。
+    pub pid: u32,
+    /// 退出码；被强制结束或被信号结束时可能为 `null`。
+    pub exit_code: Option<i32>,
+    /// 是否崩溃：未被强制结束，且退出码非 0 或日志中出现崩溃特征。
+    pub crashed: bool,
+}
 
 /// 长耗时命令的返回值：任务已在后台启动。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]

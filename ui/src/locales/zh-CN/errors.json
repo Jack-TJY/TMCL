@@ -21,6 +21,7 @@
   "JAVA_PROBE_FAILED": "无法识别 Java：{java}",
   "JAVA_RUNTIME_UNAVAILABLE": "没有适用于 {platform} 的 Java {major} 可供下载，请手动安装",
   "JAVA_VERSION_MISMATCH": "所选 Java 为 {actual}，该版本游戏需要 Java {expected}，可能无法启动",
+  "LAUNCH_ALREADY_RUNNING": "该实例已在运行",
   "LAUNCH_SPAWN_FAILED": "无法启动 Java：{java}",
   "LAUNCH_VERSION_NOT_INSTALLED": "实例需要的版本 {version} {loader} 尚未安装",
   "NET_CONNECT": "无法连接到服务器 {url}",

@@ -41,6 +41,9 @@
 | `instance_refresh` | 无 | `InstanceList` | 先与 `instances/` 目录重新对账，再返回同 `instance_list` |
 | `instance_rename` | `InstanceRenameArgs { id, name }` | `InstanceConfig` | 只改显示名称，ID 与目录不变 |
 | `instance_save` | `InstanceSaveArgs { config: InstanceConfig }` | `InstanceConfig` | 保存修改后的完整配置（实例须已存在），返回规整后的配置（名称去掉首尾空白） |
+| `launch_kill` | `LaunchInstanceArgs { instance_id }` | `LaunchKillResult { killed }` | 强制结束该实例的游戏进程，进程退出后照常推送 `game:exited`（`crashed` 为 `false`）；未在运行或仍在启动前准备中时 `killed` 为 `false`，不报错 |
+| `launch_running` | 无 | `LaunchRunning { games: RunningGame { instance_id, pid }[] }` | 运行中的游戏（按实例 ID 排序），不含仍在准备中的实例；供界面重新打开后恢复状态 |
+| `launch_start` | `LaunchStartArgs { instance_id, account: { kind: "offline", name } }` | `TaskStarted` | 任务种类 `launch`：校验并补全游戏文件（阶段 `verify`，需要时 `version_json`…`assets`）、选择或下载 Java、解压 natives，创建游戏进程后任务成功并记录 `last_played_at`；之后推送 `game:log` / `game:exited`。实例不存在返回 `INSTANCE_NOT_FOUND`，用户名不合法返回 `AUTH_OFFLINE_INVALID_NAME`，该实例已在启动或运行返回 `LAUNCH_ALREADY_RUNNING`。`account` 目前只有离线账号（仅限本地测试），M1-08 追加其他种类 |
 | `settings_get` | 无 | `SettingsSnapshot { settings: LauncherSettings, data_dir, config_backup }` | 读取 `config.json` 中除 `schema`、`language` 外的设置：`LauncherSettings { theme, appearance, memory, download }`，字段同 [data-layout.md](data-layout.md) 第 3 节；`data_dir` 为数据目录绝对路径；`config.json` 损坏时按读取规则备份并回退默认值，`config_backup` 给出备份路径，否则为 `null` |
 | `settings_get_language` | 无 | `SettingsLanguage { language: string \| null }` | `config.json` 中保存的界面语言；尚无可用的 `config.json`（首次启动或文件损坏）时为 `null`，由前端按系统语言选择后写回 |
 | `settings_open_data_dir` | 无 | 无 | 在系统文件管理器中打开数据目录（不存在时先创建） |
@@ -55,8 +58,8 @@
 | --- | --- | --- |
 | `task:progress` | `TaskProgress { task_id, kind, stage, done, total, bytes_done, bytes_total, speed_bps }` | 经 `ThrottledSink` 限流，同一阶段最多每 200 ms 一次；阶段切换、首条和完成总会推送 |
 | `task:finished` | `TaskFinished { task_id, state, error? }` | 每个任务恰好一次；`state` 为 `succeeded` \| `failed` \| `cancelled`，仅 `failed` 带 `error` |
-| `game:log` | `GameLog { instance_id, pid, stream, lines }` | M1-07 定义类型并追加 |
-| `game:exited` | `GameExited { instance_id, pid, exit_code, crashed }` | M1-07 定义类型并追加 |
+| `game:log` | `GameLog { instance_id, pid, stream, lines }` | `stream` 为 `stdout` \| `stderr`；同一来源的连续行最多每 100 ms 批量推送一次，访问令牌已替换为 `***` |
+| `game:exited` | `GameExited { instance_id, pid, exit_code, crashed }` | 每次成功启动恰好一次；`exit_code` 可能为 `null`；`crashed` 为未被强制结束且（退出码非 0 或日志出现崩溃特征） |
 | `auth:device-code` | `DeviceCode { user_code, verification_uri, expires_in }` | M0-10 定义类型并追加 |
 
 - 事件向所有窗口广播；发送失败只记日志。
