@@ -27,8 +27,12 @@
 | --- | --- | --- | --- |
 | `app_info` | 无 | `AppInfo { version, os, arch, ms_login_enabled }` | 版本号、平台与功能开关 |
 | `app_demo_task` | `AppDemoTaskArgs { steps, step_ms, fail_at? }` | `TaskStarted` | 演示任务：`steps` 1–100、`step_ms` ≤ 5000，越界返回 `COMMON_INTERNAL`；走到 `fail_at` 步时以 `failed` 结束 |
+| `game_install` | `GameInstallArgs { version_id }` | `TaskStarted` | 任务种类 `game_install`：下载并校验该版本的版本 JSON、资源索引、依赖库与资源文件，阶段依次为 `version_json`、`asset_index`、`libraries`、`assets`；`version_id` 为空、超过 64 字符或含 `/`、`\`、`:`、`..` 时直接返回 `COMMON_INTERNAL`；版本不存在时任务以 `GAME_VERSION_NOT_FOUND` 失败 |
+| `game_version_list` | 无 | `GameVersionList { latest_release, latest_snapshot, versions: GameVersion { id, kind, release_time }[] }` | 官方版本清单，新版本在前；`kind` 为 `release` \| `snapshot` \| `old_beta` \| `old_alpha` \| `other` |
 | `settings_get_language` | 无 | `SettingsLanguage { language: string \| null }` | `config.json` 中保存的界面语言；尚无可用的 `config.json`（首次启动或文件损坏）时为 `null`，由前端按系统语言选择后写回 |
 | `settings_set_language` | `SettingsSetLanguageArgs { language }` | 无 | 写入界面语言，其他设置不变；`language` 须为由字母、数字、连字符组成的 BCP 47 标签（≤ 35 字符），否则返回 `COMMON_INTERNAL` |
+| `task_cancel` | `TaskCancelArgs { task_id }` | `TaskCancelResult { cancelled }` | 请求取消运行中的任务，任务随后以 `task:finished`（`cancelled`）结束；任务不存在或已结束时 `cancelled` 为 `false`，不报错 |
+| `task_list` | 无 | `TaskList { tasks: TaskInfo[] }` | 全局任务列表：运行中的按开始时间先后在前，随后是最近结束的至多 50 条。`TaskInfo { task_id, kind, status, started_at, finished_at, progress, error }`，`status` 为 `running` \| `succeeded` \| `failed` \| `cancelled`，时间为 unix 毫秒，`progress` 为最近一次推送的 `TaskProgress` |
 
 ## 3. 事件
 
@@ -42,7 +46,7 @@
 
 - 事件向所有窗口广播；发送失败只记日志。
 - 首条进度可能早于命令返回，前端须**先订阅再调用命令**，并按 `task_id`（或 `kind`）过滤。
-- 任务取消：任务函数返回 `AppError::cancelled()` 时结束状态为 `cancelled`。全局任务列表与 `task_cancel` 命令由 M1-10 的 `TaskManager` 提供。
+- 任务取消：任务函数返回 `AppError::cancelled()` 时结束状态为 `cancelled`。所有经 `spawn_task` 启动的任务都登记在全局 `TaskManager` 中，见 `task_list`、`task_cancel`。
 
 ## 4. 类型生成
 

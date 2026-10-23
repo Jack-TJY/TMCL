@@ -3948,7 +3948,10 @@ dependencies = [
  "tempfile",
  "tmcl-auth",
  "tmcl-common",
+ "tmcl-game",
+ "tmcl-net",
  "tokio",
+ "tokio-util",
  "tracing",
  "ts-rs",
 ]

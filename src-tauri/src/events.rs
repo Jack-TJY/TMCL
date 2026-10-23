@@ -2,16 +2,20 @@
 //!
 //! 长耗时命令调用 [`spawn_task`]：立即返回 [`TaskStarted`]，任务在后台运行，
 //! 进度经 [`ThrottledSink`] 限流后以 `task:progress` 推送，结束时恰好推送一次 `task:finished`。
+//! 任务同时登记到全局 [`TaskManager`]，供 `task_list` / `task_cancel` 使用。
 
 use std::future::Future;
 use std::sync::Arc;
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tmcl_common::{
     AppResult, ProgressSink, TaskCtx, TaskFinished, TaskId, TaskProgress, ThrottledSink,
 };
 use ts_rs::TS;
+
+use crate::state::AppState;
+use crate::tasks::TaskManager;
 
 /// 任务进度，负载 [`TaskProgress`]，最多每 200 ms 一次。
 pub const TASK_PROGRESS: &str = "task:progress";
@@ -33,20 +37,22 @@ pub fn emit<R: Runtime, P: Serialize + Clone>(app: &AppHandle<R>, event: &str, p
     }
 }
 
-/// 把进度转成 `task:progress` 事件的接收端。
+/// 把进度转成 `task:progress` 事件、并记入任务管理器的接收端。
 pub struct EventSink<R: Runtime> {
     app: AppHandle<R>,
+    tasks: Arc<TaskManager>,
 }
 
 impl<R: Runtime> EventSink<R> {
     /// 创建接收端。
-    pub fn new(app: AppHandle<R>) -> Self {
-        Self { app }
+    pub fn new(app: AppHandle<R>, tasks: Arc<TaskManager>) -> Self {
+        Self { app, tasks }
     }
 }
 
 impl<R: Runtime> ProgressSink for EventSink<R> {
     fn report(&self, progress: &TaskProgress) {
+        self.tasks.progress(progress);
         emit(&self.app, TASK_PROGRESS, progress);
     }
 }
@@ -62,9 +68,17 @@ where
     Fut: Future<Output = AppResult<T>> + Send + 'static,
     T: Send + 'static,
 {
-    let sink = Arc::new(ThrottledSink::new(EventSink::new(app.clone())));
+    let tasks = app
+        .try_state::<AppState>()
+        .map(|state| state.tasks.clone())
+        .unwrap_or_default();
+    let sink = Arc::new(ThrottledSink::new(EventSink::new(
+        app.clone(),
+        tasks.clone(),
+    )));
     let ctx = TaskCtx::new(kind, sink);
     let task_id = ctx.id;
+    tasks.start(&ctx);
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let result = job(ctx).await;
@@ -73,11 +87,9 @@ where
         {
             tracing::warn!(%task_id, error = %err, "task failed");
         }
-        emit(
-            &app,
-            TASK_FINISHED,
-            &TaskFinished::from_result(task_id, &result),
-        );
+        let finished = TaskFinished::from_result(task_id, &result);
+        tasks.finish(&finished);
+        emit(&app, TASK_FINISHED, &finished);
     });
     TaskStarted { task_id }
 }

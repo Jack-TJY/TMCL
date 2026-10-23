@@ -14,7 +14,13 @@
     "minimize": "Minimize",
     "maximize": "Maximize",
     "restore": "Restore Down",
-    "close": "Close"
+    "close": "Close",
+    "exitConfirm": {
+      "title": "Tasks are still running",
+      "content": "{count} task(s) have not finished. Quitting will interrupt them. Quit anyway?",
+      "confirm": "Quit",
+      "cancel": "Cancel"
+    }
   },
   "placeholder": "This page is coming in a later version"
 }
