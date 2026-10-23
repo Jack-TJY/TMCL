@@ -6,6 +6,8 @@
 //! `.part` 并从头重试。已存在且大小、SHA1 均匹配的文件直接跳过。
 //! 大于 [`DownloadOptions::chunk_threshold`] 且服务器支持 `Range` 的文件
 //! 分片并发下载（`chunk.rs`）。
+//! 每个文件按 [`Sources::candidates`] 依次尝试各下载源（首选镜像在前，官方
+//! 源在后），某个源重试用尽或校验失败后换下一个源。
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -26,6 +28,7 @@ use crate::chunk;
 use crate::client::{HttpClient, map_reqwest_error};
 use crate::progress::ProgressTracker;
 use crate::retry::RetryPolicy;
+use crate::source::Sources;
 
 /// 默认同时进行的连接数。
 pub const DEFAULT_CONCURRENCY: usize = 16;
@@ -106,18 +109,71 @@ impl DownloadOptions {
 pub struct Downloader {
     client: HttpClient,
     options: Arc<DownloadOptions>,
+    sources: Arc<Sources>,
     connections: Arc<Semaphore>,
 }
 
 impl Downloader {
-    /// 用给定的客户端与设置创建下载引擎；并发数至少为 1。
+    /// 用给定的客户端与设置创建下载引擎；并发数至少为 1。下载源为
+    /// [`Sources::default`]，可用 [`Downloader::with_sources`] 替换。
     pub fn new(client: HttpClient, options: DownloadOptions) -> Self {
         let connections = Arc::new(Semaphore::new(options.concurrency.max(1)));
         Self {
             client,
             options: Arc::new(options),
+            sources: Arc::new(Sources::default()),
             connections,
         }
+    }
+
+    /// 由 `config.json` 的 `download` 段创建：并发数与下载源策略。
+    pub fn from_config(client: HttpClient, config: &DownloadConfig) -> Self {
+        Self::new(client, DownloadOptions::from_config(config))
+            .with_sources(Sources::from_config(config))
+    }
+
+    /// 替换下载源。
+    pub fn with_sources(mut self, sources: Sources) -> Self {
+        self.sources = Arc::new(sources);
+        self
+    }
+
+    /// 当前下载源。
+    pub fn sources(&self) -> &Sources {
+        &self.sources
+    }
+
+    /// 按下载源依次尝试，下载整个响应体到内存，适合版本清单等小文件。
+    pub async fn get_bytes(&self, url: &str, ctx: &TaskCtx) -> AppResult<Vec<u8>> {
+        let candidates = self.sources.candidates(url);
+        let last = candidates.len() - 1;
+        for (index, candidate) in candidates.into_iter().enumerate() {
+            let result = self
+                .options
+                .retry
+                .run(ctx, |_| self.client.get_bytes(&candidate.url, ctx))
+                .await;
+            match result {
+                Ok(bytes) => return Ok(bytes),
+                Err(e) if index == last || e.is_cancelled() => return Err(e),
+                Err(e) => fall_back(&candidate.source, &e),
+            }
+        }
+        unreachable!("候选列表至少包含官方源")
+    }
+
+    /// 按下载源依次尝试，下载并解析 JSON。
+    pub async fn get_json<T: serde::de::DeserializeOwned>(
+        &self,
+        url: &str,
+        ctx: &TaskCtx,
+    ) -> AppResult<T> {
+        let bytes = self.get_bytes(url, ctx).await?;
+        serde_json::from_slice(&bytes).map_err(|e| {
+            AppError::new(ErrorCode::CommonJson)
+                .with_param("url", url)
+                .with_detail(e.to_string())
+        })
     }
 
     /// 内部使用的 HTTP 客户端。
@@ -240,18 +296,37 @@ impl Downloader {
             tracker: tracker.clone(),
             counted: Arc::new(AtomicU64::new(0)),
         };
-        let bytes = self
-            .options
-            .retry
-            .run(ctx, |_| async {
-                match item.size {
-                    Some(size) if size > self.options.chunk_threshold => {
-                        chunk::attempt(self, item, size, &part, &progress, ctx).await
+        let candidates = self.sources.candidates(&item.url);
+        let last = candidates.len() - 1;
+        let mut bytes = 0;
+        for (index, candidate) in candidates.into_iter().enumerate() {
+            let item = &DownloadItem {
+                url: candidate.url,
+                ..item.clone()
+            };
+            let result = self
+                .options
+                .retry
+                .run(ctx, |_| async {
+                    match item.size {
+                        Some(size) if size > self.options.chunk_threshold => {
+                            chunk::attempt(self, item, size, &part, &progress, ctx).await
+                        }
+                        _ => self.attempt(item, &part, &progress, ctx).await,
                     }
-                    _ => self.attempt(item, &part, &progress, ctx).await,
+                })
+                .await;
+            match result {
+                Ok(n) => {
+                    bytes = n;
+                    break;
                 }
-            })
-            .await?;
+                Err(e) if index == last || e.is_cancelled() => return Err(e),
+                // 换源时保留 `.part`：有 SHA1 时续传的内容仍会被完整校验，
+                // 校验失败的 `.part` 已在 `attempt` 中删除。
+                Err(e) => fall_back(&candidate.source, &e),
+            }
+        }
         fs::rename(&part, &item.path)
             .await
             .map_err(|e| io_error(&item.path, &e))?;
@@ -389,6 +464,11 @@ impl ItemProgress {
             }
         }
     }
+}
+
+/// 记录某个下载源失败、改用下一个源。
+fn fall_back(source: &str, err: &AppError) {
+    tracing::warn!(source, code = %err.code, "下载源失败，改用下一个源");
 }
 
 /// 检查 `path` 是否已存在且与期望的大小和 SHA1 一致。
@@ -562,7 +642,10 @@ mod tests {
 
     #[test]
     fn options_follow_config() {
-        let options = DownloadOptions::from_config(&DownloadConfig { max_concurrency: 4 });
+        let options = DownloadOptions::from_config(&DownloadConfig {
+            max_concurrency: 4,
+            ..DownloadConfig::default()
+        });
         assert_eq!(options.concurrency, 4);
         assert_eq!(options.retry, RetryPolicy::default());
     }

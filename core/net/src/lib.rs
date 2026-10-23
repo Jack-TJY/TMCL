@@ -7,6 +7,7 @@ pub mod client;
 pub mod download;
 pub mod progress;
 pub mod retry;
+pub mod source;
 #[cfg(feature = "test-util")]
 pub mod testing;
 
@@ -17,3 +18,4 @@ pub use download::{
 };
 pub use progress::ProgressTracker;
 pub use retry::{RetryPolicy, is_retryable};
+pub use source::{Candidate, DownloadSource, Official, PrefixMirror, Sources};
