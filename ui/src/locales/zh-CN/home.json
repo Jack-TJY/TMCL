@@ -1,0 +1,15 @@
+{
+  "edit": "编辑",
+  "editHint": "拖动组件调整位置，拖动右下角调整大小；按 Esc 放弃本次修改。",
+  "reset": "恢复默认布局",
+  "cancel": "取消",
+  "done": "完成",
+  "empty": "首页还没有组件",
+  "loadFailed": "读取主页布局失败，已显示默认布局：{error}",
+  "backup": "主页布局文件已损坏，已备份到 {path} 并恢复默认布局",
+  "skipped": "有 {count} 个组件无法读取，已跳过",
+  "saveFailed": "保存主页布局失败：{error}",
+  "widget": {
+    "remove": "删除组件"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Quick actions",
+  "description": "Open the game or data folder, create an instance",
+  "noInstance": "No usable instance yet",
+  "actions": {
+    "gameDir": "Open game folder",
+    "dataDir": "Open data folder",
+    "newInstance": "New instance",
+    "settings": "Settings"
+  },
+  "settings": {
+    "labels": "Show labels"
+  }
+}
