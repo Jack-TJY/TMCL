@@ -14,10 +14,12 @@ serde_json = { workspace = true }
 tmcl-common = { path = "../common" }
 tmcl-game = { path = "../game" }
 tmcl-instance = { path = "../instance" }
+tmcl-java = { path = "../java" }
 tmcl-net = { path = "../net" }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["process"] }
 tracing = { workspace = true }
 ts-rs = { workspace = true }
+zip = { workspace = true }
 
 [dev-dependencies]
 sha1 = { workspace = true }

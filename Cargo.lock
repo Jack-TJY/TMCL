@@ -4152,10 +4152,12 @@ dependencies = [
  "tmcl-common",
  "tmcl-game",
  "tmcl-instance",
+ "tmcl-java",
  "tmcl-net",
  "tokio",
  "tracing",
  "ts-rs",
+ "zip",
 ]
 
 [[package]]
