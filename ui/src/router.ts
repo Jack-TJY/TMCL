@@ -2,6 +2,7 @@
 // 页面尚未实现时使用 PlaceholderPage，对应步骤把 component 换成自己的页面即可。
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from "vue-router";
 import PlaceholderPage from "./layouts/PlaceholderPage.vue";
+import DownloadPage from "./pages/download/DownloadPage.vue";
 import SettingsPage from "./pages/settings/SettingsPage.vue";
 
 declare module "vue-router" {
@@ -22,7 +23,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/download",
     name: "download",
-    component: PlaceholderPage,
+    component: DownloadPage,
     meta: { titleKey: "shell.nav.download" },
   },
   {
