@@ -1,34 +1,69 @@
 <script setup lang="ts">
-import DemoTask from "./components/DemoTask.vue";
-import LocaleSwitcher from "./components/LocaleSwitcher.vue";
+// 根组件：按设置应用亮/暗主题、强调色与组件库语言，渲染应用框架。
+import {
+  darkTheme,
+  dateEnUS,
+  dateZhCN,
+  enUS,
+  NConfigProvider,
+  NDialogProvider,
+  NMessageProvider,
+  zhCN,
+} from "naive-ui";
+import { computed, watchEffect } from "vue";
+import { useI18n } from "vue-i18n";
+import AppLayout from "./layouts/AppLayout.vue";
+import { useSettingsStore } from "./stores/settings";
+import { fluentCssVars, fluentOverrides } from "./theme/fluent";
+
+const settings = useSettingsStore();
+const { locale } = useI18n();
+
+const theme = computed(() => (settings.isDark ? darkTheme : null));
+const overrides = computed(() => fluentOverrides(settings.accent, settings.isDark));
+const naiveLocale = computed(() => (locale.value === "zh-CN" ? zhCN : enUS));
+const naiveDateLocale = computed(() => (locale.value === "zh-CN" ? dateZhCN : dateEnUS));
+
+// 布局等非 Naive UI 元素使用的变量，挂在根元素上。
+watchEffect(() => {
+  const root = document.documentElement;
+  for (const [name, value] of Object.entries(fluentCssVars(settings.accent, settings.isDark))) {
+    root.style.setProperty(name, value);
+  }
+  root.style.colorScheme = settings.isDark ? "dark" : "light";
+});
 </script>
 
 <template>
-  <main class="shell">
-    <h1>TMCL</h1>
-    <DemoTask />
-    <LocaleSwitcher />
-  </main>
+  <NConfigProvider
+    :theme="theme"
+    :theme-overrides="overrides"
+    :locale="naiveLocale"
+    :date-locale="naiveDateLocale"
+    class="config-root"
+  >
+    <NMessageProvider>
+      <NDialogProvider>
+        <AppLayout />
+      </NDialogProvider>
+    </NMessageProvider>
+  </NConfigProvider>
 </template>
 
 <style>
 html,
 body,
-#app {
+#app,
+.config-root {
   height: 100%;
   margin: 0;
 }
 
 body {
-  font-family:
-    "Segoe UI Variable", "Segoe UI", system-ui, "Microsoft YaHei", "PingFang SC", sans-serif;
-}
-
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
+  font-family: var(--tmcl-font);
+  background: var(--tmcl-bg);
+  color: var(--tmcl-text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 </style>

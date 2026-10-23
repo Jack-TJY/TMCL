@@ -1,16 +1,5 @@
 {
   "language": {
     "label": "Language"
-  },
-  "demo": {
-    "version": "TMCL {version} · {os}/{arch}",
-    "run": "Run demo task",
-    "failAt": "Fail at step {step}",
-    "invalidArgs": "Use invalid arguments",
-    "state": {
-      "succeeded": "Succeeded",
-      "failed": "Failed",
-      "cancelled": "Cancelled"
-    }
   }
 }
