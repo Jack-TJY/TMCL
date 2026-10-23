@@ -41,14 +41,19 @@ pub struct GameProcess {
     secrets: Vec<String>,
 }
 
-/// 强制结束游戏进程的句柄，可在其他任务中使用。
-#[derive(Debug, Clone)]
+/// 强制结束游戏进程的句柄，可在其他任务中使用；`Default` 得到不关联进程的句柄（测试用）。
+#[derive(Debug, Clone, Default)]
 pub struct KillHandle(CancellationToken);
 
 impl KillHandle {
     /// 请求强制结束；进程已退出时不做任何事。
     pub fn kill(&self) {
         self.0.cancel();
+    }
+
+    /// 是否已请求强制结束。
+    pub fn is_killed(&self) -> bool {
+        self.0.is_cancelled()
     }
 }
 
