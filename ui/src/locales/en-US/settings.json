@@ -20,6 +20,11 @@
     "system": "Use system setting",
     "custom": "Custom"
   },
+  "material": {
+    "label": "Window material",
+    "description": "Use Mica on Windows 11 or vibrancy on macOS as the window background",
+    "unsupported": "Window materials are not supported on this system. A solid background is used"
+  },
   "source": {
     "label": "Download source",
     "description": "Automatic mode prefers a mirror and falls back to the official source",

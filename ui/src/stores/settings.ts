@@ -9,6 +9,7 @@ import {
 } from "../api/__mocks__/settings";
 import { toAppError } from "../api/invoke";
 import { DEFAULT_ACCENT, systemAccent } from "../theme/fluent";
+import { applyMaterial, detectMaterial, type MaterialKind } from "../theme/material";
 
 /** 跟踪系统的深浅色偏好。 */
 function useSystemDark() {
@@ -39,10 +40,27 @@ export const useSettingsStore = defineStore("settings", () => {
   /** 系统强调色；取不到时为 `null`。 */
   const systemAccentColor = detectedAccent;
 
+  /** 平台支持的窗口材质，启动时检测。 */
+  const materialKind = ref<MaterialKind>("none");
+  /** 窗口材质当前是否生效；生效时页面底色透明。 */
+  const materialActive = ref(false);
+
+  /** 按当前设置应用窗口材质。 */
+  async function syncMaterial() {
+    materialActive.value = await applyMaterial(
+      materialKind.value,
+      settings.value.window_material,
+      isDark.value,
+    );
+  }
+
   /** 读取已保存的设置；失败时保持默认值。 */
   async function load() {
     try {
-      settings.value = await mockSettingsGet();
+      [settings.value, materialKind.value] = await Promise.all([
+        mockSettingsGet(),
+        detectMaterial().catch(() => "none" as const),
+      ]);
     } finally {
       loaded.value = true;
     }
@@ -62,5 +80,16 @@ export const useSettingsStore = defineStore("settings", () => {
     }
   }
 
-  return { settings, loaded, isDark, accent, systemAccentColor, load, update };
+  return {
+    settings,
+    loaded,
+    isDark,
+    accent,
+    systemAccentColor,
+    materialKind,
+    materialActive,
+    load,
+    update,
+    syncMaterial,
+  };
 });
