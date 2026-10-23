@@ -1,0 +1,20 @@
+{
+  "nav": {
+    "label": "Navigation",
+    "expand": "Expand navigation",
+    "collapse": "Collapse navigation",
+    "home": "Home",
+    "instances": "Instances",
+    "download": "Download",
+    "accounts": "Accounts",
+    "multiplayer": "Multiplayer",
+    "settings": "Settings"
+  },
+  "window": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore Down",
+    "close": "Close"
+  },
+  "placeholder": "This page is coming in a later version"
+}

@@ -1,0 +1,20 @@
+{
+  "nav": {
+    "label": "导航",
+    "expand": "展开导航",
+    "collapse": "收起导航",
+    "home": "首页",
+    "instances": "实例",
+    "download": "下载",
+    "accounts": "账号",
+    "multiplayer": "联机",
+    "settings": "设置"
+  },
+  "window": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "向下还原",
+    "close": "关闭"
+  },
+  "placeholder": "此页面将在后续版本中提供"
+}
