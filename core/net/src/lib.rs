@@ -11,7 +11,7 @@ pub mod source;
 #[cfg(feature = "test-util")]
 pub mod testing;
 
-pub use client::{HttpClient, USER_AGENT};
+pub use client::{Body, HttpClient, Timeouts, USER_AGENT};
 pub use download::{
     DownloadItem, DownloadOptions, DownloadReport, Downloader, Outcome, download_all, download_one,
     is_valid, sha1_file,

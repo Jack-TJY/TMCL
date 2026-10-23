@@ -25,7 +25,7 @@ use tokio::task::JoinSet;
 use tokio::time::MissedTickBehavior;
 
 use crate::chunk;
-use crate::client::{HttpClient, map_reqwest_error};
+use crate::client::HttpClient;
 use crate::progress::ProgressTracker;
 use crate::retry::RetryPolicy;
 use crate::source::Sources;
@@ -366,15 +366,10 @@ impl Downloader {
                 .map_err(|e| io_error(part, &e))?
         };
         let mut written = offset;
-        if let Some(mut response) = response {
-            loop {
-                let chunk = tokio::select! {
-                    biased;
-                    _ = ctx.cancel.cancelled() => return Err(AppError::cancelled()),
-                    c = response.chunk() => c.map_err(|e| map_reqwest_error(&item.url, &e))?,
-                };
-                let Some(chunk) = chunk else { break };
-                hasher.update(&chunk);
+        if let Some(response) = response {
+            let mut body = self.client.body(response, &item.url);
+            while let Some(chunk) = body.next(ctx).await? {
+                hasher.update(&*chunk);
                 file.write_all(&chunk)
                     .await
                     .map_err(|e| io_error(part, &e))?;
