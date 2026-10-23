@@ -1,4 +1,4 @@
-//! 版本文件补全：版本 JSON、客户端 jar、依赖库、日志配置、资源索引与资源文件。
+//! 版本文件补全、校验与修复：版本 JSON、客户端 jar、依赖库、日志配置、资源索引与资源文件。
 //!
 //! 文件放在 `<data_root>/shared/` 下，供所有实例共享：
 //!
@@ -8,14 +8,18 @@
 //! shared/assets/indexes/<index>.json
 //! shared/assets/objects/<hash 前两位>/<hash>
 //! shared/assets/log_configs/<file>
+//! shared/assets/virtual/<index>/<name>      （legacy 索引，启动前生成）
 //! ```
 
-use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use serde::Deserialize;
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, ProgressUpdate, TaskCtx};
 use tmcl_net::{DownloadItem, DownloadReport, Downloader, is_valid};
+use tokio::sync::Semaphore;
+use tokio::task::JoinSet;
+
+use crate::assets::{AssetIndex, asset_items};
 
 use crate::libraries::{GameFile, library_files};
 use crate::manifest::{MANIFEST_URL, VersionManifest};
@@ -59,22 +63,6 @@ impl InstallReport {
         self.skipped += r.skipped;
         self.bytes += r.bytes;
     }
-}
-
-/// 资源索引文件。
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct AssetIndex {
-    /// 资源名 → 对象。
-    pub objects: BTreeMap<String, AssetObject>,
-}
-
-/// 资源对象。
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct AssetObject {
-    /// SHA1，同时是存储文件名。
-    pub hash: String,
-    /// 大小。
-    pub size: u64,
 }
 
 /// `shared/` 下各类游戏文件的路径。
@@ -132,6 +120,11 @@ impl GameFiles {
             .join("objects")
             .join(hash.get(..2).unwrap_or(hash))
             .join(hash)
+    }
+
+    /// `shared/assets/virtual/<id>/`：`virtual` 索引按资源名展开的目录。
+    pub fn virtual_assets_dir(&self, id: &str) -> PathBuf {
+        self.assets_dir().join("virtual").join(id)
     }
 
     /// `shared/assets/log_configs/<file>`。
@@ -204,7 +197,7 @@ pub async fn install_version(
                 .with_param("path", item.path.display())
                 .with_detail(e.to_string())
         })?;
-        let parsed: AssetIndex = serde_json::from_slice(&bytes)?;
+        let parsed = AssetIndex::parse(&bytes)?;
         index_objects = asset_items(&files, &parsed, &options.resources_url);
         ctx.report(ProgressUpdate::new("asset_index").items(1, 1));
     }
@@ -237,6 +230,101 @@ pub async fn install_version(
             .download_all(index_objects, "assets", ctx)
             .await?,
     );
+    Ok(report)
+}
+
+/// 修复 `version_id`：重新下载缺失或校验不通过的文件，与 [`install_version`] 相同。
+pub async fn repair_version(
+    downloader: &Downloader,
+    paths: &DataPaths,
+    version_id: &str,
+    options: &InstallOptions,
+    ctx: &TaskCtx,
+) -> AppResult<InstallReport> {
+    install_version(downloader, paths, version_id, options, ctx).await
+}
+
+/// 校验结果。
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct VerifyReport {
+    /// 检查的文件数。
+    pub checked: u64,
+    /// 缺失或大小、SHA1 不符的文件，按路径排序。
+    pub broken: Vec<PathBuf>,
+}
+
+impl VerifyReport {
+    /// 全部文件完好。
+    pub fn is_ok(&self) -> bool {
+        self.broken.is_empty()
+    }
+}
+
+/// 同时校验的文件数。
+const VERIFY_CONCURRENCY: usize = 8;
+
+/// 只校验、不下载：检查本地已安装的 `version_id` 在当前平台运行所需的全部文件。
+///
+/// 版本 JSON 链从本地读取，读不到或格式错误时返回对应错误；资源索引缺失或损坏时计为损坏，
+/// 其中的资源文件不再逐个检查。阶段为 `verify`，可取消。
+pub async fn verify_version(
+    paths: &DataPaths,
+    version_id: &str,
+    ctx: &TaskCtx,
+) -> AppResult<VerifyReport> {
+    let files = GameFiles::new(paths.clone());
+    let version = resolve(version_id, |id| files.load_version(id))?;
+    let mut targets = library_files(&files, &version, &RuleEnv::current());
+    if let Some(index) = &version.asset_index {
+        let path = files.asset_index(&index.id);
+        targets.push(GameFile {
+            path: path.clone(),
+            url: Some(index.url.clone()),
+            size: Some(index.size),
+            sha1: Some(index.sha1.clone()),
+        });
+        if is_valid(&path, Some(index.size), Some(&index.sha1)).await? {
+            let parsed = AssetIndex::load(&files, &index.id)?;
+            targets.extend(
+                asset_items(&files, &parsed, "")
+                    .into_iter()
+                    .map(|i| GameFile {
+                        path: i.path,
+                        url: None,
+                        size: i.size,
+                        sha1: i.sha1,
+                    }),
+            );
+        }
+    }
+
+    let total = targets.len() as u64;
+    ctx.report(ProgressUpdate::new("verify").items(0, total));
+    let limit = Arc::new(Semaphore::new(VERIFY_CONCURRENCY));
+    let mut set = JoinSet::new();
+    for file in targets {
+        let limit = limit.clone();
+        set.spawn(async move {
+            let _permit = limit.acquire_owned().await;
+            let ok = is_valid(&file.path, file.size, file.sha1.as_deref()).await?;
+            Ok::<_, AppError>((file.path, ok))
+        });
+    }
+    let mut report = VerifyReport::default();
+    while let Some(joined) = set.join_next().await {
+        if ctx.is_cancelled() {
+            set.abort_all();
+            ctx.check_cancelled()?;
+        }
+        let (path, ok) = joined
+            .map_err(|e| AppError::new(ErrorCode::CommonInternal).with_detail(e.to_string()))??;
+        report.checked += 1;
+        if !ok {
+            report.broken.push(path);
+        }
+        ctx.report(ProgressUpdate::new("verify").items(report.checked, total));
+    }
+    report.broken.sort();
     Ok(report)
 }
 
@@ -291,31 +379,6 @@ impl Metadata<'_> {
         report.add(single(self.downloader.download_one(&item, ctx).await?));
         self.files.load_version(id)
     }
-}
-
-/// 资源索引中的对象，按哈希去重。
-pub fn asset_items(
-    files: &GameFiles,
-    index: &AssetIndex,
-    resources_url: &str,
-) -> Vec<DownloadItem> {
-    let mut seen = BTreeSet::new();
-    index
-        .objects
-        .values()
-        .filter(|o| seen.insert(o.hash.as_str()))
-        .map(|o| DownloadItem {
-            url: format!(
-                "{}/{}/{}",
-                resources_url.trim_end_matches('/'),
-                o.hash.get(..2).unwrap_or(&o.hash),
-                o.hash
-            ),
-            path: files.asset_object(&o.hash),
-            size: Some(o.size),
-            sha1: Some(o.hash.clone()),
-        })
-        .collect()
 }
 
 fn single(outcome: tmcl_net::Outcome) -> DownloadReport {
