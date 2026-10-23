@@ -24,7 +24,10 @@ serde = { workspace = true }
 tauri = { workspace = true }
 tmcl-auth = { path = "../core/auth" }
 tmcl-common = { path = "../core/common" }
+tmcl-game = { path = "../core/game" }
+tmcl-net = { path = "../core/net" }
 tokio = { workspace = true, features = ["sync"] }
+tokio-util = { workspace = true }
 tracing = { workspace = true }
 ts-rs = { workspace = true }
 
@@ -32,3 +35,4 @@ ts-rs = { workspace = true }
 serde_json = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
+tmcl-net = { path = "../core/net", features = ["test-util"] }

@@ -12,7 +12,9 @@ use tmcl_common::{AppError, TaskFinished, TaskProgress};
 use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo};
+use crate::commands::game::{GameInstallArgs, GameVersionList};
 use crate::commands::settings::{SettingsLanguage, SettingsSetLanguageArgs};
+use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
 use crate::events::TaskStarted;
 
 /// 置为 `1` 时测试改为写入生成物。
@@ -34,9 +36,16 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     // app
     AppDemoTaskArgs::export_all(&cfg)?;
     AppInfo::export_all(&cfg)?;
+    // game
+    GameInstallArgs::export_all(&cfg)?;
+    GameVersionList::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
     SettingsSetLanguageArgs::export_all(&cfg)?;
+    // task
+    TaskCancelArgs::export_all(&cfg)?;
+    TaskCancelResult::export_all(&cfg)?;
+    TaskList::export_all(&cfg)?;
     Ok(())
 }
 
