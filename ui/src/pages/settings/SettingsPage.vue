@@ -12,6 +12,7 @@ import {
   LocalLanguage24Regular,
   Server24Regular,
   TopSpeed24Regular,
+  Window24Regular,
 } from "@vicons/fluent";
 import {
   NButton,
@@ -19,6 +20,7 @@ import {
   NInputNumber,
   NSelect,
   NSlider,
+  NSwitch,
   NTag,
   NTooltip,
   useMessage,
@@ -165,6 +167,21 @@ function setConcurrency(value: number | null) {
           :value="accentMode"
           :options="accentModeOptions"
           @update:value="setAccentMode"
+        />
+      </SettingRow>
+      <SettingRow
+        :icon="Window24Regular"
+        :title="t('settings.material.label')"
+        :description="
+          store.materialKind === 'none'
+            ? t('settings.material.unsupported')
+            : t('settings.material.description')
+        "
+      >
+        <NSwitch
+          :value="store.settings.window_material && store.materialKind !== 'none'"
+          :disabled="store.materialKind === 'none'"
+          @update:value="(v: boolean) => save((s) => (s.window_material = v))"
         />
       </SettingRow>
     </section>

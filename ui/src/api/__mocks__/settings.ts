@@ -13,6 +13,8 @@ export interface LauncherSettings {
   theme: ThemeMode;
   /** `#RRGGBB`；`null` 表示跟随系统强调色。 */
   accent: string | null;
+  /** 平台支持时使用窗口材质（Mica / vibrancy），否则使用纯色背景。 */
+  window_material: boolean;
   download: { source: DownloadSource; max_concurrency: number };
   /** 新建实例的默认最大内存。 */
   memory: { max_mb: number };
@@ -31,6 +33,7 @@ export interface JavaInstall {
 export const DEFAULT_SETTINGS: LauncherSettings = {
   theme: "system",
   accent: null,
+  window_material: true,
   download: { source: "auto", max_concurrency: 16 },
   memory: { max_mb: 4096 },
 };

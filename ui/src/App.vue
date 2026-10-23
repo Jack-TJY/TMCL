@@ -10,7 +10,7 @@ import {
   NMessageProvider,
   zhCN,
 } from "naive-ui";
-import { computed, watchEffect } from "vue";
+import { computed, watch, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import AppLayout from "./layouts/AppLayout.vue";
 import { useSettingsStore } from "./stores/settings";
@@ -30,8 +30,16 @@ watchEffect(() => {
   for (const [name, value] of Object.entries(fluentCssVars(settings.accent, settings.isDark))) {
     root.style.setProperty(name, value);
   }
+  if (settings.materialActive) root.style.setProperty("--tmcl-bg", "transparent");
   root.style.colorScheme = settings.isDark ? "dark" : "light";
 });
+
+// 材质的开关与明暗跟随设置变化。
+watch(
+  () => [settings.settings.window_material, settings.isDark, settings.materialKind],
+  () => void settings.syncMaterial(),
+  { immediate: true },
+);
 </script>
 
 <template>

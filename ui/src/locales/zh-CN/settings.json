@@ -20,6 +20,11 @@
     "system": "跟随系统",
     "custom": "自定义"
   },
+  "material": {
+    "label": "窗口材质",
+    "description": "使用 Windows 11 的 Mica 或 macOS 的毛玻璃效果作为窗口背景",
+    "unsupported": "当前系统不支持窗口材质，使用纯色背景"
+  },
   "source": {
     "label": "下载源",
     "description": "自动模式下优先使用镜像，失败时回退官方源",
