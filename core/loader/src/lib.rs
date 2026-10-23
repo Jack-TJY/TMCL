@@ -3,7 +3,8 @@
 //! 核心层 crate，不依赖 `tauri`，见 `docs/PLAN.md` 第 2 节。
 //!
 //! - [`list`]：列出与游戏版本匹配的加载器版本；
-//! - [`fabric`]、[`quilt`]：下载 profile JSON，写成继承原版的版本 JSON。
+//! - [`fabric`]、[`quilt`]：下载 profile JSON，写成继承原版的版本 JSON；
+//! - [`processors`]：运行 Forge / NeoForge 安装器的处理步骤。
 //!
 //! 安装结果是 `shared/versions/<id>/<id>.json` 中一个带 `inheritsFrom` 的版本，`<id>` 由
 //! [`version_id`] 决定。版本 JSON 在其余文件全部就绪后才原子写入，安装中途失败或取消时
@@ -14,6 +15,7 @@
 
 pub mod fabric;
 pub mod list;
+pub mod processors;
 mod profile;
 pub mod quilt;
 
