@@ -55,6 +55,8 @@ pub enum ErrorCode {
     JavaNotFound,
     /// 无法识别该 Java 的版本或架构。
     JavaProbeFailed,
+    /// 官方源与 Adoptium 都没有该平台、该主版本的运行时。
+    JavaRuntimeUnavailable,
     /// 手动指定的 Java 主版本与游戏要求不一致（仅作警告）。
     JavaVersionMismatch,
     /// 无法启动游戏进程（Java 路径无效或无权限）。
@@ -96,6 +98,7 @@ impl ErrorCode {
             Self::JavaArchMismatch => "JAVA_ARCH_MISMATCH",
             Self::JavaNotFound => "JAVA_NOT_FOUND",
             Self::JavaProbeFailed => "JAVA_PROBE_FAILED",
+            Self::JavaRuntimeUnavailable => "JAVA_RUNTIME_UNAVAILABLE",
             Self::JavaVersionMismatch => "JAVA_VERSION_MISMATCH",
             Self::LaunchSpawnFailed => "LAUNCH_SPAWN_FAILED",
             Self::NetConnect => "NET_CONNECT",
@@ -206,6 +209,7 @@ mod tests {
             ErrorCode::JavaArchMismatch,
             ErrorCode::JavaNotFound,
             ErrorCode::JavaProbeFailed,
+            ErrorCode::JavaRuntimeUnavailable,
             ErrorCode::JavaVersionMismatch,
             ErrorCode::LaunchSpawnFailed,
             ErrorCode::NetConnect,

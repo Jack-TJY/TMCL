@@ -18,6 +18,7 @@
   "JAVA_ARCH_MISMATCH": "Java architecture mismatch: {expected} required, but {java} is {actual}",
   "JAVA_NOT_FOUND": "Java {major} was not found",
   "JAVA_PROBE_FAILED": "Cannot identify Java: {java}",
+  "JAVA_RUNTIME_UNAVAILABLE": "No downloadable Java {major} is available for {platform}; please install it manually",
   "JAVA_VERSION_MISMATCH": "The selected Java is {actual}, but this game version needs Java {expected} and may not start",
   "LAUNCH_SPAWN_FAILED": "Failed to start Java: {java}",
   "NET_CONNECT": "Cannot connect to {url}",

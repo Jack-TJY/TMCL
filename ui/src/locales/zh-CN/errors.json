@@ -18,6 +18,7 @@
   "JAVA_ARCH_MISMATCH": "Java 架构不匹配：需要 {expected}，{java} 为 {actual}",
   "JAVA_NOT_FOUND": "找不到 Java {major}",
   "JAVA_PROBE_FAILED": "无法识别 Java：{java}",
+  "JAVA_RUNTIME_UNAVAILABLE": "没有适用于 {platform} 的 Java {major} 可供下载，请手动安装",
   "JAVA_VERSION_MISMATCH": "所选 Java 为 {actual}，该版本游戏需要 Java {expected}，可能无法启动",
   "LAUNCH_SPAWN_FAILED": "无法启动 Java：{java}",
   "NET_CONNECT": "无法连接到服务器 {url}",
