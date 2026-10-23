@@ -3,6 +3,7 @@
 //! 核心层 crate，不依赖 `tauri`，见 `docs/PLAN.md` 第 2 节。
 
 pub mod arguments;
+pub mod assets;
 pub mod install;
 pub mod libraries;
 pub mod manifest;
@@ -10,7 +11,11 @@ pub mod natives;
 pub mod rules;
 pub mod version;
 
-pub use install::{GameFiles, InstallOptions, InstallReport, install_version};
+pub use assets::{AssetIndex, AssetObject, game_assets_dir, prepare_legacy_assets};
+pub use install::{
+    GameFiles, InstallOptions, InstallReport, VerifyReport, install_version, repair_version,
+    verify_version,
+};
 pub use libraries::{GameFile, library_files, library_items};
 pub use manifest::{
     MANIFEST_MAX_AGE, MANIFEST_URL, ManifestEntry, ManifestPolicy, ManifestStore, VersionManifest,

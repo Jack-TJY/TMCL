@@ -9,8 +9,9 @@ use sha1::{Digest, Sha1};
 use tmcl_common::{DataPaths, ErrorCode, TaskCtx};
 use tmcl_game::natives::native_jars;
 use tmcl_game::{
-    GameFiles, InstallOptions, RuleEnv, VersionJson, install_version, library_files, library_items,
-    parse_version, resolve,
+    AssetIndex, GameFiles, InstallOptions, RuleEnv, VersionJson, game_assets_dir, install_version,
+    library_files, library_items, parse_version, prepare_legacy_assets, repair_version, resolve,
+    verify_version,
 };
 use tmcl_net::testing::TestServer;
 use tmcl_net::{DownloadOptions, Downloader, HttpClient};
@@ -412,4 +413,151 @@ async fn install_respects_downloader_connection_limit() {
     .await
     .unwrap();
     assert_eq!(server.max_active(), 1);
+}
+
+#[tokio::test]
+async fn verify_finds_broken_files_and_repair_fixes_them() {
+    let (server, options) = fake_release().await;
+    let dir = tempfile::tempdir().unwrap();
+    let paths = DataPaths::at(dir.path());
+    let ctx = TaskCtx::noop("game_verify");
+    install_version(&downloader(4), &paths, "fake", &options, &ctx)
+        .await
+        .unwrap();
+
+    let report = verify_version(&paths, "fake", &ctx).await.unwrap();
+    // jar、库、natives、日志配置、资源索引、两个资源。
+    assert_eq!(report.checked, 7);
+    assert!(report.is_ok());
+
+    let files = GameFiles::new(paths.clone());
+    let lib = files.library("a/lib/1/lib-1.jar");
+    std::fs::remove_file(&lib).unwrap();
+    std::fs::write(files.client_jar("fake"), b"tampered").unwrap();
+    let hits = server.hits();
+    let report = verify_version(&paths, "fake", &ctx).await.unwrap();
+    let mut expected = vec![lib.clone(), files.client_jar("fake")];
+    expected.sort();
+    assert_eq!(report.broken, expected);
+    assert_eq!(server.hits(), hits, "校验不应联网");
+
+    let repaired = repair_version(&downloader(4), &paths, "fake", &options, &ctx)
+        .await
+        .unwrap();
+    assert_eq!(repaired.downloaded, 2);
+    assert!(verify_version(&paths, "fake", &ctx).await.unwrap().is_ok());
+
+    // 资源索引损坏时只报告索引本身。
+    std::fs::write(files.asset_index("fake-index"), b"{}").unwrap();
+    let report = verify_version(&paths, "fake", &ctx).await.unwrap();
+    assert_eq!(report.checked, 5);
+    assert_eq!(report.broken, [files.asset_index("fake-index")]);
+}
+
+#[tokio::test]
+async fn verify_requires_local_version_json() {
+    let dir = tempfile::tempdir().unwrap();
+    let err = verify_version(&DataPaths::at(dir.path()), "1.20.1", &TaskCtx::noop("v"))
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, ErrorCode::CommonIo);
+}
+
+#[tokio::test]
+async fn verify_can_be_cancelled() {
+    let (_server, options) = fake_release().await;
+    let dir = tempfile::tempdir().unwrap();
+    let paths = DataPaths::at(dir.path());
+    let ctx = TaskCtx::noop("game_verify");
+    install_version(&downloader(4), &paths, "fake", &options, &ctx)
+        .await
+        .unwrap();
+    ctx.cancel.cancel();
+    let err = verify_version(&paths, "fake", &ctx).await.unwrap_err();
+    assert_eq!(err.code, ErrorCode::CommonCancelled);
+}
+
+fn legacy_index(
+    flag: &str,
+    objects: &[(&str, &[u8])],
+) -> (tempfile::TempDir, GameFiles, AssetIndex) {
+    let dir = tempfile::tempdir().unwrap();
+    let files = GameFiles::new(DataPaths::at(dir.path()));
+    let mut map = serde_json::Map::new();
+    for (name, data) in objects {
+        let hash = sha1_hex(data);
+        let path = files.asset_object(&hash);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, data).unwrap();
+        map.insert(
+            (*name).to_owned(),
+            json!({"hash": hash, "size": data.len()}),
+        );
+    }
+    let mut index = json!({"objects": map});
+    index[flag] = json!(true);
+    let index: AssetIndex = serde_json::from_value(index).unwrap();
+    (dir, files, index)
+}
+
+#[test]
+fn virtual_assets_are_copied_by_name() {
+    let (dir, files, index) = legacy_index(
+        "virtual",
+        &[
+            ("sound/step.ogg", b"step"),
+            ("../evil", b"evil"),
+            ("lang/en_US.lang", b"en"),
+        ],
+    );
+    let game_dir = dir.path().join("game");
+    let root = game_assets_dir(&files, "legacy", &index, &game_dir);
+    assert_eq!(root, files.virtual_assets_dir("legacy"));
+
+    assert_eq!(
+        prepare_legacy_assets(&files, "legacy", &index, &game_dir).unwrap(),
+        2
+    );
+    assert_eq!(std::fs::read(root.join("sound/step.ogg")).unwrap(), b"step");
+    assert!(!files.assets_dir().join("virtual/evil").exists());
+    // 第二次全部跳过。
+    assert_eq!(
+        prepare_legacy_assets(&files, "legacy", &index, &game_dir).unwrap(),
+        0
+    );
+}
+
+#[test]
+fn pre_1_6_assets_go_to_game_resources() {
+    let (dir, files, index) = legacy_index("map_to_resources", &[("music/calm1.ogg", b"calm")]);
+    let game_dir = dir.path().join("game");
+    assert_eq!(
+        game_assets_dir(&files, "pre-1.6", &index, &game_dir),
+        game_dir.join("resources")
+    );
+    assert_eq!(
+        prepare_legacy_assets(&files, "pre-1.6", &index, &game_dir).unwrap(),
+        1
+    );
+    assert_eq!(
+        std::fs::read(game_dir.join("resources/music/calm1.ogg")).unwrap(),
+        b"calm"
+    );
+
+    // 新版本索引不复制。
+    let modern: AssetIndex = serde_json::from_value(json!({"objects": {}})).unwrap();
+    assert_eq!(
+        game_assets_dir(&files, "5", &modern, &game_dir),
+        files.assets_dir()
+    );
+    assert_eq!(
+        prepare_legacy_assets(&files, "5", &modern, &game_dir).unwrap(),
+        0
+    );
+
+    // 资源文件缺失时报错。
+    std::fs::remove_dir_all(files.assets_dir().join("objects")).unwrap();
+    std::fs::remove_dir_all(game_dir.join("resources")).unwrap();
+    let err = prepare_legacy_assets(&files, "pre-1.6", &index, &game_dir).unwrap_err();
+    assert_eq!(err.code, ErrorCode::CommonIo);
 }
