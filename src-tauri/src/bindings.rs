@@ -12,6 +12,7 @@ use tmcl_common::{AppError, TaskFinished, TaskProgress};
 use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo};
+use crate::commands::appearance::{AppearanceImageArgs, AppearanceImportArgs, AppearanceImported};
 use crate::commands::game::{GameInstallArgs, GameVersionList};
 use crate::commands::instance::{
     InstanceCreateArgs, InstanceDuplicateArgs, InstanceExportArgs, InstanceGameEntries,
@@ -47,6 +48,10 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     // app
     AppDemoTaskArgs::export_all(&cfg)?;
     AppInfo::export_all(&cfg)?;
+    // appearance
+    AppearanceImageArgs::export_all(&cfg)?;
+    AppearanceImportArgs::export_all(&cfg)?;
+    AppearanceImported::export_all(&cfg)?;
     // game
     GameInstallArgs::export_all(&cfg)?;
     GameVersionList::export_all(&cfg)?;

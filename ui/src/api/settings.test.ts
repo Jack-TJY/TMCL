@@ -18,7 +18,20 @@ describe("settings commands", () => {
     expect(tauriInvoke).toHaveBeenLastCalledWith("settings_open_data_dir", undefined);
     const settings = {
       theme: "dark" as const,
-      appearance: { accent: null, window_material: true },
+      appearance: {
+        accent: null,
+        window_material: true,
+        background: {
+          kind: "default" as const,
+          color: "#1F4E79",
+          image: null,
+          fit: "fill" as const,
+          opacity: 100,
+          blur: 0,
+          mask: 0,
+          card_opacity: 85,
+        },
+      },
       memory: { max_mb: 4096 },
       download: { max_concurrency: 16, source: "auto" },
     };

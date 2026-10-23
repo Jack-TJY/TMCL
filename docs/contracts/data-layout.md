@@ -48,7 +48,17 @@
   "theme": "system",
   "appearance": {
     "accent": null,
-    "window_material": true
+    "window_material": true,
+    "background": {
+      "kind": "default",
+      "color": "#1F4E79",
+      "image": null,
+      "fit": "fill",
+      "opacity": 100,
+      "blur": 0,
+      "mask": 0,
+      "card_opacity": 85
+    }
   },
   "memory": {
     "max_mb": 4096
@@ -67,6 +77,14 @@
 | `theme` | `"system"` \| `"light"` \| `"dark"` | `"system"` | 界面主题 |
 | `appearance.accent` | 字符串 \| `null` | `null` | 强调色 `#RRGGBB`；`null` 跟随系统强调色（取不到时用 `#0067C0`） |
 | `appearance.window_material` | 布尔 | `true` | 平台支持时使用窗口材质（Win11 Mica、macOS vibrancy），否则纯色背景 |
+| `appearance.background.kind` | `"default"` \| `"color"` \| `"image"` | `"default"` | 窗口材质未生效时的背景：内置亮/暗背景（跟随主题）、纯色、自定义图片；图片缺失时回退 `default` |
+| `appearance.background.color` | 字符串 | `"#1F4E79"` | 纯色背景 `#RRGGBB` |
+| `appearance.background.image` | 字符串 \| `null` | `null` | `ui/backgrounds/` 中的文件名，由 `appearance_import_background` 生成 |
+| `appearance.background.fit` | `"fill"` \| `"fit"` \| `"center"` \| `"tile"` | `"fill"` | 图片填充方式：填充、适应、居中、平铺 |
+| `appearance.background.opacity` | 整数 0–100 | `100` | 背景不透明度（%），其余透出主题底色 |
+| `appearance.background.blur` | 整数 0–40 | `0` | 背景模糊半径（px） |
+| `appearance.background.mask` | 整数 -100–100 | `0` | 遮罩亮度：负数变暗、正数变亮 |
+| `appearance.background.card_opacity` | 整数 0–100 | `85` | 卡片与内容区底色不透明度（%），低于 100 时显示毛玻璃 |
 | `memory.max_mb` | 正整数 | `4096` | 新建实例的默认最大内存（MiB），512–32768 |
 | `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
 | `download.source` | `"auto"` \| `"official"` \| 镜像名（如 `"bmclapi"`） | `"auto"` | 下载源。`auto`：Forge、NeoForge、Fabric 先走 BMCLAPI（`bmclapi-loaders`），其余文件走官方源，失败都回退官方源。`bmclapi`：所有文件先走 BMCLAPI 再回退官方源。未知名称按 `auto` 处理 |

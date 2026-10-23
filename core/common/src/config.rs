@@ -39,8 +39,11 @@ pub enum ThemeMode {
 pub struct AppearanceConfig {
     /// 强调色 `#RRGGBB`；`null` 表示跟随系统强调色。
     pub accent: Option<String>,
-    /// 平台支持时使用窗口材质（Mica / vibrancy），否则使用纯色背景。
+    /// 平台支持时使用窗口材质（Mica / vibrancy），此时不显示 `background`；
+    /// 平台不支持或关闭时使用 `background`。
     pub window_material: bool,
+    /// 窗口背景与透明度（PLAN.md M1-19）。
+    pub background: BackgroundConfig,
 }
 
 impl Default for AppearanceConfig {
@@ -48,6 +51,72 @@ impl Default for AppearanceConfig {
         Self {
             accent: None,
             window_material: true,
+            background: BackgroundConfig::default(),
+        }
+    }
+}
+
+/// 背景来源（窗口材质之外）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum BackgroundKind {
+    /// 内置背景，跟随亮/暗主题切换。
+    #[default]
+    Default,
+    /// 纯色 `color`。
+    Color,
+    /// `<data_root>/ui/backgrounds/` 下的图片 `image`。
+    Image,
+}
+
+/// 背景图片的填充方式。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum BackgroundFit {
+    /// 等比缩放铺满窗口，超出部分裁掉。
+    #[default]
+    Fill,
+    /// 等比缩放完整显示，留白处为主题底色。
+    Fit,
+    /// 原始尺寸居中。
+    Center,
+    /// 原始尺寸平铺。
+    Tile,
+}
+
+/// 窗口背景与透明度。百分比字段取值 0–100。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(default)]
+pub struct BackgroundConfig {
+    /// 背景来源。
+    pub kind: BackgroundKind,
+    /// 纯色背景的颜色 `#RRGGBB`。
+    pub color: String,
+    /// 背景图片在 `ui/backgrounds/` 中的文件名；未导入时为 `null`。
+    pub image: Option<String>,
+    /// 图片填充方式。
+    pub fit: BackgroundFit,
+    /// 背景不透明度（%），其余部分透出主题底色。
+    pub opacity: u8,
+    /// 背景模糊半径（px），0–40。
+    pub blur: u8,
+    /// 遮罩亮度，-100–100：负数叠加黑色变暗，正数叠加白色变亮，0 不加遮罩。
+    pub mask: i8,
+    /// 卡片与内容区底色的不透明度（%）；低于 100 时卡片显示毛玻璃效果。
+    pub card_opacity: u8,
+}
+
+impl Default for BackgroundConfig {
+    fn default() -> Self {
+        Self {
+            kind: BackgroundKind::Default,
+            color: "#1F4E79".to_owned(),
+            image: None,
+            fit: BackgroundFit::Fill,
+            opacity: 100,
+            blur: 0,
+            mask: 0,
+            card_opacity: 85,
         }
     }
 }
@@ -350,5 +419,21 @@ mod tests {
         let partial = Config::parse(br##"{"appearance": {"accent": "#FF0000"}}"##).unwrap();
         assert_eq!(partial.appearance.accent.as_deref(), Some("#FF0000"));
         assert!(partial.appearance.window_material);
+        assert_eq!(partial.appearance.background, BackgroundConfig::default());
+    }
+
+    #[test]
+    fn partial_background_fills_defaults() {
+        let config = Config::parse(
+            br#"{"appearance": {"background": {"kind": "image", "image": "bg-1.png", "fit": "tile", "mask": -30}}}"#,
+        )
+        .unwrap();
+        let background = config.appearance.background;
+        assert_eq!(background.kind, BackgroundKind::Image);
+        assert_eq!(background.image.as_deref(), Some("bg-1.png"));
+        assert_eq!(background.fit, BackgroundFit::Tile);
+        assert_eq!(background.mask, -30);
+        assert_eq!(background.opacity, 100);
+        assert_eq!(background.card_opacity, 85);
     }
 }

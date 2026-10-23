@@ -20,6 +20,9 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // app
         commands::app::app_demo_task,
         commands::app::app_info,
+        // appearance
+        commands::appearance::appearance_import_background,
+        commands::appearance::appearance_read_background,
         // game
         commands::game::game_install,
         commands::game::game_version_list,
@@ -424,6 +427,24 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(err["code"], "INSTANCE_NOT_FOUND");
+    }
+
+    #[test]
+    fn appearance_import_and_missing_background_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path().join("data"));
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+        let source = dir.path().join("photo.png");
+        std::fs::write(&source, b"\x89PNG\r\n\x1a\n").unwrap();
+
+        let body = json!({ "args": { "path": source.display().to_string() } });
+        let imported = invoke(&webview, "appearance_import_background", body).unwrap();
+        let image = imported["image"].as_str().unwrap();
+        assert!(paths.ui_backgrounds_dir().join(image).is_file());
+
+        let body = json!({ "args": { "image": "bg-0.png" } });
+        let err = invoke(&webview, "appearance_read_background", body).unwrap_err();
+        assert_eq!(err["code"], "APPEARANCE_IMAGE_MISSING");
     }
 
     #[test]

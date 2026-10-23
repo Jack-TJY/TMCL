@@ -1,4 +1,6 @@
 {
+  "APPEARANCE_IMAGE_MISSING": "Background image {image} not found, using the default background",
+  "APPEARANCE_IMAGE_UNSUPPORTED": "Only PNG, JPG and WebP images up to {max_mb} MB are supported",
   "AUTH_OFFLINE_INVALID_NAME": "Username must be 3–16 letters, digits or underscores",
   "COMMON_CANCELLED": "The operation was cancelled",
   "COMMON_CONFIG_SCHEMA_UNSUPPORTED": "Config file version {schema} is not supported (supported: {supported})",

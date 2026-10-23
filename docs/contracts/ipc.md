@@ -26,6 +26,8 @@
 | 命令 | 参数 | 返回 | 说明 |
 | --- | --- | --- | --- |
 | `app_info` | 无 | `AppInfo { version, os, arch, ms_login_enabled }` | 版本号、平台与功能开关 |
+| `appearance_import_background` | `AppearanceImportArgs { path }` | `AppearanceImported { image }` | 把用户选中的图片复制到 `ui/backgrounds/`，文件名为 `bg-<unix 毫秒>.<png\|jpg\|webp>`（按文件头识别格式）；不是 png/jpg/webp 或超过 32 MB 返回 `APPEARANCE_IMAGE_UNSUPPORTED`；同时删除除新图片与 `config.json` 当前所用图片外的旧背景图。不修改 `config.json`，由前端随后经 `settings_set` 写入 `appearance.background.image` |
+| `appearance_read_background` | `AppearanceImageArgs { image }` | 二进制（前端为 `ArrayBuffer`） | 读取背景图片内容；文件不存在或文件名不是启动器生成的格式时返回 `APPEARANCE_IMAGE_MISSING` |
 | `app_demo_task` | `AppDemoTaskArgs { steps, step_ms, fail_at? }` | `TaskStarted` | 演示任务：`steps` 1–100、`step_ms` ≤ 5000，越界返回 `COMMON_INTERNAL`；走到 `fail_at` 步时以 `failed` 结束 |
 | `game_install` | `GameInstallArgs { version_id }` | `TaskStarted` | 任务种类 `game_install`：下载并校验该版本的版本 JSON、资源索引、依赖库与资源文件，阶段依次为 `version_json`、`asset_index`、`libraries`、`assets`；`version_id` 为空、超过 64 字符或含 `/`、`\`、`:`、`..` 时直接返回 `COMMON_INTERNAL`；版本不存在时任务以 `GAME_VERSION_NOT_FOUND` 失败 |
 | `game_version_list` | 无 | `GameVersionList { latest_release, latest_snapshot, versions: GameVersion { id, kind, release_time }[] }` | 官方版本清单，新版本在前；`kind` 为 `release` \| `snapshot` \| `old_beta` \| `old_alpha` \| `other` |
@@ -47,7 +49,7 @@
 | `settings_get` | 无 | `SettingsSnapshot { settings: LauncherSettings, data_dir, config_backup }` | 读取 `config.json` 中除 `schema`、`language` 外的设置：`LauncherSettings { theme, appearance, memory, download }`，字段同 [data-layout.md](data-layout.md) 第 3 节；`data_dir` 为数据目录绝对路径；`config.json` 损坏时按读取规则备份并回退默认值，`config_backup` 给出备份路径，否则为 `null` |
 | `settings_get_language` | 无 | `SettingsLanguage { language: string \| null }` | `config.json` 中保存的界面语言；尚无可用的 `config.json`（首次启动或文件损坏）时为 `null`，由前端按系统语言选择后写回 |
 | `settings_open_data_dir` | 无 | 无 | 在系统文件管理器中打开数据目录（不存在时先创建） |
-| `settings_set` | `SettingsSetArgs { settings: LauncherSettings }` | `LauncherSettings` | 整体保存设置，界面语言不变，返回保存后的设置；`appearance.accent` 须为 `#RRGGBB` 或 `null`、`download.max_concurrency` 1–64、`memory.max_mb` 512–32768，否则返回 `COMMON_INTERNAL`（`params` 中对应项为 `false`）；下载设置变化时重建下载引擎，已在运行的任务不受影响 |
+| `settings_set` | `SettingsSetArgs { settings: LauncherSettings }` | `LauncherSettings` | 整体保存设置，界面语言不变，返回保存后的设置；`appearance.accent` 须为 `#RRGGBB` 或 `null`、`download.max_concurrency` 1–64、`memory.max_mb` 512–32768、`appearance.background` 各项在下表范围内（`background`），否则返回 `COMMON_INTERNAL`（`params` 中对应项为 `false`）；下载设置变化时重建下载引擎，已在运行的任务不受影响 |
 | `settings_set_language` | `SettingsSetLanguageArgs { language }` | 无 | 写入界面语言，其他设置不变；`language` 须为由字母、数字、连字符组成的 BCP 47 标签（≤ 35 字符），否则返回 `COMMON_INTERNAL` |
 | `task_cancel` | `TaskCancelArgs { task_id }` | `TaskCancelResult { cancelled }` | 请求取消运行中的任务，任务随后以 `task:finished`（`cancelled`）结束；任务不存在或已结束时 `cancelled` 为 `false`，不报错 |
 | `task_list` | 无 | `TaskList { tasks: TaskInfo[] }` | 全局任务列表：运行中的按开始时间先后在前，随后是最近结束的至多 50 条。`TaskInfo { task_id, kind, status, started_at, finished_at, progress, error }`，`status` 为 `running` \| `succeeded` \| `failed` \| `cancelled`，时间为 unix 毫秒，`progress` 为最近一次推送的 `TaskProgress` |
