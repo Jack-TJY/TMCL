@@ -18,6 +18,7 @@ fn windows() -> RuleEnv {
     RuleEnv {
         os_name: "windows",
         arch: "x86_64",
+        os_version: None,
         features: BTreeMap::new(),
     }
 }

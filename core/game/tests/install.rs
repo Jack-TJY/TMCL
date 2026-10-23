@@ -23,6 +23,7 @@ fn env(os: &'static str) -> RuleEnv {
     RuleEnv {
         os_name: os,
         arch: "x86_64",
+        os_version: None,
         features: BTreeMap::new(),
     }
 }

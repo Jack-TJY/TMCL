@@ -18,7 +18,7 @@ use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, ProgressUpdate, Tas
 use tmcl_net::{DownloadItem, DownloadReport, Downloader};
 
 use crate::manifest::{MANIFEST_URL, VersionManifest};
-use crate::version::{RuleEnv, VersionJson};
+use crate::version::{RuleEnv, VersionJson, parse_version};
 
 /// 官方资源文件下载地址前缀。
 pub const RESOURCES_URL: &str = "https://resources.download.minecraft.net";
@@ -148,15 +148,6 @@ impl GameFiles {
         })?;
         parse_version(id, &bytes)
     }
-}
-
-/// 解析版本 JSON；格式错误时返回 `GAME_VERSION_JSON_INVALID`。
-pub fn parse_version(id: &str, bytes: &[u8]) -> AppResult<VersionJson> {
-    serde_json::from_slice(bytes).map_err(|e| {
-        AppError::new(ErrorCode::GameVersionJsonInvalid)
-            .with_param("version", id)
-            .with_detail(e.to_string())
-    })
 }
 
 /// 下载并校验运行 `version_id` 所需的全部文件，已校验的文件不会重复下载。
