@@ -18,7 +18,6 @@
     "title": "安装 {version}",
     "name": "实例名称",
     "loader": "加载器",
-    "loaderVanilla": "原版（Fabric、Forge 等加载器的选择将在后续版本提供）",
     "cancel": "取消",
     "confirm": "创建并下载",
     "started": "已开始下载“{name}”，可在任务中心查看进度"

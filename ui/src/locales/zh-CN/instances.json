@@ -39,6 +39,7 @@
     "loadFailed": "无法读取实例配置",
     "version": "游戏版本",
     "loader": "加载器",
+    "changeLoader": "更换",
     "created": "创建时间",
     "lastPlayed": "上次游玩",
     "group": "分组",
