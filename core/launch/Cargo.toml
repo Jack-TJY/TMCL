@@ -8,3 +8,11 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+tmcl-common = { path = "../common" }
+tmcl-game = { path = "../game" }
+tokio = { workspace = true, features = ["process"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tmcl-auth = { path = "../auth" }
+tmcl-net = { path = "../net" }

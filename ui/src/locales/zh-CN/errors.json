@@ -1,4 +1,5 @@
 {
+  "AUTH_OFFLINE_INVALID_NAME": "用户名只能包含 3–16 个字母、数字或下划线",
   "COMMON_CANCELLED": "操作已取消",
   "COMMON_CONFIG_SCHEMA_UNSUPPORTED": "配置文件版本 {schema} 不受支持（当前支持 {supported}）",
   "COMMON_DATA_DIR_UNAVAILABLE": "无法访问数据目录 {path}",
@@ -9,6 +10,7 @@
   "COMMON_LOG_INIT": "日志系统初始化失败",
   "GAME_VERSION_JSON_INVALID": "版本 {version} 的描述文件已损坏",
   "GAME_VERSION_NOT_FOUND": "找不到版本 {version}",
+  "LAUNCH_SPAWN_FAILED": "无法启动 Java：{java}",
   "NET_CONNECT": "无法连接到服务器 {url}",
   "NET_HASH_MISMATCH": "文件校验失败 {url}",
   "NET_HTTP_STATUS": "服务器返回错误 {status}：{url}",
