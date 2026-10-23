@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
-use tmcl_game::{VersionManifest, VersionType, install_version};
+use tmcl_game::{
+    ManifestPolicy, ManifestStore, VersionManifest, VersionType, install_version, load_manifest,
+};
 use ts_rs::TS;
 
 use crate::events::{TaskStarted, spawn_task};
@@ -41,14 +43,33 @@ pub struct GameInstallArgs {
     pub version_id: String,
 }
 
-/// 获取官方版本清单。
+/// 获取官方版本清单；1 小时内使用 SQLite 中的缓存，获取失败时退回旧缓存。
 #[tauri::command]
 pub async fn game_version_list(state: State<'_, AppState>) -> Result<GameVersionList, AppError> {
     let downloader = state.downloader()?;
     let ctx = TaskCtx::noop("game_version_list");
-    let manifest =
-        VersionManifest::fetch(downloader.client(), &state.game.manifest_url, &ctx).await?;
+    let manifest = load_manifest(
+        &downloader,
+        &SharedDb(&state),
+        &state.game.manifest_url,
+        ManifestPolicy::default(),
+        &ctx,
+    )
+    .await?;
     Ok(to_list(manifest))
+}
+
+/// 通过应用的共享数据库连接存取版本清单缓存。
+struct SharedDb<'a>(&'a AppState);
+
+impl ManifestStore for SharedDb<'_> {
+    fn load_manifest(&self, url: &str) -> AppResult<Option<(String, i64)>> {
+        self.0.with_db(|_, db| db.load_manifest(url))
+    }
+
+    fn save_manifest(&self, url: &str, body: &str) -> AppResult<()> {
+        self.0.with_db(|_, db| db.save_manifest(url, body))
+    }
 }
 
 /// 下载并校验运行该版本所需的全部文件，立即返回任务 ID。
