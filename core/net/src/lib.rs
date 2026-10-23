@@ -4,10 +4,15 @@
 
 pub mod client;
 pub mod download;
+pub mod progress;
+pub mod retry;
 #[cfg(feature = "test-util")]
 pub mod testing;
 
 pub use client::{HttpClient, USER_AGENT};
 pub use download::{
-    DownloadItem, DownloadReport, Outcome, download_all, download_one, is_valid, sha1_file,
+    DownloadItem, DownloadOptions, DownloadReport, Downloader, Outcome, download_all, download_one,
+    is_valid, sha1_file,
 };
+pub use progress::ProgressTracker;
+pub use retry::{RetryPolicy, is_retryable};
