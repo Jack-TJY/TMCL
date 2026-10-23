@@ -1,0 +1,37 @@
+{
+  "center": {
+    "title": "Tasks",
+    "empty": "No tasks",
+    "clearFinished": "Clear finished"
+  },
+  "kind": {
+    "game_install": "Download game",
+    "instance_duplicate": "Copy instance",
+    "instance_export": "Export instance",
+    "instance_import": "Import instance"
+  },
+  "stage": {
+    "version_json": "Version info",
+    "asset_index": "Asset index",
+    "libraries": "Libraries",
+    "assets": "Assets",
+    "copy": "Copying files",
+    "export": "Packing",
+    "import": "Unpacking"
+  },
+  "status": {
+    "waiting": "Preparing…",
+    "succeeded": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "speed": "{speed}/s",
+  "action": {
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "dismiss": "Remove",
+    "copy": "Copy details",
+    "copied": "Error details copied",
+    "copyFailed": "Couldn't copy"
+  }
+}

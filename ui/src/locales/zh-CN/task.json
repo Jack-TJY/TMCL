@@ -1,0 +1,37 @@
+{
+  "center": {
+    "title": "任务",
+    "empty": "没有任务",
+    "clearFinished": "清除已结束"
+  },
+  "kind": {
+    "game_install": "下载游戏",
+    "instance_duplicate": "复制实例",
+    "instance_export": "导出实例",
+    "instance_import": "导入实例"
+  },
+  "stage": {
+    "version_json": "版本信息",
+    "asset_index": "资源索引",
+    "libraries": "依赖库",
+    "assets": "资源文件",
+    "copy": "复制文件",
+    "export": "打包",
+    "import": "解包"
+  },
+  "status": {
+    "waiting": "准备中…",
+    "succeeded": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "speed": "{speed}/s",
+  "action": {
+    "cancel": "取消",
+    "retry": "重试",
+    "dismiss": "移除",
+    "copy": "复制详情",
+    "copied": "已复制错误详情",
+    "copyFailed": "复制失败"
+  }
+}
