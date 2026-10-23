@@ -56,7 +56,9 @@ fn setup<R: Runtime>(builder: tauri::Builder<R>, state: AppState) -> tauri::Buil
 /// 构建并运行 Tauri 应用。
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    setup(tauri::Builder::default(), AppState::new())
+    // 文件对话框：导入导出实例时由前端经 `ui/src/api/dialog.ts` 调用，只开放打开与保存两项权限。
+    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    setup(builder, AppState::new())
         .run(tauri::generate_context!())
         .expect("error while running TMCL");
 }
