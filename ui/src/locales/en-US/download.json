@@ -1,0 +1,31 @@
+{
+  "kind": {
+    "release": "Releases",
+    "snapshot": "Snapshots",
+    "old": "Old versions"
+  },
+  "column": {
+    "version": "Version",
+    "released": "Released"
+  },
+  "latest": "Latest",
+  "search": "Search versions",
+  "refresh": "Refresh",
+  "loadFailed": "Couldn't load the version list",
+  "retry": "Retry",
+  "install": {
+    "action": "Install",
+    "title": "Install {version}",
+    "name": "Instance name",
+    "loader": "Mod loader",
+    "loaderVanilla": "Vanilla (choosing Fabric, Forge and other loaders comes in a later version)",
+    "cancel": "Cancel",
+    "confirm": "Create and download",
+    "started": "Started downloading “{name}”. Track it in the task center."
+  },
+  "source": {
+    "auto": "Download source: automatic. Game files come from Mojang's official servers; Forge, NeoForge and Fabric are mirrored by BMCLAPI (bangbang93, bmclapidoc.bangbang93.com) and fall back to official servers on failure.",
+    "bmclapi": "Download source: BMCLAPI. Files are mirrored by BMCLAPI (bangbang93, bmclapidoc.bangbang93.com) first and fall back to official servers on failure. Files remain the property of their original sites.",
+    "official": "Download source: official. All files are downloaded from Mojang and each loader's official site."
+  }
+}

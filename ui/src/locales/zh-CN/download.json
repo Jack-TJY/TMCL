@@ -1,0 +1,31 @@
+{
+  "kind": {
+    "release": "正式版",
+    "snapshot": "快照",
+    "old": "远古版本"
+  },
+  "column": {
+    "version": "版本",
+    "released": "发布日期"
+  },
+  "latest": "最新",
+  "search": "搜索版本号",
+  "refresh": "刷新",
+  "loadFailed": "无法获取版本列表",
+  "retry": "重试",
+  "install": {
+    "action": "安装",
+    "title": "安装 {version}",
+    "name": "实例名称",
+    "loader": "加载器",
+    "loaderVanilla": "原版（Fabric、Forge 等加载器的选择将在后续版本提供）",
+    "cancel": "取消",
+    "confirm": "创建并下载",
+    "started": "已开始下载“{name}”，可在任务中心查看进度"
+  },
+  "source": {
+    "auto": "下载源：自动。游戏文件来自 Mojang 官方源；Forge、NeoForge、Fabric 由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速，失败时自动回退官方源。",
+    "bmclapi": "下载源：BMCLAPI。文件优先由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速，失败时自动回退官方源；文件版权归原站点所有。",
+    "official": "下载源：官方源。所有文件均从 Mojang 与各加载器的官方站点下载。"
+  }
+}
