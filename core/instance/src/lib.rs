@@ -4,13 +4,16 @@
 //!
 //! - [`model`]：`instance.json` 结构与 `schema` 迁移；
 //! - [`store`]：创建、列表（SQLite 索引 + 启动对账）、读取、修改、重命名、
-//!   删除到回收站。
+//!   删除到回收站；
+//! - [`import_export`]：复制实例，导出 / 导入 `.tmclpack`。
 
+pub mod import_export;
 pub mod model;
 pub mod store;
 #[cfg(test)]
 mod test_util;
 
+pub use import_export::PACK_EXTENSION;
 pub use model::{
     INSTANCE_SCHEMA, InstanceConfig, JavaSetting, LoaderKind, LoaderSpec, MemorySetting,
     WindowSetting,
