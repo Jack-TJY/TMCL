@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn game_version_list_over_ipc() {
-        let (_app, webview, _server, _dir) = game_app();
+        let (_app, webview, server, _dir) = game_app();
         let list = invoke(&webview, "game_version_list", json!({})).unwrap();
         assert_eq!(list["latest_release"], "1.20.1");
         assert_eq!(list["versions"][0]["id"], "23w31a");
@@ -243,6 +243,10 @@ mod tests {
             list["versions"][1]["release_time"],
             "2023-06-12T13:25:51+00:00"
         );
+        // 第二次读取命中 SQLite 缓存，不再请求服务器。
+        let again = invoke(&webview, "game_version_list", json!({})).unwrap();
+        assert_eq!(again, list);
+        assert_eq!(server.hits(), 1);
     }
 
     #[test]
