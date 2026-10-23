@@ -4143,6 +4143,20 @@ dependencies = [
 [[package]]
 name = "tmcl-loader"
 version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "sha1",
+ "tempfile",
+ "tmcl-common",
+ "tmcl-game",
+ "tmcl-instance",
+ "tmcl-net",
+ "tokio",
+ "tracing",
+ "ts-rs",
+]
 
 [[package]]
 name = "tmcl-net"

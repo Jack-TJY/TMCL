@@ -34,6 +34,10 @@
 | `LAUNCH_ALREADY_RUNNING` | launch | 该实例已在启动或运行中，同一实例同时只能运行一个游戏 | `id` | 该实例已在运行 | This instance is already running |
 | `LAUNCH_SPAWN_FAILED` | launch | 无法启动游戏进程（Java 路径无效或无权限） | `java` | 无法启动 Java：{java} | Failed to start Java: {java} |
 | `LAUNCH_VERSION_NOT_INSTALLED` | launch | 实例需要的游戏版本尚未安装；目前用于带模组加载器的实例（加载器安装由 M1-09 提供） | `version`、`loader`（可选） | 实例需要的版本 {version} {loader} 尚未安装 | The version {version} {loader} required by this instance is not installed |
+| `LOADER_INSTALLER_INVALID` | loader | 加载器安装器或安装描述（install_profile.json、profile JSON）损坏或格式不受支持 | `kind`、`version` | 安装器损坏或格式不受支持（{kind} {version}） | The installer of {kind} {version} is corrupted or unsupported |
+| `LOADER_PROCESSOR_FAILED` | loader | Forge/NeoForge 安装器的处理步骤（processor）退出码非 0、输出缺失或 SHA1 不符 | `kind`、`version`、`processor` | {kind} {version} 安装失败：处理步骤 {processor} 出错 | Failed to install {kind} {version}: processor {processor} failed |
+| `LOADER_UNSUPPORTED_VERSION` | loader | 该加载器不支持这个游戏版本（如 Forge 1.7.10 以前的版本） | `kind`、`game` | {kind} 不支持 Minecraft {game} | {kind} does not support Minecraft {game} |
+| `LOADER_VERSION_NOT_FOUND` | loader | 加载器元数据中没有该游戏版本对应的加载器版本 | `kind`、`game`、`version` | 找不到适用于 Minecraft {game} 的 {kind} {version} | {kind} {version} for Minecraft {game} was not found |
 | `NET_CONNECT` | net | 无法连接服务器（DNS、TCP 或 TLS 失败） | `url` | 无法连接到服务器 {url} | Cannot connect to {url} |
 | `NET_HASH_MISMATCH` | net | 下载文件的 SHA1 与期望值不一致 | `url`、`expected`、`actual` | 文件校验失败 {url} | File verification failed for {url} |
 | `NET_HTTP_STATUS` | net | 服务器返回非 2xx 状态码 | `url`、`status` | 服务器返回错误 {status}：{url} | Server returned {status} for {url} |
