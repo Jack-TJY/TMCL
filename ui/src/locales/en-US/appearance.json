@@ -1,0 +1,49 @@
+{
+  "source": {
+    "label": "Background",
+    "description": "Window material, built-in background, solid color or your own image",
+    "noMaterial": "Window material is not supported on this system; choose a built-in background, color or image",
+    "default": "Default (follows light/dark theme)",
+    "color": "Solid color",
+    "image": "Picture",
+    "material": "Window material"
+  },
+  "color": {
+    "label": "Background color"
+  },
+  "image": {
+    "label": "Background picture",
+    "description": "PNG, JPG and WebP are supported; the picture is copied to the data folder",
+    "choose": "Choose picture…",
+    "filter": "Images"
+  },
+  "fit": {
+    "label": "Fit",
+    "fill": "Fill",
+    "fit": "Fit",
+    "center": "Center",
+    "tile": "Tile"
+  },
+  "opacity": {
+    "label": "Background opacity",
+    "description": "Lower values let the theme color show through"
+  },
+  "blur": {
+    "label": "Background blur",
+    "description": "Blur the background so content stands out"
+  },
+  "mask": {
+    "label": "Overlay brightness",
+    "description": "Left to darken, right to brighten"
+  },
+  "card_opacity": {
+    "label": "Card opacity",
+    "description": "Below 100%, cards become frosted glass and show the background"
+  },
+  "materialHint": "Not available while using window material",
+  "reset": {
+    "label": "Reset",
+    "description": "Restore the default background and transparency",
+    "action": "Reset"
+  }
+}

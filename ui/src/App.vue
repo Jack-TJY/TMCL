@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 根组件：按设置应用亮/暗主题、强调色与组件库语言，渲染应用框架。
+// 根组件：按设置应用亮/暗主题、强调色与组件库语言，在窗口背景之上渲染应用框架。
 import {
   darkTheme,
   dateEnUS,
@@ -12,6 +12,7 @@ import {
 } from "naive-ui";
 import { computed, watch, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
+import AppBackground from "./components/app-background/AppBackground.vue";
 import AppLayout from "./layouts/AppLayout.vue";
 import { useSettingsStore } from "./stores/settings";
 import { fluentCssVars, fluentOverrides } from "./theme/fluent";
@@ -52,7 +53,9 @@ watch(
   >
     <NMessageProvider>
       <NDialogProvider>
-        <AppLayout />
+        <AppBackground>
+          <AppLayout />
+        </AppBackground>
       </NDialogProvider>
     </NMessageProvider>
   </NConfigProvider>
