@@ -1,0 +1,55 @@
+{
+  "section": {
+    "appearance": "Appearance",
+    "download": "Download",
+    "game": "Game",
+    "storage": "Storage",
+    "about": "About"
+  },
+  "theme": {
+    "label": "Theme",
+    "description": "Use light, dark, or follow the system setting",
+    "system": "Use system setting",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "accent": {
+    "label": "Accent color",
+    "description": "Uses the system accent color by default",
+    "unavailable": "The system accent color is unavailable, using {color} by default",
+    "system": "Use system setting",
+    "custom": "Custom"
+  },
+  "source": {
+    "label": "Download source",
+    "description": "Automatic mode prefers a mirror and falls back to the official source",
+    "auto": "Automatic",
+    "official": "Official",
+    "bmclapi": "BMCLAPI mirror"
+  },
+  "concurrency": {
+    "label": "Concurrent downloads",
+    "description": "Number of downloads running at the same time (1–64)"
+  },
+  "memory": {
+    "label": "Default maximum memory",
+    "description": "Maximum memory given to the game for new instances"
+  },
+  "java": {
+    "label": "Java",
+    "found": "{count} Java installations found",
+    "none": "No Java found yet. One will be chosen or downloaded when the game starts",
+    "managed": "Managed by TMCL"
+  },
+  "dataDir": {
+    "label": "Data folder",
+    "open": "Open folder"
+  },
+  "about": {
+    "version": "Version {version} · {os}/{arch}",
+    "versionUnknown": "Version information unavailable",
+    "disclaimer": "TMCL is an unofficial launcher and is not affiliated with Mojang Studios or Microsoft.",
+    "license": "TMCL is open-source software released under the GPL-3.0 license."
+  },
+  "notYetAvailable": "Coming in a later version"
+}

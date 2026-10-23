@@ -1,0 +1,55 @@
+{
+  "section": {
+    "appearance": "外观",
+    "download": "下载",
+    "game": "游戏",
+    "storage": "存储",
+    "about": "关于"
+  },
+  "theme": {
+    "label": "主题",
+    "description": "选择亮色、暗色，或跟随系统设置",
+    "system": "跟随系统",
+    "light": "亮色",
+    "dark": "暗色"
+  },
+  "accent": {
+    "label": "强调色",
+    "description": "默认使用系统强调色",
+    "unavailable": "无法读取系统强调色，默认使用 {color}",
+    "system": "跟随系统",
+    "custom": "自定义"
+  },
+  "source": {
+    "label": "下载源",
+    "description": "自动模式下优先使用镜像，失败时回退官方源",
+    "auto": "自动",
+    "official": "官方源",
+    "bmclapi": "BMCLAPI 镜像"
+  },
+  "concurrency": {
+    "label": "同时下载数",
+    "description": "同时进行的下载任务数量（1–64）"
+  },
+  "memory": {
+    "label": "默认最大内存",
+    "description": "新建实例时分配给游戏的最大内存"
+  },
+  "java": {
+    "label": "Java",
+    "found": "已发现 {count} 个 Java",
+    "none": "尚未发现 Java，启动游戏时会自动选择或下载",
+    "managed": "由启动器管理"
+  },
+  "dataDir": {
+    "label": "数据目录",
+    "open": "打开文件夹"
+  },
+  "about": {
+    "version": "版本 {version} · {os}/{arch}",
+    "versionUnknown": "版本信息不可用",
+    "disclaimer": "TMCL 是非官方启动器，与 Mojang Studios、Microsoft 无关。",
+    "license": "TMCL 是开源软件，以 GPL-3.0 许可证发布。"
+  },
+  "notYetAvailable": "后续版本提供"
+}

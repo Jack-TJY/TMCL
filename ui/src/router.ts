@@ -2,6 +2,7 @@
 // 页面尚未实现时使用 PlaceholderPage，对应步骤把 component 换成自己的页面即可。
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from "vue-router";
 import PlaceholderPage from "./layouts/PlaceholderPage.vue";
+import SettingsPage from "./pages/settings/SettingsPage.vue";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -45,7 +46,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/settings",
     name: "settings",
-    component: PlaceholderPage,
+    component: SettingsPage,
     meta: { titleKey: "shell.nav.settings" },
   },
   { path: "/:pathMatch(.*)*", redirect: "/home" },
