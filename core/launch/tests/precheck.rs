@@ -4,7 +4,7 @@ use tmcl_common::{DataPaths, ErrorCode, TaskCtx};
 use tmcl_game::InstallOptions;
 use tmcl_instance::{InstanceConfig, JavaSetting, LoaderKind, LoaderSpec};
 use tmcl_java::RuntimeInstaller;
-use tmcl_launch::{LaunchAccount, LaunchEnv, prepare};
+use tmcl_launch::{LaunchAccount, LaunchEnv, prepare, version_id};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient};
 
 struct Fixture {
@@ -99,4 +99,21 @@ async fn cancelled_task_stops_preparation() {
         .unwrap_err();
     assert_eq!(err.code, ErrorCode::CommonCancelled);
     assert_eq!(f.natives_dirs(), 0);
+}
+
+#[test]
+fn loader_instances_launch_the_loader_version() {
+    let mut instance = InstanceConfig::new("x", "1.20.1", None).unwrap();
+    assert_eq!(version_id(&instance), "1.20.1");
+    for (kind, version, expected) in [
+        (LoaderKind::Fabric, "0.16.5", "fabric-loader-0.16.5-1.20.1"),
+        (LoaderKind::Forge, "47.2.0", "1.20.1-forge-47.2.0"),
+        (LoaderKind::Neoforge, "47.1.106", "1.20.1-neoforge-47.1.106"),
+    ] {
+        instance.loader = Some(LoaderSpec {
+            kind,
+            version: version.to_owned(),
+        });
+        assert_eq!(version_id(&instance), expected);
+    }
 }

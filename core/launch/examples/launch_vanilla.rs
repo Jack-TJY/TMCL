@@ -1,11 +1,12 @@
-//! 端到端示例：准备（补全文件、选择 Java、解压 natives）并用离线账号启动原版。
+//! 端到端示例：准备（补全文件、选择 Java、解压 natives）并用离线账号启动原版或已安装的加载器版本。
 //!
 //! ```text
-//! cargo run -p tmcl-launch --example launch_vanilla -- 1.20.1 [--java <java 路径>] [--name Dev] [--data <数据目录>] [--kill-after <秒>]
+//! cargo run -p tmcl-launch --example launch_vanilla -- 1.20.1 [--loader <种类>:<版本>] [--java <java 路径>] [--name Dev] [--data <数据目录>] [--kill-after <秒>]
 //! ```
 //!
 //! 不给 `--java` 时自动选择（没有合适的就下载运行时）；不给 `--data` 时使用
-//! `DataPaths::resolve()`，即示例可执行文件旁的 `tmcl-data/`。离线账号仅限本地测试。
+//! `DataPaths::resolve()`，即示例可执行文件旁的 `tmcl-data/`。`--loader forge:47.2.0` 等需先用
+//! `tmcl-loader` 的 `install_loader` 示例安装。离线账号仅限本地测试。
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -15,13 +16,14 @@ use std::time::Duration;
 use tmcl_auth::OfflineAccount;
 use tmcl_common::{AppResult, DataPaths, ProgressSink, TaskCtx, TaskProgress, ThrottledSink};
 use tmcl_game::InstallOptions;
-use tmcl_instance::{InstanceConfig, JavaSetting};
+use tmcl_instance::{InstanceConfig, JavaSetting, LoaderKind, LoaderSpec};
 use tmcl_java::RuntimeInstaller;
-use tmcl_launch::{LaunchAccount, LaunchEnv, LogStream, prepare, spawn};
+use tmcl_launch::{LaunchAccount, LaunchEnv, LogStream, prepare, spawn, version_id};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient};
 
 struct Args {
     version: String,
+    loader: Option<LoaderSpec>,
     java: Option<String>,
     name: String,
     data: Option<PathBuf>,
@@ -31,6 +33,7 @@ struct Args {
 fn parse_args() -> Result<Args, String> {
     let mut args = Args {
         version: String::new(),
+        loader: None,
         java: None,
         name: "Dev".to_owned(),
         data: None,
@@ -40,6 +43,21 @@ fn parse_args() -> Result<Args, String> {
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--java" => args.java = it.next(),
+            "--loader" => {
+                let spec = it.next().ok_or("缺少加载器")?;
+                let (kind, version) = spec.split_once(':').ok_or("加载器格式为 <种类>:<版本>")?;
+                let kind = match kind {
+                    "fabric" => LoaderKind::Fabric,
+                    "quilt" => LoaderKind::Quilt,
+                    "forge" => LoaderKind::Forge,
+                    "neoforge" => LoaderKind::Neoforge,
+                    other => return Err(format!("未知的加载器：{other}")),
+                };
+                args.loader = Some(LoaderSpec {
+                    kind,
+                    version: version.to_owned(),
+                });
+            }
             "--name" => args.name = it.next().ok_or("缺少用户名")?,
             "--data" => args.data = it.next().map(PathBuf::from),
             "--kill-after" => {
@@ -89,8 +107,12 @@ async fn run(args: Args) -> AppResult<i32> {
         java: &java,
         install: &install,
     };
-    let mut instance = InstanceConfig::new(&format!("Dev {}", args.version), &args.version, None)?;
-    instance.id = format!("dev-{}", args.version);
+    let mut instance = InstanceConfig::new(
+        &format!("Dev {}", args.version),
+        &args.version,
+        args.loader.clone(),
+    )?;
+    instance.id = format!("dev-{}", version_id(&instance));
     instance.memory.min_mb = 512;
     instance.memory.max_mb = 2048;
     if let Some(path) = args.java {
