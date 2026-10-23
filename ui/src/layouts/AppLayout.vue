@@ -5,6 +5,7 @@ import { NIcon, NTooltip } from "naive-ui";
 import { onBeforeUnmount, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
+import TaskCenter from "../components/tasks/TaskCenter.vue";
 import { FOOTER_NAV, MAIN_NAV, type NavItem } from "./nav";
 import TitleBar from "./TitleBar.vue";
 
@@ -35,6 +36,9 @@ function isActive(item: NavItem): boolean {
         >
           <NIcon :size="16"><Navigation24Regular /></NIcon>
         </button>
+      </template>
+      <template #trailing>
+        <TaskCenter />
       </template>
     </TitleBar>
     <div class="app-body">

@@ -56,6 +56,7 @@ async function requestClose() {
   <header class="titlebar" data-tauri-drag-region>
     <slot name="leading" />
     <span class="titlebar-title" data-tauri-drag-region>{{ title }}</span>
+    <slot name="trailing" />
     <div v-if="appWindow" class="caption-buttons">
       <button
         class="caption-button"
