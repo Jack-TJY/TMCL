@@ -25,6 +25,10 @@
 | `INSTANCE_NOT_FOUND` | instance | 找不到该实例（目录不存在或 ID 非法） | `id` | 找不到实例 {id} | Instance {id} was not found |
 | `INSTANCE_PACK_INVALID` | instance | `.tmclpack` 不是有效的 zip，或缺少 / 损坏 `instance.json` | — | 不是有效的 TMCL 实例包 | Not a valid TMCL instance pack |
 | `INSTANCE_SCHEMA_UNSUPPORTED` | instance | `instance.json` 的 `schema` 缺失、为 0 或高于当前程序支持的版本 | `schema`、`supported` | 实例配置版本 {schema} 不受支持（当前支持 {supported}），请更新启动器 | Instance config version {schema} is not supported (supported: {supported}); please update the launcher |
+| `JAVA_ARCH_MISMATCH` | java | Java 的架构与启动器不一致（如 64 位系统上的 32 位 Java）；自动选择时为错误，手动指定时为警告 | `java`、`expected`、`actual` | Java 架构不匹配：需要 {expected}，{java} 为 {actual} | Java architecture mismatch: {expected} required, but {java} is {actual} |
+| `JAVA_NOT_FOUND` | java | 找不到满足主版本要求的 Java | `major` | 找不到 Java {major} | Java {major} was not found |
+| `JAVA_PROBE_FAILED` | java | 无法识别 Java 的版本或架构（文件不存在、不是 Java 或运行超时） | `java` | 无法识别 Java：{java} | Cannot identify Java: {java} |
+| `JAVA_VERSION_MISMATCH` | java | 手动指定的 Java 主版本与游戏要求不一致，仅作警告 | `java`、`expected`、`actual` | 所选 Java 为 {actual}，该版本游戏需要 Java {expected}，可能无法启动 | The selected Java is {actual}, but this game version needs Java {expected} and may not start |
 | `LAUNCH_SPAWN_FAILED` | launch | 无法启动游戏进程（Java 路径无效或无权限） | `java` | 无法启动 Java：{java} | Failed to start Java: {java} |
 | `NET_CONNECT` | net | 无法连接服务器（DNS、TCP 或 TLS 失败） | `url` | 无法连接到服务器 {url} | Cannot connect to {url} |
 | `NET_HASH_MISMATCH` | net | 下载文件的 SHA1 与期望值不一致 | `url`、`expected`、`actual` | 文件校验失败 {url} | File verification failed for {url} |

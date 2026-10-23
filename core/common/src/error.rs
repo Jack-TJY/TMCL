@@ -49,6 +49,14 @@ pub enum ErrorCode {
     InstancePackInvalid,
     /// `instance.json` 的 `schema` 为 0 或高于当前程序支持的版本。
     InstanceSchemaUnsupported,
+    /// Java 的架构与启动器不一致（例如 64 位系统上的 32 位 Java）。
+    JavaArchMismatch,
+    /// 找不到满足主版本要求的 Java。
+    JavaNotFound,
+    /// 无法识别该 Java 的版本或架构。
+    JavaProbeFailed,
+    /// 手动指定的 Java 主版本与游戏要求不一致（仅作警告）。
+    JavaVersionMismatch,
     /// 无法启动游戏进程（Java 路径无效或无权限）。
     LaunchSpawnFailed,
     /// 无法连接服务器（DNS、TCP 或 TLS 失败）。
@@ -85,6 +93,10 @@ impl ErrorCode {
             Self::InstanceNotFound => "INSTANCE_NOT_FOUND",
             Self::InstancePackInvalid => "INSTANCE_PACK_INVALID",
             Self::InstanceSchemaUnsupported => "INSTANCE_SCHEMA_UNSUPPORTED",
+            Self::JavaArchMismatch => "JAVA_ARCH_MISMATCH",
+            Self::JavaNotFound => "JAVA_NOT_FOUND",
+            Self::JavaProbeFailed => "JAVA_PROBE_FAILED",
+            Self::JavaVersionMismatch => "JAVA_VERSION_MISMATCH",
             Self::LaunchSpawnFailed => "LAUNCH_SPAWN_FAILED",
             Self::NetConnect => "NET_CONNECT",
             Self::NetHashMismatch => "NET_HASH_MISMATCH",
@@ -191,6 +203,10 @@ mod tests {
             ErrorCode::InstanceNotFound,
             ErrorCode::InstancePackInvalid,
             ErrorCode::InstanceSchemaUnsupported,
+            ErrorCode::JavaArchMismatch,
+            ErrorCode::JavaNotFound,
+            ErrorCode::JavaProbeFailed,
+            ErrorCode::JavaVersionMismatch,
             ErrorCode::LaunchSpawnFailed,
             ErrorCode::NetConnect,
             ErrorCode::NetHashMismatch,
