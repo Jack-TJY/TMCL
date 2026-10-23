@@ -1,17 +1,22 @@
 // 游戏会话（PLAN.md M1-13）：每个实例最近一次启动的状态与日志，供实例页、日志窗口和
-// 首页“开始游戏”组件（M1-18）共用。启动暂由 api/__mocks__/launch.ts 提供。
+// 首页“开始游戏”组件（M1-18）共用。启动经任务中心（种类 `launch`），账号暂由
+// api/__mocks__/account.ts 提供离线账号（M1-08 完成后替换）。
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
-import {
-  mockLaunchKill,
-  mockLaunchStart,
-  mockOnGameExited,
-  mockOnGameLog,
-  type GameExited,
-  type GameLog,
-} from "../../api/__mocks__/launch";
+import { computed, ref, watch } from "vue";
+import { mockLaunchAccount } from "../../api/__mocks__/account";
 import { toAppError } from "../../api/invoke";
+import {
+  LAUNCH_TASK_KIND,
+  launchKill,
+  launchStart,
+  onGameExited,
+  onGameLog,
+} from "../../api/launch";
 import type { AppError } from "../../bindings/AppError";
+import type { GameExited } from "../../bindings/GameExited";
+import type { GameLog } from "../../bindings/GameLog";
+import type { TaskId } from "../../bindings/TaskId";
+import { useTasksStore } from "../../stores/tasks";
 
 /** 每个会话保留的日志行数上限，超出时丢弃最早的行。 */
 export const MAX_LOG_LINES = 5000;
@@ -41,7 +46,6 @@ export interface GameSession {
 export interface LaunchTarget {
   id: string;
   name: string;
-  jvm_args: string[];
 }
 
 /** 追加日志并截断到上限（原地修改）。 */
@@ -59,7 +63,8 @@ export function isActive(session: GameSession | undefined): boolean {
 export const useGameSessions = defineStore("gameSessions", () => {
   const sessions = ref<Record<string, GameSession>>({});
   let crashHandler: ((session: GameSession) => void) | null = null;
-  let subscribed = false;
+  let subscribed: Promise<unknown> | null = null;
+  const tasks = useTasksStore();
 
   const active = computed(() => Object.values(sessions.value).filter((s) => isActive(s)));
 
@@ -79,11 +84,26 @@ export const useGameSessions = defineStore("gameSessions", () => {
     if (exited.crashed) crashHandler?.(session);
   }
 
-  function subscribe() {
-    if (subscribed) return;
-    subscribed = true;
-    mockOnGameLog(onLog);
-    mockOnGameExited(onExited);
+  /** 订阅游戏事件；须在启动前完成，避免漏掉最早的日志。 */
+  function subscribe(): Promise<unknown> {
+    subscribed ??= Promise.all([onGameLog(onLog), onGameExited(onExited)]);
+    return subscribed;
+  }
+
+  /** 等待启动任务结束：成功即游戏进程已创建，失败或取消时抛出 AppError。 */
+  function waitForTask(taskId: TaskId): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const stop = watch(
+        () => tasks.entries.find((e) => e.task_id === taskId),
+        (entry) => {
+          if (!entry || entry.status === "running") return;
+          queueMicrotask(() => stop());
+          if (entry.status === "succeeded") resolve();
+          else reject(entry.error ?? { code: "COMMON_CANCELLED", params: {}, detail: null });
+        },
+        { immediate: true, deep: true },
+      );
+    });
   }
 
   /** 设置崩溃时的回调（例如弹出提示），替换之前设置的回调。 */
@@ -93,7 +113,7 @@ export const useGameSessions = defineStore("gameSessions", () => {
 
   /** 启动实例；已在运行时不重复启动。失败时会话状态为 `failed` 并抛出 AppError。 */
   async function launch(target: LaunchTarget): Promise<void> {
-    subscribe();
+    await subscribe();
     if (isActive(sessions.value[target.id])) return;
     sessions.value[target.id] = {
       instanceId: target.id,
@@ -106,7 +126,15 @@ export const useGameSessions = defineStore("gameSessions", () => {
       nextSeq: 0,
     };
     try {
-      await mockLaunchStart({ instance_id: target.id, jvm_args: target.jvm_args });
+      const taskId = await tasks.start({
+        kind: LAUNCH_TASK_KIND,
+        label: target.name,
+        start: () => launchStart({ instance_id: target.id, account: mockLaunchAccount() }),
+      });
+      await waitForTask(taskId);
+      const session = sessions.value[target.id];
+      // 游戏可能在任务结束前就已输出日志甚至退出，只在仍为启动中时更新。
+      if (session.status === "starting") session.status = "running";
     } catch (err) {
       const error = toAppError(err);
       const session = sessions.value[target.id];
@@ -118,7 +146,7 @@ export const useGameSessions = defineStore("gameSessions", () => {
 
   /** 强制结束游戏进程。 */
   async function kill(instanceId: string): Promise<void> {
-    await mockLaunchKill({ instance_id: instanceId });
+    await launchKill({ instance_id: instanceId });
   }
 
   return { sessions, active, launch, kill, setCrashHandler };

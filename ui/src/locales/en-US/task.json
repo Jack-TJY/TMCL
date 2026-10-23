@@ -8,7 +8,8 @@
     "game_install": "Download game",
     "instance_duplicate": "Copy instance",
     "instance_export": "Export instance",
-    "instance_import": "Import instance"
+    "instance_import": "Import instance",
+    "launch": "Launch game"
   },
   "stage": {
     "version_json": "Version info",
@@ -17,7 +18,9 @@
     "assets": "Assets",
     "copy": "Copying files",
     "export": "Packing",
-    "import": "Unpacking"
+    "import": "Unpacking",
+    "java_runtime": "Java runtime",
+    "verify": "Verifying files"
   },
   "status": {
     "waiting": "Preparing…",
