@@ -28,11 +28,18 @@ pub struct Migration {
 }
 
 /// 所有迁移，按版本号递增排列，一行一条。
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "0001_common_init",
-    sql: include_str!("../migrations/0001_common_init.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "0001_common_init",
+        sql: include_str!("../migrations/0001_common_init.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "0002_instance_index",
+        sql: include_str!("../migrations/0002_instance_index.sql"),
+    },
+];
 
 /// 已打开并完成迁移的数据库连接。
 #[derive(Debug)]
@@ -192,15 +199,15 @@ mod tests {
         const EXTRA: &[Migration] = &[
             MIGRATIONS[0],
             Migration {
-                version: 2,
-                name: "0002_test_extra",
+                version: 99,
+                name: "0099_test_extra",
                 sql: "CREATE TABLE extra (id INTEGER PRIMARY KEY);",
             },
         ];
         let mut db = Db::open_in_memory().unwrap();
         migrate(db.conn_mut(), EXTRA).unwrap();
         migrate(db.conn_mut(), EXTRA).unwrap();
-        assert_eq!(db.schema_version().unwrap(), 2);
+        assert_eq!(db.schema_version().unwrap(), 99);
         db.conn()
             .execute("INSERT INTO extra (id) VALUES (1)", [])
             .unwrap();
@@ -211,15 +218,18 @@ mod tests {
         const BROKEN: &[Migration] = &[
             MIGRATIONS[0],
             Migration {
-                version: 2,
-                name: "0002_test_broken",
+                version: 99,
+                name: "0099_test_broken",
                 sql: "CREATE TABLE half (id INTEGER); THIS IS NOT SQL;",
             },
         ];
         let mut db = Db::open_in_memory().unwrap();
         let err = migrate(db.conn_mut(), BROKEN).unwrap_err();
         assert_eq!(err.code, ErrorCode::CommonDb);
-        assert_eq!(db.schema_version().unwrap(), 1);
+        assert_eq!(
+            db.schema_version().unwrap(),
+            MIGRATIONS.last().unwrap().version
+        );
         let half: i64 = db
             .conn()
             .query_row(

@@ -39,6 +39,16 @@ pub enum ErrorCode {
     GameVersionJsonInvalid,
     /// 版本清单中没有该版本。
     GameVersionNotFound,
+    /// 实例的 `instance.json` 缺失或格式错误。
+    InstanceCorrupted,
+    /// 实例名称为空或过长。
+    InstanceInvalidName,
+    /// 找不到该实例。
+    InstanceNotFound,
+    /// `.tmclpack` 文件格式错误或缺少 `instance.json`。
+    InstancePackInvalid,
+    /// `instance.json` 的 `schema` 为 0 或高于当前程序支持的版本。
+    InstanceSchemaUnsupported,
     /// 无法启动游戏进程（Java 路径无效或无权限）。
     LaunchSpawnFailed,
     /// 无法连接服务器（DNS、TCP 或 TLS 失败）。
@@ -70,6 +80,11 @@ impl ErrorCode {
             Self::CommonLogInit => "COMMON_LOG_INIT",
             Self::GameVersionJsonInvalid => "GAME_VERSION_JSON_INVALID",
             Self::GameVersionNotFound => "GAME_VERSION_NOT_FOUND",
+            Self::InstanceCorrupted => "INSTANCE_CORRUPTED",
+            Self::InstanceInvalidName => "INSTANCE_INVALID_NAME",
+            Self::InstanceNotFound => "INSTANCE_NOT_FOUND",
+            Self::InstancePackInvalid => "INSTANCE_PACK_INVALID",
+            Self::InstanceSchemaUnsupported => "INSTANCE_SCHEMA_UNSUPPORTED",
             Self::LaunchSpawnFailed => "LAUNCH_SPAWN_FAILED",
             Self::NetConnect => "NET_CONNECT",
             Self::NetHashMismatch => "NET_HASH_MISMATCH",
@@ -171,6 +186,11 @@ mod tests {
             ErrorCode::CommonLogInit,
             ErrorCode::GameVersionJsonInvalid,
             ErrorCode::GameVersionNotFound,
+            ErrorCode::InstanceCorrupted,
+            ErrorCode::InstanceInvalidName,
+            ErrorCode::InstanceNotFound,
+            ErrorCode::InstancePackInvalid,
+            ErrorCode::InstanceSchemaUnsupported,
             ErrorCode::LaunchSpawnFailed,
             ErrorCode::NetConnect,
             ErrorCode::NetHashMismatch,

@@ -20,6 +20,11 @@
 | `COMMON_LOG_INIT` | common | 日志系统初始化失败 | — | 日志系统初始化失败 | Failed to initialize logging |
 | `GAME_VERSION_JSON_INVALID` | game | 版本 JSON 格式错误或缺少必需字段 | `version` | 版本 {version} 的描述文件已损坏 | The metadata of version {version} is invalid |
 | `GAME_VERSION_NOT_FOUND` | game | 版本清单中没有该版本 | `version` | 找不到版本 {version} | Version {version} was not found |
+| `INSTANCE_CORRUPTED` | instance | 实例的 `instance.json` 缺失或格式错误 | `id`（可选） | 实例 {id} 的配置文件已损坏 | The configuration of instance {id} is corrupted |
+| `INSTANCE_INVALID_NAME` | instance | 实例名称为空、超过 64 个字符或含控制字符 | `max` | 实例名称不能为空，且不超过 {max} 个字符 | Instance name must not be empty and at most {max} characters |
+| `INSTANCE_NOT_FOUND` | instance | 找不到该实例（目录不存在或 ID 非法） | `id` | 找不到实例 {id} | Instance {id} was not found |
+| `INSTANCE_PACK_INVALID` | instance | `.tmclpack` 不是有效的 zip，或缺少 / 损坏 `instance.json` | — | 不是有效的 TMCL 实例包 | Not a valid TMCL instance pack |
+| `INSTANCE_SCHEMA_UNSUPPORTED` | instance | `instance.json` 的 `schema` 缺失、为 0 或高于当前程序支持的版本 | `schema`、`supported` | 实例配置版本 {schema} 不受支持（当前支持 {supported}），请更新启动器 | Instance config version {schema} is not supported (supported: {supported}); please update the launcher |
 | `LAUNCH_SPAWN_FAILED` | launch | 无法启动游戏进程（Java 路径无效或无权限） | `java` | 无法启动 Java：{java} | Failed to start Java: {java} |
 | `NET_CONNECT` | net | 无法连接服务器（DNS、TCP 或 TLS 失败） | `url` | 无法连接到服务器 {url} | Cannot connect to {url} |
 | `NET_HASH_MISMATCH` | net | 下载文件的 SHA1 与期望值不一致 | `url`、`expected`、`actual` | 文件校验失败 {url} | File verification failed for {url} |

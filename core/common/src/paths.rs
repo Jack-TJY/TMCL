@@ -52,6 +52,7 @@ impl DataPaths {
             self.shared_assets_dir(),
             self.java_dir(),
             self.instances_dir(),
+            self.trash_dir(),
             self.ui_backgrounds_dir(),
             self.cache_dir(),
             self.logs_dir(),
@@ -123,6 +124,11 @@ impl DataPaths {
     /// `instances/<instance-id>/game/`：作为 `--gameDir` 传给游戏。
     pub fn instance_game_dir(&self, instance_id: &str) -> PathBuf {
         self.instance_dir(instance_id).join("game")
+    }
+
+    /// `trash/`：已删除的实例，保留 7 天后清理。
+    pub fn trash_dir(&self) -> PathBuf {
+        self.root.join("trash")
     }
 
     /// `ui/`：界面相关的用户数据。
@@ -260,6 +266,7 @@ mod tests {
             paths.instance_game_dir("abc"),
             root.join("instances/abc/game")
         );
+        assert_eq!(paths.trash_dir(), root.join("trash"));
         assert_eq!(paths.ui_layout_file(), root.join("ui/layout.json"));
         assert_eq!(paths.logs_dir(), root.join("logs"));
     }
