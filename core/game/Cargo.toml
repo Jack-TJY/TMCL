@@ -16,6 +16,7 @@ tmcl-common = { path = "../common" }
 tmcl-net = { path = "../net" }
 tokio = { workspace = true }
 tracing = { workspace = true }
+zip = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 winreg = { workspace = true }

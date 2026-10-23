@@ -8,6 +8,7 @@
   "COMMON_IO": "读写文件失败 {path}",
   "COMMON_JSON": "数据格式错误",
   "COMMON_LOG_INIT": "日志系统初始化失败",
+  "GAME_FILE_MISSING": "版本 {version} 缺少文件 {path}，请重新安装模组加载器",
   "GAME_VERSION_JSON_INVALID": "版本 {version} 的描述文件已损坏",
   "GAME_VERSION_NOT_FOUND": "找不到版本 {version}",
   "INSTANCE_CORRUPTED": "实例 {id} 的配置文件已损坏",

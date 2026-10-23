@@ -35,6 +35,8 @@ pub enum ErrorCode {
     CommonJson,
     /// 日志系统初始化失败。
     CommonLogInit,
+    /// 运行该版本需要的文件缺失，且没有下载地址（由加载器安装器生成）。
+    GameFileMissing,
     /// 版本 JSON 格式错误或缺少必需字段。
     GameVersionJsonInvalid,
     /// 版本清单中没有该版本。
@@ -88,6 +90,7 @@ impl ErrorCode {
             Self::CommonIo => "COMMON_IO",
             Self::CommonJson => "COMMON_JSON",
             Self::CommonLogInit => "COMMON_LOG_INIT",
+            Self::GameFileMissing => "GAME_FILE_MISSING",
             Self::GameVersionJsonInvalid => "GAME_VERSION_JSON_INVALID",
             Self::GameVersionNotFound => "GAME_VERSION_NOT_FOUND",
             Self::InstanceCorrupted => "INSTANCE_CORRUPTED",
@@ -199,6 +202,7 @@ mod tests {
             ErrorCode::CommonIo,
             ErrorCode::CommonJson,
             ErrorCode::CommonLogInit,
+            ErrorCode::GameFileMissing,
             ErrorCode::GameVersionJsonInvalid,
             ErrorCode::GameVersionNotFound,
             ErrorCode::InstanceCorrupted,

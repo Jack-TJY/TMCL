@@ -15,10 +15,11 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, ProgressUpdate, TaskCtx};
-use tmcl_net::{DownloadItem, DownloadReport, Downloader};
+use tmcl_net::{DownloadItem, DownloadReport, Downloader, is_valid};
 
+use crate::libraries::{GameFile, library_files};
 use crate::manifest::{MANIFEST_URL, VersionManifest};
-use crate::version::{RuleEnv, VersionJson, parse_version};
+use crate::version::{MAX_INHERIT_DEPTH, RuleEnv, VersionJson, parse_version, resolve};
 
 /// 官方资源文件下载地址前缀。
 pub const RESOURCES_URL: &str = "https://resources.download.minecraft.net";
@@ -150,9 +151,15 @@ impl GameFiles {
     }
 }
 
-/// 下载并校验运行 `version_id` 所需的全部文件，已校验的文件不会重复下载。
+/// 下载并校验运行 `version_id` 所需的全部文件，已校验的文件不会重复下载；也用于修复。
 ///
-/// 阶段依次为 `version_json`、`asset_index`、`libraries`（含客户端 jar 与日志配置）、`assets`。
+/// 先沿 `inheritsFrom` 准备整条链上的版本 JSON：加载器版本（带 `inheritsFrom`）与清单中没有的
+/// 自定义版本只用本地文件，原版按清单的 SHA1 校验、不符时重新下载；清单获取失败但本地已有
+/// 版本 JSON 时继续使用本地文件。随后按 [`crate::resolve`] 合并，下载资源索引、客户端 jar、
+/// 依赖库（含旧式 natives）、日志配置与资源文件。
+///
+/// 阶段依次为 `version_json`、`asset_index`、`libraries`、`assets`。没有下载地址
+/// （由加载器安装器生成）的库缺失时返回 `GAME_FILE_MISSING`。
 /// 连接数上限、重试与下载源都沿用 `downloader` 的设置。
 pub async fn install_version(
     downloader: &Downloader,
@@ -165,16 +172,21 @@ pub async fn install_version(
     let mut report = InstallReport::default();
 
     ctx.report(ProgressUpdate::new("version_json").items(0, 1));
-    let manifest: VersionManifest = downloader.get_json(&options.manifest_url, ctx).await?;
-    let entry = manifest.find(version_id)?;
-    let json_item = DownloadItem {
-        url: entry.url.clone(),
-        path: files.version_json(version_id),
-        size: None,
-        sha1: Some(entry.sha1.clone()),
+    let mut metadata = Metadata {
+        downloader,
+        files: &files,
+        options,
+        manifest: None,
     };
-    report.add(single(downloader.download_one(&json_item, ctx).await?));
-    let version = files.load_version(version_id)?;
+    let mut id = version_id.to_owned();
+    for _ in 0..MAX_INHERIT_DEPTH {
+        let version = metadata.ensure_json(&id, &mut report, ctx).await?;
+        match version.inherits_from {
+            Some(parent) => id = parent,
+            None => break,
+        }
+    }
+    let version = resolve(version_id, |id| files.load_version(id))?;
     ctx.report(ProgressUpdate::new("version_json").items(1, 1));
 
     let mut index_objects = Vec::new();
@@ -197,10 +209,27 @@ pub async fn install_version(
         ctx.report(ProgressUpdate::new("asset_index").items(1, 1));
     }
 
-    let library_items = library_items(&files, &version, &RuleEnv::current());
+    let library_files = library_files(&files, &version, &RuleEnv::current());
+    let (downloadable, local): (Vec<_>, Vec<_>) =
+        library_files.into_iter().partition(|f| f.url.is_some());
+    for file in local {
+        if !is_valid(&file.path, file.size, file.sha1.as_deref()).await? {
+            return Err(AppError::new(ErrorCode::GameFileMissing)
+                .with_param("version", version_id)
+                .with_param("path", file.path.display()));
+        }
+        report.skipped += 1;
+    }
     report.add(
         downloader
-            .download_all(library_items, "libraries", ctx)
+            .download_all(
+                downloadable
+                    .iter()
+                    .filter_map(GameFile::download_item)
+                    .collect(),
+                "libraries",
+                ctx,
+            )
             .await?,
     );
     report.add(
@@ -211,41 +240,57 @@ pub async fn install_version(
     Ok(report)
 }
 
-/// 客户端 jar、适用于 `env` 的依赖库和日志配置。
-pub fn library_items(files: &GameFiles, version: &VersionJson, env: &RuleEnv) -> Vec<DownloadItem> {
-    let mut items = Vec::new();
-    if let Some(downloads) = &version.downloads {
-        items.push(DownloadItem {
-            url: downloads.client.url.clone(),
-            path: files.client_jar(&version.id),
-            size: Some(downloads.client.size),
-            sha1: Some(downloads.client.sha1.clone()),
-        });
-    }
-    let mut seen = BTreeSet::new();
-    for library in version.libraries.iter().filter(|l| l.applies(env)) {
-        let Some(artifact) = library.artifact() else {
-            continue;
-        };
-        if !seen.insert(artifact.path.as_str()) {
-            continue;
+/// 准备版本 JSON 时的状态：版本清单只在需要时获取一次。
+struct Metadata<'a> {
+    downloader: &'a Downloader,
+    files: &'a GameFiles,
+    options: &'a InstallOptions,
+    manifest: Option<VersionManifest>,
+}
+
+impl Metadata<'_> {
+    /// 确保 `id` 的版本 JSON 在本地且为最新，返回解析结果（未合并父版本）。
+    async fn ensure_json(
+        &mut self,
+        id: &str,
+        report: &mut InstallReport,
+        ctx: &TaskCtx,
+    ) -> AppResult<VersionJson> {
+        let local = self.files.load_version(id).ok();
+        if let Some(version) = &local
+            && version.inherits_from.is_some()
+        {
+            return Ok(version.clone());
         }
-        items.push(DownloadItem {
-            url: artifact.url.clone(),
-            path: files.library(&artifact.path),
-            size: Some(artifact.size),
-            sha1: Some(artifact.sha1.clone()),
-        });
+        let manifest = match &self.manifest {
+            Some(manifest) => manifest,
+            None => match self
+                .downloader
+                .get_json::<VersionManifest>(&self.options.manifest_url, ctx)
+                .await
+            {
+                Ok(manifest) => self.manifest.insert(manifest),
+                Err(e) if e.is_cancelled() => return Err(e),
+                Err(e) => {
+                    return local.ok_or(e).inspect(|_| {
+                        tracing::warn!(version = id, "获取版本清单失败，使用本地版本 JSON");
+                    });
+                }
+            },
+        };
+        let entry = match manifest.find(id) {
+            Ok(entry) => entry,
+            Err(e) => return local.ok_or(e),
+        };
+        let item = DownloadItem {
+            url: entry.url.clone(),
+            path: self.files.version_json(id),
+            size: None,
+            sha1: Some(entry.sha1.clone()),
+        };
+        report.add(single(self.downloader.download_one(&item, ctx).await?));
+        self.files.load_version(id)
     }
-    if let Some(log) = version.logging.as_ref().and_then(|l| l.client.as_ref()) {
-        items.push(DownloadItem {
-            url: log.file.url.clone(),
-            path: files.log_config(&log.file.id),
-            size: Some(log.file.size),
-            sha1: Some(log.file.sha1.clone()),
-        });
-    }
-    items
 }
 
 /// 资源索引中的对象，按哈希去重。

@@ -14,7 +14,9 @@ use std::time::Duration;
 
 use tmcl_auth::OfflineAccount;
 use tmcl_common::{AppResult, DataPaths, ProgressSink, TaskCtx, TaskProgress, ThrottledSink};
-use tmcl_game::{GameFiles, InstallOptions, install_version};
+use tmcl_game::{
+    GameFiles, InstallOptions, RuleEnv, extract_natives, install_version, new_natives_dir,
+};
 use tmcl_launch::{LaunchAccount, LaunchSpec, LogStream, build_command, spawn};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient};
 
@@ -94,11 +96,15 @@ async fn run(args: Args) -> AppResult<i32> {
 
     let files = GameFiles::new(paths.clone());
     let instance_id = format!("dev-{}", args.version);
+    let version = files.load_version(&args.version)?;
+    let natives_dir = new_natives_dir(&paths, &args.version);
+    let natives = extract_natives(&files, &version, &RuleEnv::current(), &natives_dir)?;
+    eprintln!("解压 natives：{natives} 个文件");
     let spec = LaunchSpec {
         java: args.java,
-        version: files.load_version(&args.version)?,
+        version,
         game_dir: paths.instance_game_dir(&instance_id),
-        natives_dir: paths.cache_dir().join("natives").join(&args.version),
+        natives_dir: natives_dir.clone(),
         account: LaunchAccount {
             name: account.name.clone(),
             uuid: account.uuid.simple().to_string(),
@@ -121,6 +127,7 @@ async fn run(args: Args) -> AppResult<i32> {
         })
         .await?;
     eprintln!("游戏退出：{:?}，崩溃：{}", exit.exit_code, exit.crashed);
+    let _ = std::fs::remove_dir_all(&natives_dir);
     Ok(exit.exit_code.unwrap_or(1))
 }
 
