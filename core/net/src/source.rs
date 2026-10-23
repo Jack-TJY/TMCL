@@ -17,12 +17,17 @@ pub const OFFICIAL: &str = "official";
 pub const AUTO: &str = "auto";
 /// BMCLAPI 镜像的名称。
 pub const BMCLAPI: &str = "bmclapi";
+/// 只镜像模组加载器（Forge、NeoForge、Fabric）的 BMCLAPI 镜像名称。
+pub const BMCLAPI_LOADERS: &str = "bmclapi-loaders";
 
-/// `auto` 策略使用的默认镜像。
+/// `auto` 策略使用的默认镜像：只让加载器走 BMCLAPI，Mojang 的文件走官方源。
 ///
-/// 由维护者看完 `docs/research/mirrors.md` 的测速报告后决定，决定前为
-/// `None`，即 `auto` 等同于只用官方源。
-pub const DEFAULT_MIRROR: Option<&str> = None;
+/// 依据 `docs/research/mirrors.md` 的实测：国内直连时官方的 Mojang 内容最快
+/// 最稳，而官方 Forge/Fabric maven 无法访问；BMCLAPI 的加载器文件稳定，
+/// 但 Mojang 的小文件常超时。维护者于 2026-10-23 选定。
+pub const DEFAULT_MIRROR: Option<&str> = Some(BMCLAPI_LOADERS);
+
+const BMCLAPI_ROOT: &str = "https://bmclapi2.bangbang93.com";
 
 /// 一个下载源。
 pub trait DownloadSource: Debug + Send + Sync {
@@ -74,37 +79,48 @@ impl PrefixMirror {
     /// <https://bmclapidoc.bangbang93.com>。NeoForge 只镜像 `forge` 与
     /// `neoforge` 两个构件；Quilt 被文档标为暂不可用，未收录。
     pub fn bmclapi() -> Self {
-        const ROOT: &str = "https://bmclapi2.bangbang93.com";
-        Self::new(
-            BMCLAPI,
-            [
-                ("https://piston-meta.mojang.com", ROOT.to_owned()),
-                ("https://piston-data.mojang.com", ROOT.to_owned()),
-                ("https://launchermeta.mojang.com", ROOT.to_owned()),
-                ("https://launcher.mojang.com", ROOT.to_owned()),
-                ("https://libraries.minecraft.net", format!("{ROOT}/maven")),
-                (
-                    "https://resources.download.minecraft.net",
-                    format!("{ROOT}/assets"),
-                ),
-                (
-                    "https://files.minecraftforge.net/maven",
-                    format!("{ROOT}/maven"),
-                ),
-                ("https://maven.minecraftforge.net", format!("{ROOT}/maven")),
-                (
-                    "https://maven.neoforged.net/releases/net/neoforged/forge",
-                    format!("{ROOT}/maven/net/neoforged/forge"),
-                ),
-                (
-                    "https://maven.neoforged.net/releases/net/neoforged/neoforge",
-                    format!("{ROOT}/maven/net/neoforged/neoforge"),
-                ),
-                ("https://maven.fabricmc.net", format!("{ROOT}/maven")),
-                ("https://meta.fabricmc.net", format!("{ROOT}/fabric-meta")),
-            ],
-        )
+        let root = BMCLAPI_ROOT;
+        let mut rules = vec![
+            ("https://piston-meta.mojang.com", root.to_owned()),
+            ("https://piston-data.mojang.com", root.to_owned()),
+            ("https://launchermeta.mojang.com", root.to_owned()),
+            ("https://launcher.mojang.com", root.to_owned()),
+            ("https://libraries.minecraft.net", format!("{root}/maven")),
+            (
+                "https://resources.download.minecraft.net",
+                format!("{root}/assets"),
+            ),
+        ];
+        rules.extend(loader_rules());
+        Self::new(BMCLAPI, rules)
     }
+
+    /// 只含 [`PrefixMirror::bmclapi`] 中模组加载器规则的镜像。
+    pub fn bmclapi_loaders() -> Self {
+        Self::new(BMCLAPI_LOADERS, loader_rules())
+    }
+}
+
+/// BMCLAPI 中 Forge、NeoForge、Fabric 的改写规则。
+fn loader_rules() -> Vec<(&'static str, String)> {
+    let root = BMCLAPI_ROOT;
+    vec![
+        (
+            "https://files.minecraftforge.net/maven",
+            format!("{root}/maven"),
+        ),
+        ("https://maven.minecraftforge.net", format!("{root}/maven")),
+        (
+            "https://maven.neoforged.net/releases/net/neoforged/forge",
+            format!("{root}/maven/net/neoforged/forge"),
+        ),
+        (
+            "https://maven.neoforged.net/releases/net/neoforged/neoforge",
+            format!("{root}/maven/net/neoforged/neoforge"),
+        ),
+        ("https://maven.fabricmc.net", format!("{root}/maven")),
+        ("https://meta.fabricmc.net", format!("{root}/fabric-meta")),
+    ]
 }
 
 impl DownloadSource for PrefixMirror {
@@ -155,7 +171,10 @@ impl Sources {
         Self {
             policy: policy.into(),
             default_mirror: DEFAULT_MIRROR.map(str::to_owned),
-            mirrors: vec![Arc::new(PrefixMirror::bmclapi())],
+            mirrors: vec![
+                Arc::new(PrefixMirror::bmclapi()),
+                Arc::new(PrefixMirror::bmclapi_loaders()),
+            ],
         }
     }
 
@@ -333,11 +352,41 @@ mod tests {
 
     const LIB: &str = "https://libraries.minecraft.net/a/b/1/b-1.jar";
 
+    const FORGE: &str = "https://maven.minecraftforge.net/net/minecraftforge/forge/x.jar";
+
+    #[test]
+    fn auto_mirrors_only_loaders_by_default() {
+        let s = Sources::new(AUTO);
+        assert_eq!(sources(&s.candidates(LIB)), [OFFICIAL]);
+        assert_eq!(
+            sources(
+                &s.candidates("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
+            ),
+            [OFFICIAL]
+        );
+        let c = s.candidates(FORGE);
+        assert_eq!(sources(&c), [BMCLAPI_LOADERS, OFFICIAL]);
+        assert_eq!(
+            c[0].url,
+            "https://bmclapi2.bangbang93.com/maven/net/minecraftforge/forge/x.jar"
+        );
+    }
+
+    #[test]
+    fn loader_mirror_is_a_subset_of_bmclapi() {
+        let full = PrefixMirror::bmclapi();
+        let loaders = PrefixMirror::bmclapi_loaders();
+        for (from, to) in &loaders.rules {
+            assert!(full.rules.contains(&(from.clone(), to.clone())), "{from}");
+        }
+        assert_eq!(full.rules.len(), loaders.rules.len() + 6);
+    }
+
     #[test]
     fn auto_without_default_mirror_is_official() {
-        let s = Sources::new(AUTO);
-        assert_eq!(DEFAULT_MIRROR, None);
-        assert_eq!(sources(&s.candidates(LIB)), [OFFICIAL]);
+        let mut s = Sources::new(AUTO);
+        s.set_default_mirror(None);
+        assert_eq!(sources(&s.candidates(FORGE)), [OFFICIAL]);
     }
 
     #[test]
@@ -372,6 +421,7 @@ mod tests {
     fn unknown_policy_behaves_like_auto() {
         let mut s = Sources::new("nope");
         assert_eq!(sources(&s.candidates(LIB)), [OFFICIAL]);
+        assert_eq!(sources(&s.candidates(FORGE)), [BMCLAPI_LOADERS, OFFICIAL]);
         s.set_default_mirror(Some(BMCLAPI));
         assert_eq!(sources(&s.candidates(LIB)), [BMCLAPI, OFFICIAL]);
     }
@@ -383,7 +433,10 @@ mod tests {
             "local",
             [("https://libraries.minecraft.net", "http://127.0.0.1:1/m")],
         ));
-        assert_eq!(s.mirror_names().collect::<Vec<_>>(), [BMCLAPI, "local"]);
+        assert_eq!(
+            s.mirror_names().collect::<Vec<_>>(),
+            [BMCLAPI, BMCLAPI_LOADERS, "local"]
+        );
         assert_eq!(
             s.candidates(LIB)[0].url,
             "http://127.0.0.1:1/m/a/b/1/b-1.jar"
