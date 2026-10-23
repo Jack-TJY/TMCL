@@ -12,6 +12,7 @@ import {
 import { toAppError } from "../api/invoke";
 import { settingsGet, settingsSet } from "../api/settings";
 import type { LauncherSettings } from "../bindings/LauncherSettings";
+import { DEFAULT_BACKGROUND } from "../theme/background";
 import { DEFAULT_ACCENT, systemAccent } from "../theme/fluent";
 import { applyMaterial, detectMaterial, type MaterialKind } from "../theme/material";
 
@@ -23,20 +24,7 @@ export type Settings = LauncherSettings & {
 /** 与后端 `Config::default()` 一致的默认设置。 */
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
-  appearance: {
-    accent: null,
-    window_material: true,
-    background: {
-      kind: "default",
-      color: "#1F4E79",
-      image: null,
-      fit: "fill",
-      opacity: 100,
-      blur: 0,
-      mask: 0,
-      card_opacity: 85,
-    },
-  },
+  appearance: { accent: null, window_material: true, background: DEFAULT_BACKGROUND },
   memory: { max_mb: 4096 },
   download: { max_concurrency: 16, source: DEFAULT_SOURCE },
 };

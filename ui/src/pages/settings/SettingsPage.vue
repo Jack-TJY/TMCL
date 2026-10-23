@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 设置页（PLAN.md M1-11）：外观、下载、游戏、存储与关于。
+// 设置页（PLAN.md M1-11）：外观（背景与透明度见 appearance/，M1-19）、下载、游戏、存储与关于。
 // 下载源与 Java 列表暂由 api/__mocks__ 提供，见该文件说明。
 import {
   Color24Regular,
@@ -12,18 +12,8 @@ import {
   LocalLanguage24Regular,
   Server24Regular,
   TopSpeed24Regular,
-  Window24Regular,
 } from "@vicons/fluent";
-import {
-  NButton,
-  NColorPicker,
-  NInputNumber,
-  NSelect,
-  NSlider,
-  NSwitch,
-  NTag,
-  useMessage,
-} from "naive-ui";
+import { NButton, NColorPicker, NInputNumber, NSelect, NSlider, NTag, useMessage } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { mockJavaList, type DownloadSource, type JavaInstall } from "../../api/__mocks__/settings";
@@ -35,6 +25,7 @@ import type { ThemeMode } from "../../bindings/ThemeMode";
 import { formatError, isLocale, LOCALE_NAMES, setLocale, SUPPORTED_LOCALES } from "../../i18n";
 import { useSettingsStore, type Settings } from "../../stores/settings";
 import { DEFAULT_ACCENT, isHexColor } from "../../theme/fluent";
+import BackgroundSettings from "./appearance/BackgroundSettings.vue";
 import SettingRow from "./SettingRow.vue";
 
 /** Win11 个性化设置中的部分强调色，作为取色器的预设。 */
@@ -168,21 +159,7 @@ function setConcurrency(value: number | null) {
           @update:value="setAccentMode"
         />
       </SettingRow>
-      <SettingRow
-        :icon="Window24Regular"
-        :title="t('settings.material.label')"
-        :description="
-          store.materialKind === 'none'
-            ? t('settings.material.unsupported')
-            : t('settings.material.description')
-        "
-      >
-        <NSwitch
-          :value="store.settings.appearance.window_material && store.materialKind !== 'none'"
-          :disabled="store.materialKind === 'none'"
-          @update:value="(v: boolean) => save((s) => (s.appearance.window_material = v))"
-        />
-      </SettingRow>
+      <BackgroundSettings />
     </section>
 
     <section>

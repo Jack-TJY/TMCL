@@ -193,6 +193,9 @@ function isActive(item: NavItem): boolean {
   border-left: 1px solid var(--tmcl-stroke);
   border-top-left-radius: 8px;
   background: var(--tmcl-layer);
+  /* 卡片透明度低于 100% 时的毛玻璃（M1-19）；内容区内的卡片透出的是模糊后的背景。 */
+  -webkit-backdrop-filter: blur(var(--tmcl-card-blur, 0px));
+  backdrop-filter: blur(var(--tmcl-card-blur, 0px));
 }
 
 .content-layer :deep(.page-title) {

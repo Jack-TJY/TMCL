@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <!-- TMCL 内置暗色背景：项目原创，随项目以 GPL-3.0 发布。 -->
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F1624"/>
+      <stop offset="1" stop-color="#191428"/>
+    </linearGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="100"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#base)"/>
+  <g filter="url(#soft)">
+    <ellipse cx="1180" cy="300" rx="420" ry="260" fill="#1F4F9E" opacity="0.8"/>
+    <ellipse cx="1420" cy="720" rx="300" ry="240" fill="#56308C" opacity="0.7"/>
+    <ellipse cx="320" cy="820" rx="380" ry="200" fill="#0F5E6E" opacity="0.6"/>
+    <ellipse cx="760" cy="560" rx="260" ry="180" fill="#23386E" opacity="0.5"/>
+  </g>
+  <path d="M0 760 C 380 640 760 900 1120 760 S 1600 620 1600 620 V 1000 H 0 Z" fill="#000000" opacity="0.18"/>
+  <path d="M0 860 C 420 780 820 980 1200 860 S 1600 760 1600 760 V 1000 H 0 Z" fill="#000000" opacity="0.18"/>
+</svg>

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const tauriInvoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke: tauriInvoke }));
 
+import { DEFAULT_BACKGROUND } from "../theme/background";
 import { settingsGet, settingsOpenDataDir, settingsSet } from "./settings";
 
 describe("settings commands", () => {
@@ -18,20 +19,7 @@ describe("settings commands", () => {
     expect(tauriInvoke).toHaveBeenLastCalledWith("settings_open_data_dir", undefined);
     const settings = {
       theme: "dark" as const,
-      appearance: {
-        accent: null,
-        window_material: true,
-        background: {
-          kind: "default" as const,
-          color: "#1F4E79",
-          image: null,
-          fit: "fill" as const,
-          opacity: 100,
-          blur: 0,
-          mask: 0,
-          card_opacity: 85,
-        },
-      },
+      appearance: { accent: null, window_material: true, background: DEFAULT_BACKGROUND },
       memory: { max_mb: 4096 },
       download: { max_concurrency: 16, source: "auto" },
     };
