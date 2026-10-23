@@ -1,0 +1,15 @@
+{
+  "edit": "Edit",
+  "editHint": "Drag a widget to move it, drag its bottom-right corner to resize. Press Esc to discard changes.",
+  "reset": "Reset to default layout",
+  "cancel": "Cancel",
+  "done": "Done",
+  "empty": "No widgets on the home page yet",
+  "loadFailed": "Couldn't load the home layout, showing the default layout: {error}",
+  "backup": "The home layout file was damaged. It was backed up to {path} and the default layout was restored",
+  "skipped": "{count} widget(s) couldn't be read and were skipped",
+  "saveFailed": "Couldn't save the home layout: {error}",
+  "widget": {
+    "remove": "Remove widget"
+  }
+}

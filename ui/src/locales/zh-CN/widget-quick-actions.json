@@ -1,0 +1,14 @@
+{
+  "title": "快捷操作",
+  "description": "打开游戏目录、数据目录，新建实例",
+  "noInstance": "还没有可用的实例",
+  "actions": {
+    "gameDir": "打开游戏目录",
+    "dataDir": "打开数据目录",
+    "newInstance": "新建实例",
+    "settings": "设置"
+  },
+  "settings": {
+    "labels": "显示文字"
+  }
+}
