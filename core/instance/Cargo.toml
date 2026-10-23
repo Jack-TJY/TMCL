@@ -16,6 +16,7 @@ tmcl-common = { path = "../common" }
 tracing = { workspace = true }
 ts-rs = { workspace = true }
 uuid = { workspace = true }
+zip = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
