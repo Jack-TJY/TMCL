@@ -20,7 +20,7 @@ describe("settings commands", () => {
       theme: "dark" as const,
       appearance: { accent: null, window_material: true },
       memory: { max_mb: 4096 },
-      download: { max_concurrency: 16 },
+      download: { max_concurrency: 16, source: "auto" },
     };
     await settingsSet({ settings });
     expect(tauriInvoke).toHaveBeenLastCalledWith("settings_set", { args: { settings } });

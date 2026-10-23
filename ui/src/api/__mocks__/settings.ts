@@ -20,7 +20,7 @@ export const DEFAULT_SOURCE: DownloadSource = "auto";
 
 const STORAGE_KEY = "tmcl.mock.downloadSource";
 
-function isSource(value: unknown): value is DownloadSource {
+export function isSource(value: unknown): value is DownloadSource {
   return value === "auto" || value === "official" || value === "bmclapi";
 }
 

@@ -54,7 +54,8 @@
     "max_mb": 4096
   },
   "download": {
-    "max_concurrency": 16
+    "max_concurrency": 16,
+    "source": "auto"
   }
 }
 ```
@@ -68,6 +69,7 @@
 | `appearance.window_material` | 布尔 | `true` | 平台支持时使用窗口材质（Win11 Mica、macOS vibrancy），否则纯色背景 |
 | `memory.max_mb` | 正整数 | `4096` | 新建实例的默认最大内存（MiB），512–32768 |
 | `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
+| `download.source` | `"auto"` \| `"official"` \| 镜像名（如 `"bmclapi"`） | `"auto"` | 下载源。`auto`：Forge、NeoForge、Fabric 先走 BMCLAPI（`bmclapi-loaders`），其余文件走官方源，失败都回退官方源。`bmclapi`：所有文件先走 BMCLAPI 再回退官方源。未知名称按 `auto` 处理 |
 
 读写规则：
 

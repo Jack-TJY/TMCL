@@ -72,12 +72,15 @@ impl Default for MemoryConfig {
 pub struct DownloadConfig {
     /// 同时进行的下载数。
     pub max_concurrency: u32,
+    /// 下载源策略：`auto`（默认镜像优先，失败回退官方）、`official` 或镜像名。
+    pub source: String,
 }
 
 impl Default for DownloadConfig {
     fn default() -> Self {
         Self {
             max_concurrency: 16,
+            source: "auto".to_owned(),
         }
     }
 }
@@ -249,7 +252,10 @@ mod tests {
         let config = Config {
             language: "en-US".to_owned(),
             theme: ThemeMode::Dark,
-            download: DownloadConfig { max_concurrency: 4 },
+            download: DownloadConfig {
+                max_concurrency: 4,
+                source: "bmclapi".to_owned(),
+            },
             ..Config::default()
         };
         config.save(&path).unwrap();
@@ -301,6 +307,7 @@ mod tests {
         assert_eq!(config.theme, ThemeMode::Light);
         assert_eq!(config.language, "zh-CN");
         assert_eq!(config.download.max_concurrency, 16);
+        assert_eq!(config.download.source, "auto");
     }
 
     #[test]

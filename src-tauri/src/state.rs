@@ -6,7 +6,7 @@ use tmcl_common::config::DownloadConfig;
 use tmcl_common::{AppResult, Config, DataPaths, Db};
 use tmcl_game::InstallOptions;
 use tmcl_instance::InstanceStore;
-use tmcl_net::{DownloadOptions, Downloader, HttpClient};
+use tmcl_net::{Downloader, HttpClient};
 use tokio::sync::Mutex;
 
 use crate::tasks::TaskManager;
@@ -110,8 +110,5 @@ fn open_db(paths: &DataPaths) -> AppResult<Db> {
 }
 
 fn build_downloader(download: &DownloadConfig) -> AppResult<Downloader> {
-    Ok(Downloader::new(
-        HttpClient::new()?,
-        DownloadOptions::from_config(download),
-    ))
+    Ok(Downloader::from_config(HttpClient::new()?, download))
 }
