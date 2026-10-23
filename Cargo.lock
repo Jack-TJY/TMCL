@@ -3981,6 +3981,15 @@ dependencies = [
 [[package]]
 name = "tmcl-java"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "tempfile",
+ "tmcl-common",
+ "tokio",
+ "tracing",
+ "ts-rs",
+ "winreg",
+]
 
 [[package]]
 name = "tmcl-launch"
