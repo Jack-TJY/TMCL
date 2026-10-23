@@ -25,6 +25,7 @@ tauri = { workspace = true }
 tmcl-auth = { path = "../core/auth" }
 tmcl-common = { path = "../core/common" }
 tmcl-game = { path = "../core/game" }
+tmcl-instance = { path = "../core/instance" }
 tmcl-net = { path = "../core/net" }
 tokio = { workspace = true, features = ["sync"] }
 tokio-util = { workspace = true }

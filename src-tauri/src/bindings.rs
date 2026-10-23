@@ -13,6 +13,10 @@ use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo};
 use crate::commands::game::{GameInstallArgs, GameVersionList};
+use crate::commands::instance::{
+    InstanceCreateArgs, InstanceDuplicateArgs, InstanceExportArgs, InstanceGameEntries,
+    InstanceIdArgs, InstanceImportArgs, InstanceList, InstanceRenameArgs, InstanceSaveArgs,
+};
 use crate::commands::settings::{SettingsLanguage, SettingsSetLanguageArgs};
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
 use crate::events::TaskStarted;
@@ -39,6 +43,16 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     // game
     GameInstallArgs::export_all(&cfg)?;
     GameVersionList::export_all(&cfg)?;
+    // instance
+    InstanceCreateArgs::export_all(&cfg)?;
+    InstanceDuplicateArgs::export_all(&cfg)?;
+    InstanceExportArgs::export_all(&cfg)?;
+    InstanceGameEntries::export_all(&cfg)?;
+    InstanceIdArgs::export_all(&cfg)?;
+    InstanceImportArgs::export_all(&cfg)?;
+    InstanceList::export_all(&cfg)?;
+    InstanceRenameArgs::export_all(&cfg)?;
+    InstanceSaveArgs::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
     SettingsSetLanguageArgs::export_all(&cfg)?;
