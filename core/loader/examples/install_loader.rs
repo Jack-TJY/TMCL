@@ -1,7 +1,7 @@
 //! M1-09 手测示例：列出并安装模组加载器。
 //!
 //! ```text
-//! cargo run -p tmcl-loader --example install_loader -- <fabric|quilt> <游戏版本> [加载器版本] [--data <数据目录>]
+//! cargo run -p tmcl-loader --example install_loader -- <fabric|quilt|forge|neoforge> <游戏版本> [加载器版本] [--data <数据目录>] [--java <java 路径>]
 //! ```
 //!
 //! 不给加载器版本时安装推荐版本。安装完成后打印版本号，可交给
@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tmcl_common::{AppResult, DataPaths, ProgressSink, TaskCtx, TaskProgress, ThrottledSink};
-use tmcl_loader::{LoaderInstaller, LoaderKind, display_name, fabric, list_versions, quilt};
+use tmcl_loader::{JavaChoice, LoaderInstaller, LoaderKind, display_name, list_versions};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient};
 
 struct PrintSink;
@@ -27,10 +27,16 @@ impl ProgressSink for PrintSink {
 async fn run() -> AppResult<()> {
     let mut positional = Vec::new();
     let mut data = None;
+    let mut java = JavaChoice::Auto;
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--data" => data = it.next().map(PathBuf::from),
+            "--java" => {
+                java = it
+                    .next()
+                    .map_or(JavaChoice::Auto, |p| JavaChoice::Path(p.into()))
+            }
             _ => positional.push(arg),
         }
     }
@@ -38,7 +44,7 @@ async fn run() -> AppResult<()> {
         [kind, game, ..] => (kind.as_str(), game.as_str()),
         _ => {
             eprintln!(
-                "用法：install_loader <fabric|quilt> <游戏版本> [加载器版本] [--data <目录>]"
+                "用法：install_loader <fabric|quilt|forge|neoforge> <游戏版本> [加载器版本] [--data <目录>] [--java <路径>]"
             );
             std::process::exit(2);
         }
@@ -46,6 +52,8 @@ async fn run() -> AppResult<()> {
     let kind = match kind {
         "fabric" => LoaderKind::Fabric,
         "quilt" => LoaderKind::Quilt,
+        "forge" => LoaderKind::Forge,
+        "neoforge" => LoaderKind::Neoforge,
         other => {
             eprintln!("不支持的加载器：{other}");
             std::process::exit(2);
@@ -57,7 +65,7 @@ async fn run() -> AppResult<()> {
     };
     paths.ensure_dirs()?;
     let downloader = Downloader::new(HttpClient::new()?, DownloadOptions::default());
-    let installer = LoaderInstaller::new(downloader.clone(), paths);
+    let installer = LoaderInstaller::new(downloader.clone(), paths).with_java(java);
     let ctx = TaskCtx::new(
         "install_loader",
         Arc::new(ThrottledSink::with_interval(
@@ -80,10 +88,7 @@ async fn run() -> AppResult<()> {
         }
     };
     eprintln!("安装 {} {loader}", display_name(kind));
-    let installed = match kind {
-        LoaderKind::Fabric => fabric::install(&installer, game, &loader, &ctx).await?,
-        _ => quilt::install(&installer, game, &loader, &ctx).await?,
-    };
+    let installed = installer.install(kind, game, &loader, &ctx).await?;
     eprintln!("{:?}", installed.report);
     println!("{}", installed.version_id);
     Ok(())
