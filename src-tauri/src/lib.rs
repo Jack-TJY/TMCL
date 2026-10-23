@@ -23,6 +23,18 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // game
         commands::game::game_install,
         commands::game::game_version_list,
+        // instance
+        commands::instance::instance_create,
+        commands::instance::instance_delete,
+        commands::instance::instance_duplicate,
+        commands::instance::instance_export,
+        commands::instance::instance_game_entries,
+        commands::instance::instance_get,
+        commands::instance::instance_import,
+        commands::instance::instance_list,
+        commands::instance::instance_refresh,
+        commands::instance::instance_rename,
+        commands::instance::instance_save,
         // settings
         commands::settings::settings_get_language,
         commands::settings::settings_set_language,
@@ -249,5 +261,141 @@ mod tests {
         assert_eq!(started["task_id"], json!(finished.task_id));
         assert_eq!(finished.state, TaskState::Failed);
         assert_eq!(finished.error.unwrap().code, ErrorCode::GameVersionNotFound);
+    }
+
+    /// 调用一个返回 `TaskStarted` 的命令并等它结束。
+    fn run_task(
+        webview: &tauri::WebviewWindow<MockRuntime>,
+        finished_rx: &mpsc::Receiver<TaskFinished>,
+        cmd: &str,
+        body: Value,
+    ) -> TaskFinished {
+        let started = invoke(webview, cmd, body).unwrap();
+        let finished = finished_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(started["task_id"], json!(finished.task_id));
+        finished
+    }
+
+    fn instance_ids(webview: &tauri::WebviewWindow<MockRuntime>) -> Vec<String> {
+        let list = invoke(webview, "instance_list", json!({})).unwrap();
+        list["instances"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| i["id"].as_str().unwrap().to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn instance_crud_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(DataPaths::at(dir.path()))));
+        assert!(instance_ids(&webview).is_empty());
+
+        let body = json!({ "args": { "name": " 生存 ", "game_version": "1.20.1",
+            "loader": { "kind": "fabric", "version": "0.16.5" } } });
+        let created = invoke(&webview, "instance_create", body).unwrap();
+        let id = created["id"].clone();
+        assert_eq!(created["name"], "生存");
+        assert_eq!(instance_ids(&webview), [id.as_str().unwrap()]);
+
+        let renamed = invoke(
+            &webview,
+            "instance_rename",
+            json!({ "args": { "id": id, "name": "新名字" } }),
+        )
+        .unwrap();
+        assert_eq!(renamed["name"], "新名字");
+
+        let mut config = invoke(&webview, "instance_get", json!({ "args": { "id": id } })).unwrap();
+        config["memory"]["max_mb"] = json!(8192);
+        let saved = invoke(
+            &webview,
+            "instance_save",
+            json!({ "args": { "config": config } }),
+        )
+        .unwrap();
+        assert_eq!(saved["memory"]["max_mb"], 8192);
+
+        let bad = invoke(
+            &webview,
+            "instance_rename",
+            json!({ "args": { "id": id, "name": "" } }),
+        );
+        let err: AppError = serde_json::from_value(bad.unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceInvalidName);
+
+        invoke(&webview, "instance_delete", json!({ "args": { "id": id } })).unwrap();
+        assert!(instance_ids(&webview).is_empty());
+        let missing = invoke(&webview, "instance_get", json!({ "args": { "id": id } }));
+        let err: AppError = serde_json::from_value(missing.unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
+    }
+
+    #[test]
+    fn instance_tasks_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path().join("tmcl-data"));
+        let (app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+        let finished_rx = finished_events(&app);
+
+        let body = json!({ "args": { "name": "源", "game_version": "1.20.1" } });
+        let id = invoke(&webview, "instance_create", body).unwrap()["id"].clone();
+        let game = paths.instance_game_dir(id.as_str().unwrap());
+        std::fs::create_dir_all(game.join("saves/world")).unwrap();
+        std::fs::create_dir_all(game.join("mods")).unwrap();
+        std::fs::write(game.join("mods/a.jar"), b"jar").unwrap();
+        std::fs::write(game.join("saves/world/level.dat"), b"dat").unwrap();
+
+        let entries = invoke(
+            &webview,
+            "instance_game_entries",
+            json!({ "args": { "id": id } }),
+        )
+        .unwrap();
+        assert_eq!(entries["entries"], json!(["mods", "saves"]));
+
+        let body = json!({ "args": { "id": id, "name": "副本", "include_saves": false } });
+        let finished = run_task(&webview, &finished_rx, "instance_duplicate", body);
+        assert_eq!(finished.state, TaskState::Succeeded);
+        assert_eq!(instance_ids(&webview).len(), 2);
+
+        let pack = dir.path().join("out.tmclpack");
+        let body = json!({ "args": { "id": id, "dest": pack, "include": ["mods"] } });
+        let finished = run_task(&webview, &finished_rx, "instance_export", body);
+        assert_eq!(finished.state, TaskState::Succeeded);
+        assert!(pack.is_file());
+
+        let body = json!({ "args": { "pack": pack } });
+        let finished = run_task(&webview, &finished_rx, "instance_import", body);
+        assert_eq!(finished.state, TaskState::Succeeded);
+        assert_eq!(instance_ids(&webview).len(), 3);
+
+        let not_pack = dir.path().join("bad.tmclpack");
+        std::fs::write(&not_pack, b"not a zip").unwrap();
+        let body = json!({ "args": { "pack": not_pack } });
+        let finished = run_task(&webview, &finished_rx, "instance_import", body);
+        assert_eq!(finished.error.unwrap().code, ErrorCode::InstancePackInvalid);
+
+        let relative = invoke(
+            &webview,
+            "instance_import",
+            json!({ "args": { "pack": "x.tmclpack" } }),
+        );
+        assert!(relative.is_err());
+    }
+
+    #[test]
+    fn instance_refresh_marks_corrupted() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path());
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+        let body = json!({ "args": { "name": "a", "game_version": "1.20.1" } });
+        let id = invoke(&webview, "instance_create", body).unwrap()["id"].clone();
+
+        std::fs::write(paths.instance_file(id.as_str().unwrap()), b"{ broken").unwrap();
+        let list = invoke(&webview, "instance_refresh", json!({})).unwrap();
+        assert_eq!(list["instances"][0]["id"], id);
+        assert_eq!(list["instances"][0]["error"], "INSTANCE_CORRUPTED");
     }
 }

@@ -3917,6 +3917,7 @@ dependencies = [
  "tmcl-auth",
  "tmcl-common",
  "tmcl-game",
+ "tmcl-instance",
  "tmcl-net",
  "tokio",
  "tokio-util",

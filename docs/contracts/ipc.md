@@ -29,6 +29,17 @@
 | `app_demo_task` | `AppDemoTaskArgs { steps, step_ms, fail_at? }` | `TaskStarted` | 演示任务：`steps` 1–100、`step_ms` ≤ 5000，越界返回 `COMMON_INTERNAL`；走到 `fail_at` 步时以 `failed` 结束 |
 | `game_install` | `GameInstallArgs { version_id }` | `TaskStarted` | 任务种类 `game_install`：下载并校验该版本的版本 JSON、资源索引、依赖库与资源文件，阶段依次为 `version_json`、`asset_index`、`libraries`、`assets`；`version_id` 为空、超过 64 字符或含 `/`、`\`、`:`、`..` 时直接返回 `COMMON_INTERNAL`；版本不存在时任务以 `GAME_VERSION_NOT_FOUND` 失败 |
 | `game_version_list` | 无 | `GameVersionList { latest_release, latest_snapshot, versions: GameVersion { id, kind, release_time }[] }` | 官方版本清单，新版本在前；`kind` 为 `release` \| `snapshot` \| `old_beta` \| `old_alpha` \| `other` |
+| `instance_create` | `InstanceCreateArgs { name, game_version, loader? }` | `InstanceConfig` | 新建实例（只写 `instance.json` 与空的 `game/`，不下载游戏文件）；名称非法返回 `INSTANCE_INVALID_NAME` |
+| `instance_delete` | `InstanceIdArgs { id }` | 无 | 把实例目录移到回收站 `trash/`，7 天后清理；损坏的实例也可删除 |
+| `instance_duplicate` | `InstanceDuplicateArgs { id, name, include_saves }` | `TaskStarted` | 任务种类 `instance_duplicate`：复制为新实例（新 ID），`include_saves` 为 `false` 时跳过 `game/saves/`；完成后重新调用 `instance_list` 获取新实例 |
+| `instance_export` | `InstanceExportArgs { id, dest, include }` | `TaskStarted` | 任务种类 `instance_export`：导出为 `.tmclpack`，`include` 为要包含的 `game/` 顶层条目名；`dest` 须为绝对路径，否则直接返回 `COMMON_INTERNAL` |
+| `instance_game_entries` | `InstanceIdArgs { id }` | `InstanceGameEntries { entries }` | `game/` 下的顶层条目名（按名称排序），供导出时选择 |
+| `instance_get` | `InstanceIdArgs { id }` | `InstanceConfig` | 读取 `instance.json`；不存在返回 `INSTANCE_NOT_FOUND`，损坏返回 `INSTANCE_CORRUPTED` / `INSTANCE_SCHEMA_UNSUPPORTED` |
+| `instance_import` | `InstanceImportArgs { pack }` | `TaskStarted` | 任务种类 `instance_import`：从 `.tmclpack` 导入为新实例；`pack` 须为绝对路径；包无效时任务以 `INSTANCE_PACK_INVALID` 失败 |
+| `instance_list` | 无 | `InstanceList { instances: InstanceSummary[] }` | 读取 SQLite 实例索引：最近启动的在前，从未启动的按创建时间倒序；损坏的实例 `error` 非空。应用首次访问数据库时先与磁盘对账并清理过期回收站 |
+| `instance_refresh` | 无 | `InstanceList` | 先与 `instances/` 目录重新对账，再返回同 `instance_list` |
+| `instance_rename` | `InstanceRenameArgs { id, name }` | `InstanceConfig` | 只改显示名称，ID 与目录不变 |
+| `instance_save` | `InstanceSaveArgs { config: InstanceConfig }` | `InstanceConfig` | 保存修改后的完整配置（实例须已存在），返回规整后的配置（名称去掉首尾空白） |
 | `settings_get_language` | 无 | `SettingsLanguage { language: string \| null }` | `config.json` 中保存的界面语言；尚无可用的 `config.json`（首次启动或文件损坏）时为 `null`，由前端按系统语言选择后写回 |
 | `settings_set_language` | `SettingsSetLanguageArgs { language }` | 无 | 写入界面语言，其他设置不变；`language` 须为由字母、数字、连字符组成的 BCP 47 标签（≤ 35 字符），否则返回 `COMMON_INTERNAL` |
 | `task_cancel` | `TaskCancelArgs { task_id }` | `TaskCancelResult { cancelled }` | 请求取消运行中的任务，任务随后以 `task:finished`（`cancelled`）结束；任务不存在或已结束时 `cancelled` 为 `false`，不报错 |
