@@ -4135,6 +4135,7 @@ dependencies = [
  "tmcl-game",
  "tmcl-instance",
  "tmcl-java",
+ "tmcl-loader",
  "tmcl-net",
  "tokio",
  "tokio-util",

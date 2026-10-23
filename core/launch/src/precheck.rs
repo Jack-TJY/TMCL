@@ -43,15 +43,26 @@ pub struct PreparedLaunch {
     pub repaired: u64,
 }
 
-/// 实例要启动的版本号：原版为游戏版本号。
-///
-/// 加载器版本由 M1-09 安装后才有，在此之前带加载器的实例返回 `LAUNCH_VERSION_NOT_INSTALLED`。
-pub fn version_id(instance: &InstanceConfig) -> AppResult<&str> {
+/// 实例要启动的版本号：原版为游戏版本号，带加载器时为 [`tmcl_loader::version_id`]。
+pub fn version_id(instance: &InstanceConfig) -> String {
     match &instance.loader {
-        None => Ok(&instance.game_version),
-        Some(loader) => Err(AppError::new(ErrorCode::LaunchVersionNotInstalled)
-            .with_param("version", &instance.game_version)
-            .with_param("loader", loader.kind.as_str())),
+        None => instance.game_version.clone(),
+        Some(loader) => {
+            tmcl_loader::version_id(loader.kind, &instance.game_version, &loader.version)
+        }
+    }
+}
+
+/// 带加载器的实例要求加载器版本已由 `tmcl_loader` 安装，否则返回 `LAUNCH_VERSION_NOT_INSTALLED`；
+/// 原版缺失时由补全下载。
+fn check_installed(files: &GameFiles, instance: &InstanceConfig, id: &str) -> AppResult<()> {
+    match &instance.loader {
+        Some(loader) if !files.version_json(id).is_file() => {
+            Err(AppError::new(ErrorCode::LaunchVersionNotInstalled)
+                .with_param("version", &instance.game_version)
+                .with_param("loader", loader.kind.as_str()))
+        }
+        _ => Ok(()),
     }
 }
 
@@ -69,11 +80,13 @@ pub async fn prepare(
     account: LaunchAccount,
     ctx: &TaskCtx,
 ) -> AppResult<PreparedLaunch> {
-    let id = version_id(instance)?;
+    let files = GameFiles::new(env.paths.clone());
+    let id = version_id(instance);
+    check_installed(&files, instance, &id)?;
+    let id = id.as_str();
     let repaired = ensure_files(env, id, ctx).await?;
     ctx.check_cancelled()?;
 
-    let files = GameFiles::new(env.paths.clone());
     let version = resolve(id, |v| files.load_version(v))?;
     let (java, warnings) = select_java(env, instance, &version, ctx).await?;
     ctx.check_cancelled()?;

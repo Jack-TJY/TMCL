@@ -248,3 +248,32 @@ fn real_token_is_listed_as_secret_but_offline_placeholder_is_not() {
     assert!(cmd.secrets.is_empty());
     assert_eq!(value_after(&cmd.args, "--accessToken"), "0");
 }
+
+#[test]
+fn forge_ignore_list_excludes_inherited_client_jar() {
+    let files = GameFiles::new(DataPaths::at("root"));
+    let mut spec = spec(&fixture("1.20.1.json"), "1.20.1");
+    spec.version = resolved("1.20.1-forge-47.4.0");
+    let cmd = build_command_for(&files, &spec, &windows());
+    let ignore = cmd
+        .args
+        .iter()
+        .find(|a| a.starts_with("-DignoreList="))
+        .unwrap();
+    assert!(
+        ignore.ends_with(",1.20.1-forge-47.4.0.jar,1.20.1.jar"),
+        "{ignore}"
+    );
+    assert!(
+        value_after(&cmd.args, "-cp").ends_with("1.20.1.jar"),
+        "客户端 jar 仍在 classpath 中"
+    );
+
+    // 原版没有 ignoreList，不受影响。
+    let vanilla = build_command_for(
+        &files,
+        &self::spec(&fixture("1.20.1.json"), "1.20.1"),
+        &windows(),
+    );
+    assert!(!vanilla.args.iter().any(|a| a.starts_with("-DignoreList=")));
+}

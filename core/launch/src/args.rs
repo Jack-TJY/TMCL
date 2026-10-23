@@ -120,6 +120,17 @@ pub fn build_command(files: &GameFiles, spec: &LaunchSpec) -> LaunchCommand {
     build_command_for(files, spec, &rule_env(spec))
 }
 
+/// Forge 1.17 起用 `-DignoreList` 按文件名把客户端 jar 排除出模块层，模板写的是 `${version_name}.jar`；
+/// 继承版本使用父版本的 `<jar_id>.jar`，需一并排除，否则 Minecraft 会被重复加载
+/// （`ResolutionException: Module minecraft contains package ...`）。
+fn ignore_client_jar(arg: String, version: &VersionJson) -> String {
+    if arg.starts_with("-DignoreList=") && version.jar_id() != version.id {
+        format!("{arg},{}.jar", version.jar_id())
+    } else {
+        arg
+    }
+}
+
 /// [`build_command`] 的可测试版本：显式给出规则环境。
 ///
 /// 顺序：`-Xms`/`-Xmx` → 版本 JVM 参数模板 → 自定义 JVM 参数 → 日志配置 → 主类 →
@@ -133,7 +144,13 @@ pub fn build_command_for(files: &GameFiles, spec: &LaunchSpec, env: &RuleEnv) ->
         format!("-Xms{}M", spec.min_memory_mb),
         format!("-Xmx{}M", spec.max_memory_mb),
     ];
-    args.extend(version.jvm_arguments(env).iter().map(subst));
+    args.extend(
+        version
+            .jvm_arguments(env)
+            .iter()
+            .map(subst)
+            .map(|a| ignore_client_jar(a, version)),
+    );
     args.extend(spec.jvm_args.iter().map(subst));
     if let Some(log) = version.logging.as_ref().and_then(|l| l.client.as_ref()) {
         let path = files.log_config(&log.file.id);
