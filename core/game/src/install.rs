@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, ProgressUpdate, TaskCtx};
-use tmcl_net::{DownloadItem, DownloadReport, HttpClient, download_all, download_one};
+use tmcl_net::{DownloadItem, DownloadReport, Downloader};
 
 use crate::manifest::{MANIFEST_URL, VersionManifest};
 use crate::version::{RuleEnv, VersionJson};
@@ -30,8 +30,6 @@ pub struct InstallOptions {
     pub manifest_url: String,
     /// 资源文件地址前缀。
     pub resources_url: String,
-    /// 同时下载数。
-    pub concurrency: usize,
 }
 
 impl Default for InstallOptions {
@@ -39,7 +37,6 @@ impl Default for InstallOptions {
         Self {
             manifest_url: MANIFEST_URL.to_owned(),
             resources_url: RESOURCES_URL.to_owned(),
-            concurrency: 16,
         }
     }
 }
@@ -165,8 +162,9 @@ pub fn parse_version(id: &str, bytes: &[u8]) -> AppResult<VersionJson> {
 /// 下载并校验运行 `version_id` 所需的全部文件，已校验的文件不会重复下载。
 ///
 /// 阶段依次为 `version_json`、`asset_index`、`libraries`（含客户端 jar 与日志配置）、`assets`。
+/// 连接数上限、重试与下载源都沿用 `downloader` 的设置。
 pub async fn install_version(
-    client: &HttpClient,
+    downloader: &Downloader,
     paths: &DataPaths,
     version_id: &str,
     options: &InstallOptions,
@@ -176,7 +174,7 @@ pub async fn install_version(
     let mut report = InstallReport::default();
 
     ctx.report(ProgressUpdate::new("version_json").items(0, 1));
-    let manifest = VersionManifest::fetch(client, &options.manifest_url, ctx).await?;
+    let manifest: VersionManifest = downloader.get_json(&options.manifest_url, ctx).await?;
     let entry = manifest.find(version_id)?;
     let json_item = DownloadItem {
         url: entry.url.clone(),
@@ -184,7 +182,7 @@ pub async fn install_version(
         size: None,
         sha1: Some(entry.sha1.clone()),
     };
-    report.add(single(download_one(client, &json_item, ctx).await?));
+    report.add(single(downloader.download_one(&json_item, ctx).await?));
     let version = files.load_version(version_id)?;
     ctx.report(ProgressUpdate::new("version_json").items(1, 1));
 
@@ -197,7 +195,7 @@ pub async fn install_version(
             size: Some(index.size),
             sha1: Some(index.sha1.clone()),
         };
-        report.add(single(download_one(client, &item, ctx).await?));
+        report.add(single(downloader.download_one(&item, ctx).await?));
         let bytes = tokio::fs::read(&item.path).await.map_err(|e| {
             AppError::new(ErrorCode::CommonIo)
                 .with_param("path", item.path.display())
@@ -209,8 +207,16 @@ pub async fn install_version(
     }
 
     let library_items = library_items(&files, &version, &RuleEnv::current());
-    report.add(download_all(client, library_items, options.concurrency, "libraries", ctx).await?);
-    report.add(download_all(client, index_objects, options.concurrency, "assets", ctx).await?);
+    report.add(
+        downloader
+            .download_all(library_items, "libraries", ctx)
+            .await?,
+    );
+    report.add(
+        downloader
+            .download_all(index_objects, "assets", ctx)
+            .await?,
+    );
     Ok(report)
 }
 

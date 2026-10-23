@@ -2,14 +2,15 @@
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use serde_json::json;
 use sha1::{Digest, Sha1};
 use tmcl_common::{DataPaths, ErrorCode, TaskCtx};
 use tmcl_game::install::library_items;
 use tmcl_game::{GameFiles, InstallOptions, RuleEnv, install_version, parse_version};
-use tmcl_net::HttpClient;
 use tmcl_net::testing::TestServer;
+use tmcl_net::{DownloadOptions, Downloader, HttpClient};
 
 fn fixture(name: &str) -> Vec<u8> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -129,9 +130,16 @@ async fn fake_release() -> (TestServer, InstallOptions) {
     let options = InstallOptions {
         manifest_url: server.url("/manifest.json"),
         resources_url: server.url("/res"),
-        concurrency: 4,
     };
     (server, options)
+}
+
+fn downloader(concurrency: usize) -> Downloader {
+    let options = DownloadOptions {
+        concurrency,
+        ..DownloadOptions::default()
+    };
+    Downloader::new(HttpClient::new().unwrap(), options)
 }
 
 #[tokio::test]
@@ -139,10 +147,10 @@ async fn installs_then_skips_everything_on_second_run() {
     let (server, options) = fake_release().await;
     let dir = tempfile::tempdir().unwrap();
     let paths = DataPaths::at(dir.path());
-    let client = HttpClient::new().unwrap();
+    let engine = downloader(4);
     let ctx = TaskCtx::noop("game_install");
 
-    let report = install_version(&client, &paths, "fake", &options, &ctx)
+    let report = install_version(&engine, &paths, "fake", &options, &ctx)
         .await
         .unwrap();
     // 版本 JSON、索引、jar、库、日志配置、两个去重后的资源；mac 专用库被规则排除。
@@ -155,7 +163,7 @@ async fn installs_then_skips_everything_on_second_run() {
     assert!(files.asset_index("fake-index").is_file());
     let hits = server.hits();
 
-    let report = install_version(&client, &paths, "fake", &options, &ctx)
+    let report = install_version(&engine, &paths, "fake", &options, &ctx)
         .await
         .unwrap();
     assert_eq!((report.downloaded, report.skipped), (0, 7));
@@ -167,7 +175,7 @@ async fn unknown_version_is_reported() {
     let (_server, options) = fake_release().await;
     let dir = tempfile::tempdir().unwrap();
     let err = install_version(
-        &HttpClient::new().unwrap(),
+        &downloader(4),
         &DataPaths::at(dir.path()),
         "1.0.0",
         &options,
@@ -176,4 +184,22 @@ async fn unknown_version_is_reported() {
     .await
     .unwrap_err();
     assert_eq!(err.code, ErrorCode::GameVersionNotFound);
+}
+
+#[tokio::test]
+async fn install_respects_downloader_connection_limit() {
+    let (server, options) = fake_release().await;
+    server.set_delay(Duration::from_millis(50));
+    let dir = tempfile::tempdir().unwrap();
+
+    install_version(
+        &downloader(1),
+        &DataPaths::at(dir.path()),
+        "fake",
+        &options,
+        &TaskCtx::noop("game_install"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(server.max_active(), 1);
 }

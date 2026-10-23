@@ -16,7 +16,7 @@ use tmcl_auth::OfflineAccount;
 use tmcl_common::{AppResult, DataPaths, ProgressSink, TaskCtx, TaskProgress, ThrottledSink};
 use tmcl_game::{GameFiles, InstallOptions, install_version};
 use tmcl_launch::{LaunchAccount, LaunchSpec, LogStream, build_command, spawn};
-use tmcl_net::HttpClient;
+use tmcl_net::{DownloadOptions, Downloader, HttpClient};
 
 struct Args {
     version: String,
@@ -74,11 +74,11 @@ async fn run(args: Args) -> AppResult<i32> {
     paths.ensure_dirs()?;
     eprintln!("数据目录：{}", paths.root().display());
 
-    let client = HttpClient::new()?;
+    let downloader = Downloader::new(HttpClient::new()?, DownloadOptions::default());
     let sink = ThrottledSink::with_interval(PrintSink, Duration::from_secs(1));
     let ctx = TaskCtx::new("game_install", Arc::new(sink));
     let report = install_version(
-        &client,
+        &downloader,
         &paths,
         &args.version,
         &InstallOptions::default(),
