@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 设置页（PLAN.md M1-11）：外观、下载、游戏、存储与关于。
-// 除界面语言外的设置暂存于 api/__mocks__，M1-10 提供命令后切换到真实接口。
+// 下载源与 Java 列表暂由 api/__mocks__ 提供，见该文件说明。
 import {
   Color24Regular,
   DarkTheme24Regular,
@@ -22,24 +22,18 @@ import {
   NSlider,
   NSwitch,
   NTag,
-  NTooltip,
   useMessage,
 } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import {
-  mockDataDir,
-  mockJavaList,
-  type DownloadSource,
-  type JavaInstall,
-  type LauncherSettings,
-  type ThemeMode,
-} from "../../api/__mocks__/settings";
+import { mockJavaList, type DownloadSource, type JavaInstall } from "../../api/__mocks__/settings";
 import { appInfo } from "../../api/app";
 import { toAppError } from "../../api/invoke";
+import { settingsOpenDataDir } from "../../api/settings";
 import type { AppInfo } from "../../bindings/AppInfo";
+import type { ThemeMode } from "../../bindings/ThemeMode";
 import { formatError, isLocale, LOCALE_NAMES, setLocale, SUPPORTED_LOCALES } from "../../i18n";
-import { useSettingsStore } from "../../stores/settings";
+import { useSettingsStore, type Settings } from "../../stores/settings";
 import { DEFAULT_ACCENT, isHexColor } from "../../theme/fluent";
 import SettingRow from "./SettingRow.vue";
 
@@ -66,11 +60,10 @@ const message = useMessage();
 const store = useSettingsStore();
 
 const info = ref<AppInfo | null>(null);
-const dataDir = ref("");
 const javas = ref<JavaInstall[]>([]);
 
 onMounted(async () => {
-  [dataDir.value, javas.value] = await Promise.all([mockDataDir(), mockJavaList()]);
+  javas.value = await mockJavaList();
   // 浏览器中调试时没有后端，版本号显示为占位符。
   info.value = await appInfo().catch(() => null);
 });
@@ -92,25 +85,31 @@ async function changeLanguage(value: string) {
   await setLocale(value).catch(showError);
 }
 
-function save(change: (draft: LauncherSettings) => void) {
+function save(change: (draft: Settings) => void) {
   store.update(change).catch(showError);
 }
 
-const accentMode = computed(() => (store.settings.accent === null ? "system" : "custom"));
+const accentMode = computed(() =>
+  store.settings.appearance.accent === null ? "system" : "custom",
+);
 const accentModeOptions = computed(() =>
   (["system", "custom"] as const).map((value) => ({ label: t(`settings.accent.${value}`), value })),
 );
 
 function setAccentMode(mode: "system" | "custom") {
-  save((s) => (s.accent = mode === "system" ? null : store.accent));
+  save((s) => (s.appearance.accent = mode === "system" ? null : store.accent));
 }
 
 function setAccent(value: string) {
-  if (isHexColor(value)) save((s) => (s.accent = value.toUpperCase()));
+  if (isHexColor(value)) save((s) => (s.appearance.accent = value.toUpperCase()));
 }
 
 function setMemory(value: number | null) {
   if (value !== null) save((s) => (s.memory.max_mb = value));
+}
+
+function openDataDir() {
+  settingsOpenDataDir().catch(showError);
 }
 
 function setConcurrency(value: number | null) {
@@ -179,9 +178,9 @@ function setConcurrency(value: number | null) {
         "
       >
         <NSwitch
-          :value="store.settings.window_material && store.materialKind !== 'none'"
+          :value="store.settings.appearance.window_material && store.materialKind !== 'none'"
           :disabled="store.materialKind === 'none'"
-          @update:value="(v: boolean) => save((s) => (s.window_material = v))"
+          @update:value="(v: boolean) => save((s) => (s.appearance.window_material = v))"
         />
       </SettingRow>
     </section>
@@ -267,20 +266,12 @@ function setConcurrency(value: number | null) {
       <SettingRow
         :icon="Folder24Regular"
         :title="t('settings.dataDir.label')"
-        :description="dataDir"
+        :description="store.dataDir"
       >
-        <NTooltip>
-          <template #trigger>
-            <!-- 打开文件夹需要后端命令（M1-10），在此之前禁用。 -->
-            <span
-              ><NButton disabled>
-                <template #icon><FolderOpen24Regular /></template>
-                {{ t("settings.dataDir.open") }}
-              </NButton></span
-            >
-          </template>
-          {{ t("settings.notYetAvailable") }}
-        </NTooltip>
+        <NButton :disabled="!store.dataDir" @click="openDataDir">
+          <template #icon><FolderOpen24Regular /></template>
+          {{ t("settings.dataDir.open") }}
+        </NButton>
       </SettingRow>
     </section>
 

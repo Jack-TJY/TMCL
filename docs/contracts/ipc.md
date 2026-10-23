@@ -40,7 +40,10 @@
 | `instance_refresh` | 无 | `InstanceList` | 先与 `instances/` 目录重新对账，再返回同 `instance_list` |
 | `instance_rename` | `InstanceRenameArgs { id, name }` | `InstanceConfig` | 只改显示名称，ID 与目录不变 |
 | `instance_save` | `InstanceSaveArgs { config: InstanceConfig }` | `InstanceConfig` | 保存修改后的完整配置（实例须已存在），返回规整后的配置（名称去掉首尾空白） |
+| `settings_get` | 无 | `SettingsSnapshot { settings: LauncherSettings, data_dir, config_backup }` | 读取 `config.json` 中除 `schema`、`language` 外的设置：`LauncherSettings { theme, appearance, memory, download }`，字段同 [data-layout.md](data-layout.md) 第 3 节；`data_dir` 为数据目录绝对路径；`config.json` 损坏时按读取规则备份并回退默认值，`config_backup` 给出备份路径，否则为 `null` |
 | `settings_get_language` | 无 | `SettingsLanguage { language: string \| null }` | `config.json` 中保存的界面语言；尚无可用的 `config.json`（首次启动或文件损坏）时为 `null`，由前端按系统语言选择后写回 |
+| `settings_open_data_dir` | 无 | 无 | 在系统文件管理器中打开数据目录（不存在时先创建） |
+| `settings_set` | `SettingsSetArgs { settings: LauncherSettings }` | `LauncherSettings` | 整体保存设置，界面语言不变，返回保存后的设置；`appearance.accent` 须为 `#RRGGBB` 或 `null`、`download.max_concurrency` 1–64、`memory.max_mb` 512–32768，否则返回 `COMMON_INTERNAL`（`params` 中对应项为 `false`）；下载设置变化时重建下载引擎，已在运行的任务不受影响 |
 | `settings_set_language` | `SettingsSetLanguageArgs { language }` | 无 | 写入界面语言，其他设置不变；`language` 须为由字母、数字、连字符组成的 BCP 47 标签（≤ 35 字符），否则返回 `COMMON_INTERNAL` |
 | `task_cancel` | `TaskCancelArgs { task_id }` | `TaskCancelResult { cancelled }` | 请求取消运行中的任务，任务随后以 `task:finished`（`cancelled`）结束；任务不存在或已结束时 `cancelled` 为 `false`，不报错 |
 | `task_list` | 无 | `TaskList { tasks: TaskInfo[] }` | 全局任务列表：运行中的按开始时间先后在前，随后是最近结束的至多 50 条。`TaskInfo { task_id, kind, status, started_at, finished_at, progress, error }`，`status` 为 `running` \| `succeeded` \| `failed` \| `cancelled`，时间为 unix 毫秒，`progress` 为最近一次推送的 `TaskProgress` |

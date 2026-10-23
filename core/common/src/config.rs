@@ -33,6 +33,39 @@ pub enum ThemeMode {
     Dark,
 }
 
+/// 外观设置。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(default)]
+pub struct AppearanceConfig {
+    /// 强调色 `#RRGGBB`；`null` 表示跟随系统强调色。
+    pub accent: Option<String>,
+    /// 平台支持时使用窗口材质（Mica / vibrancy），否则使用纯色背景。
+    pub window_material: bool,
+}
+
+impl Default for AppearanceConfig {
+    fn default() -> Self {
+        Self {
+            accent: None,
+            window_material: true,
+        }
+    }
+}
+
+/// 新建实例的默认内存。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(default)]
+pub struct MemoryConfig {
+    /// 最大内存（MiB）。
+    pub max_mb: u32,
+}
+
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self { max_mb: 4096 }
+    }
+}
+
 /// 下载相关设置。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default)]
@@ -59,6 +92,10 @@ pub struct Config {
     pub language: String,
     /// 界面主题。
     pub theme: ThemeMode,
+    /// 外观设置。
+    pub appearance: AppearanceConfig,
+    /// 新建实例的默认内存。
+    pub memory: MemoryConfig,
     /// 下载设置。
     pub download: DownloadConfig,
 }
@@ -69,6 +106,8 @@ impl Default for Config {
             schema: CONFIG_SCHEMA,
             language: "zh-CN".to_owned(),
             theme: ThemeMode::default(),
+            appearance: AppearanceConfig::default(),
+            memory: MemoryConfig::default(),
             download: DownloadConfig::default(),
         }
     }
@@ -293,5 +332,16 @@ mod tests {
         Config::default().save(&path).unwrap();
         let value: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         assert_eq!(value["schema"], CONFIG_SCHEMA);
+    }
+
+    #[test]
+    fn schema_2_without_appearance_and_memory_gets_defaults() {
+        let config = Config::parse(br#"{"schema": 2, "theme": "dark"}"#).unwrap();
+        assert_eq!(config.appearance, AppearanceConfig::default());
+        assert!(config.appearance.window_material);
+        assert_eq!(config.memory.max_mb, 4096);
+        let partial = Config::parse(br##"{"appearance": {"accent": "#FF0000"}}"##).unwrap();
+        assert_eq!(partial.appearance.accent.as_deref(), Some("#FF0000"));
+        assert!(partial.appearance.window_material);
     }
 }

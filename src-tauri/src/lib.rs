@@ -36,7 +36,10 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::instance::instance_rename,
         commands::instance::instance_save,
         // settings
+        commands::settings::settings_get,
         commands::settings::settings_get_language,
+        commands::settings::settings_open_data_dir,
+        commands::settings::settings_set,
         commands::settings::settings_set_language,
         // task
         commands::task::task_cancel,
@@ -63,11 +66,11 @@ mod tests {
     use std::time::Duration;
 
     use serde_json::{Value, json};
-    use tauri::Listener;
     use tauri::test::{
         INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets,
     };
     use tauri::webview::InvokeRequest;
+    use tauri::{Listener, Manager};
     use tmcl_common::{AppError, DataPaths, ErrorCode, TaskFinished, TaskProgress, TaskState};
     use tmcl_net::testing::TestServer;
 
@@ -397,5 +400,44 @@ mod tests {
         let list = invoke(&webview, "instance_refresh", json!({})).unwrap();
         assert_eq!(list["instances"][0]["id"], id);
         assert_eq!(list["instances"][0]["error"], "INSTANCE_CORRUPTED");
+    }
+
+    #[test]
+    fn settings_get_and_set_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let (app, webview) = mock_app_with(AppState::with_data(Ok(DataPaths::at(dir.path()))));
+
+        let snapshot = invoke(&webview, "settings_get", json!({})).unwrap();
+        assert_eq!(snapshot["data_dir"], dir.path().display().to_string());
+        assert_eq!(snapshot["config_backup"], Value::Null);
+        let mut settings = snapshot["settings"].clone();
+        assert_eq!(settings["theme"], "system");
+        assert_eq!(settings["appearance"]["window_material"], true);
+
+        settings["theme"] = json!("dark");
+        settings["appearance"]["accent"] = json!("#0078D4");
+        settings["download"]["max_concurrency"] = json!(4);
+        let saved = invoke(
+            &webview,
+            "settings_set",
+            json!({ "args": { "settings": settings } }),
+        )
+        .unwrap();
+        assert_eq!(saved, settings);
+        let state = app.state::<AppState>();
+        assert_eq!(state.downloader().unwrap().options().concurrency, 4);
+
+        let again = invoke(&webview, "settings_get", json!({})).unwrap();
+        assert_eq!(again["settings"], settings);
+
+        settings["memory"]["max_mb"] = json!(1);
+        let bad = invoke(
+            &webview,
+            "settings_set",
+            json!({ "args": { "settings": settings } }),
+        );
+        let err: AppError = serde_json::from_value(bad.unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::CommonInternal);
+        assert_eq!(err.params["max_mb"], "false");
     }
 }
