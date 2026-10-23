@@ -22,6 +22,7 @@
   "JAVA_RUNTIME_UNAVAILABLE": "No downloadable Java {major} is available for {platform}; please install it manually",
   "JAVA_VERSION_MISMATCH": "The selected Java is {actual}, but this game version needs Java {expected} and may not start",
   "LAUNCH_SPAWN_FAILED": "Failed to start Java: {java}",
+  "LAUNCH_VERSION_NOT_INSTALLED": "The version {version} {loader} required by this instance is not installed",
   "NET_CONNECT": "Cannot connect to {url}",
   "NET_HASH_MISMATCH": "File verification failed for {url}",
   "NET_HTTP_STATUS": "Server returned {status} for {url}",

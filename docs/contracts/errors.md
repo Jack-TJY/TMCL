@@ -32,6 +32,7 @@
 | `JAVA_RUNTIME_UNAVAILABLE` | java | 官方源与 Adoptium 都没有该平台、该主版本的运行时 | `major`、`platform` | 没有适用于 {platform} 的 Java {major} 可供下载，请手动安装 | No downloadable Java {major} is available for {platform}; please install it manually |
 | `JAVA_VERSION_MISMATCH` | java | 手动指定的 Java 主版本与游戏要求不一致，仅作警告 | `java`、`expected`、`actual` | 所选 Java 为 {actual}，该版本游戏需要 Java {expected}，可能无法启动 | The selected Java is {actual}, but this game version needs Java {expected} and may not start |
 | `LAUNCH_SPAWN_FAILED` | launch | 无法启动游戏进程（Java 路径无效或无权限） | `java` | 无法启动 Java：{java} | Failed to start Java: {java} |
+| `LAUNCH_VERSION_NOT_INSTALLED` | launch | 实例需要的游戏版本尚未安装；目前用于带模组加载器的实例（加载器安装由 M1-09 提供） | `version`、`loader`（可选） | 实例需要的版本 {version} {loader} 尚未安装 | The version {version} {loader} required by this instance is not installed |
 | `NET_CONNECT` | net | 无法连接服务器（DNS、TCP 或 TLS 失败） | `url` | 无法连接到服务器 {url} | Cannot connect to {url} |
 | `NET_HASH_MISMATCH` | net | 下载文件的 SHA1 与期望值不一致 | `url`、`expected`、`actual` | 文件校验失败 {url} | File verification failed for {url} |
 | `NET_HTTP_STATUS` | net | 服务器返回非 2xx 状态码 | `url`、`status` | 服务器返回错误 {status}：{url} | Server returned {status} for {url} |
