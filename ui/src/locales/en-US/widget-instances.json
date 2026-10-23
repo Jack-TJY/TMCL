@@ -1,0 +1,11 @@
+{
+  "title": "Instances",
+  "description": "Recently played instances, ready to launch",
+  "empty": "No instances yet",
+  "play": "Launch {name}",
+  "all": "View all instances",
+  "failed": "Couldn't launch {name}: {reason}",
+  "settings": {
+    "count": "Number shown"
+  }
+}

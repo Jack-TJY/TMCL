@@ -1,0 +1,14 @@
+{
+  "title": "Start game",
+  "description": "Launch your most recently played instance in one click",
+  "empty": "No instances yet",
+  "create": "New instance",
+  "play": "Play",
+  "running": "Game running",
+  "lastPlayed": "Last played {date}",
+  "neverPlayed": "Not played yet",
+  "failed": "Couldn't launch {name}: {reason}",
+  "settings": {
+    "instance": "Instance to launch"
+  }
+}

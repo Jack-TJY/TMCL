@@ -1,0 +1,8 @@
+{
+  "title": "下载任务",
+  "description": "进行中的下载与其他任务",
+  "empty": "没有进行中的任务",
+  "settings": {
+    "showFinished": "显示已结束的任务"
+  }
+}
