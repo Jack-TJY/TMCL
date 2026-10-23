@@ -16,7 +16,9 @@
   "brokenHint": "Its config can't be read. Open the folder to fix it, or delete it.",
   "neverPlayed": "Never played",
   "lastPlayed": "Last played {date}",
+  "name": "Instance name",
   "cancel": "Cancel",
+  "pathPlaceholder": "Full file path, e.g. D:/backup/survival.tmclpack",
   "loader": {
     "vanilla": "Vanilla",
     "fabric": "Fabric",
@@ -25,13 +27,66 @@
     "neoforge": "NeoForge"
   },
   "action": {
+    "details": "Details and settings",
     "open": "Open game folder",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "export": "Export",
     "delete": "Delete"
+  },
+  "detail": {
+    "loadFailed": "Couldn't load the instance config",
+    "version": "Game version",
+    "loader": "Loader",
+    "created": "Created",
+    "lastPlayed": "Last played",
+    "group": "Group",
+    "java": "Java",
+    "javaAuto": "Automatic",
+    "javaPath": "Custom path",
+    "javaPathPlaceholder": "Full path to java or javaw",
+    "javaPathRequired": "Enter the Java path",
+    "memory": "Memory",
+    "memoryMin": "Min",
+    "memoryMax": "Max",
+    "jvmArgs": "JVM arguments",
+    "gameArgs": "Game arguments",
+    "window": "Game window",
+    "width": "W",
+    "height": "H",
+    "fullscreen": "Fullscreen",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "rename": {
+    "title": "Rename \"{name}\"",
+    "confirm": "Rename"
+  },
+  "duplicate": {
+    "title": "Duplicate \"{name}\"",
+    "confirm": "Duplicate",
+    "includeSaves": "Include worlds",
+    "started": "Duplicating as \"{name}\". Track progress in the task center."
   },
   "delete": {
     "title": "Delete \"{name}\"?",
     "content": "The instance moves to the trash and is removed automatically after 7 days.",
     "confirm": "Delete",
     "done": "Deleted \"{name}\""
+  },
+  "export": {
+    "title": "Export \"{name}\"",
+    "include": "Include",
+    "noEntries": "The game folder is empty; only the instance config will be exported.",
+    "dest": "Save to",
+    "confirm": "Export",
+    "started": "Exporting \"{name}\". Track progress in the task center."
+  },
+  "import": {
+    "action": "Import",
+    "title": "Import instance",
+    "pack": "Instance pack (.tmclpack)",
+    "confirm": "Import",
+    "started": "Importing. Track progress in the task center."
   }
 }

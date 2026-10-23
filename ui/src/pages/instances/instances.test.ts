@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
-import { filterInstances, groupInstances, sortInstances } from "./instances";
+import {
+  copyName,
+  filterInstances,
+  formatArgs,
+  groupInstances,
+  groupNames,
+  joinPath,
+  packFileName,
+  parseArgs,
+  sortInstances,
+} from "./instances";
 
 function instance(id: string, extra: Partial<InstanceSummary> = {}): InstanceSummary {
   return {
@@ -40,5 +50,36 @@ describe("instance list helpers", () => {
     const groups = groupInstances(list);
     expect(groups.map((g) => g.name)).toEqual(["Adventure", "Mods", null]);
     expect(groups[1].instances.map((i) => i.id)).toEqual(["b", "c"]);
+    expect(groupNames(list)).toEqual(["Adventure", "Mods"]);
+  });
+});
+
+describe("argument text", () => {
+  it("splits on whitespace and honours quotes", () => {
+    expect(parseArgs('  -Xss2m   -Dfoo="a b" ""  ')).toEqual(["-Xss2m", "-Dfoo=a b", ""]);
+    expect(parseArgs("")).toEqual([]);
+  });
+
+  it("round-trips through formatArgs", () => {
+    const args = ["-XX:+UseG1GC", "-Dname=a b", ""];
+    expect(formatArgs(args)).toBe('-XX:+UseG1GC "-Dname=a b" ""');
+    expect(parseArgs(formatArgs(args))).toEqual(args);
+  });
+});
+
+describe("names and paths", () => {
+  it("suggests a free copy name", () => {
+    expect(copyName("生存", ["生存"])).toBe("生存 (2)");
+    expect(copyName("a", ["a", "a (2)"])).toBe("a (3)");
+  });
+
+  it("makes a safe pack file name", () => {
+    expect(packFileName('a/b:c*"d')).toBe("a_b_c__d.tmclpack");
+    expect(packFileName("  ")).toBe("instance.tmclpack");
+  });
+
+  it("joins with the directory's separator", () => {
+    expect(joinPath("C:\\TMCL\\tmcl-data", "a.tmclpack")).toBe("C:\\TMCL\\tmcl-data\\a.tmclpack");
+    expect(joinPath("/opt/tmcl-data/", "a.tmclpack")).toBe("/opt/tmcl-data/a.tmclpack");
   });
 });

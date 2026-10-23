@@ -49,3 +49,61 @@ export function groupInstances(list: InstanceSummary[], locale?: string): Instan
       return a.name.localeCompare(b.name, locale);
     });
 }
+
+/** 已有的分组名，供详情页选择。 */
+export function groupNames(list: InstanceSummary[], locale?: string): string[] {
+  const names = new Set(list.map((i) => i.group?.trim()).filter((g): g is string => !!g));
+  return [...names].sort((a, b) => a.localeCompare(b, locale));
+}
+
+/**
+ * 把一行参数文本拆成参数数组：按空白分隔，双引号内的空白保留，引号本身去掉。
+ * 例如 `-Dfoo="a b" -Xss2m` → `["-Dfoo=a b", "-Xss2m"]`。
+ */
+export function parseArgs(text: string): string[] {
+  const args: string[] = [];
+  let current = "";
+  let quoted = false;
+  let started = false;
+  for (const ch of text) {
+    if (ch === '"') {
+      quoted = !quoted;
+      started = true;
+    } else if (!quoted && /\s/.test(ch)) {
+      if (started) args.push(current);
+      current = "";
+      started = false;
+    } else {
+      current += ch;
+      started = true;
+    }
+  }
+  if (started) args.push(current);
+  return args;
+}
+
+/** `parseArgs` 的逆操作：含空白或为空的参数加双引号。 */
+export function formatArgs(args: string[]): string {
+  return args.map((a) => (a === "" || /\s/.test(a) ? `"${a}"` : a)).join(" ");
+}
+
+/** 复制实例时建议的新名称，例如 `生存` → `生存 (2)`，避开已有名称。 */
+export function copyName(name: string, existing: string[]): string {
+  const taken = new Set(existing);
+  for (let n = 2; ; n += 1) {
+    const candidate = `${name} (${n})`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
+/** 导出文件名：去掉文件名中不允许的字符。 */
+export function packFileName(name: string): string {
+  const safe = name.replace(/[\\/:*?"<>|]/g, "_").trim();
+  return `${safe || "instance"}.tmclpack`;
+}
+
+/** 在目录后拼接文件名，沿用目录中的路径分隔符。 */
+export function joinPath(dir: string, file: string): string {
+  const sep = dir.includes("\\") ? "\\" : "/";
+  return dir.endsWith(sep) ? `${dir}${file}` : `${dir}${sep}${file}`;
+}

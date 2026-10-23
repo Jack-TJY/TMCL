@@ -16,7 +16,9 @@
   "brokenHint": "配置文件无法读取，可打开目录修复或删除",
   "neverPlayed": "从未游玩",
   "lastPlayed": "上次游玩：{date}",
+  "name": "实例名称",
   "cancel": "取消",
+  "pathPlaceholder": "文件的完整路径，例如 D:/backup/生存.tmclpack",
   "loader": {
     "vanilla": "原版",
     "fabric": "Fabric",
@@ -25,13 +27,66 @@
     "neoforge": "NeoForge"
   },
   "action": {
+    "details": "详情与设置",
     "open": "打开游戏目录",
+    "rename": "重命名",
+    "duplicate": "复制",
+    "export": "导出",
     "delete": "删除"
+  },
+  "detail": {
+    "loadFailed": "无法读取实例配置",
+    "version": "游戏版本",
+    "loader": "加载器",
+    "created": "创建时间",
+    "lastPlayed": "上次游玩",
+    "group": "分组",
+    "java": "Java",
+    "javaAuto": "自动选择",
+    "javaPath": "指定路径",
+    "javaPathPlaceholder": "java 或 javaw 的完整路径",
+    "javaPathRequired": "请填写 Java 路径",
+    "memory": "内存",
+    "memoryMin": "最小",
+    "memoryMax": "最大",
+    "jvmArgs": "JVM 参数",
+    "gameArgs": "游戏参数",
+    "window": "游戏窗口",
+    "width": "宽",
+    "height": "高",
+    "fullscreen": "全屏",
+    "save": "保存",
+    "saved": "已保存"
+  },
+  "rename": {
+    "title": "重命名“{name}”",
+    "confirm": "重命名"
+  },
+  "duplicate": {
+    "title": "复制“{name}”",
+    "confirm": "复制",
+    "includeSaves": "包含存档",
+    "started": "正在复制为“{name}”，可在任务中心查看进度"
   },
   "delete": {
     "title": "删除“{name}”？",
     "content": "实例会先移到回收站，7 天后自动清理。",
     "confirm": "删除",
     "done": "已删除“{name}”"
+  },
+  "export": {
+    "title": "导出“{name}”",
+    "include": "包含的内容",
+    "noEntries": "游戏目录为空，只导出实例配置",
+    "dest": "保存到",
+    "confirm": "导出",
+    "started": "正在导出“{name}”，可在任务中心查看进度"
+  },
+  "import": {
+    "action": "导入",
+    "title": "导入实例",
+    "pack": "实例包（.tmclpack）",
+    "confirm": "导入",
+    "started": "正在导入，可在任务中心查看进度"
   }
 }

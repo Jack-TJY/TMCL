@@ -1,12 +1,20 @@
 <script setup lang="ts">
 // 实例卡片：名称、版本与加载器、最近游玩时间；右上角菜单提供实例操作。
-import { Delete20Regular, FolderOpen20Regular, MoreHorizontal20Regular } from "@vicons/fluent";
+import {
+  Copy20Regular,
+  Delete20Regular,
+  Edit20Regular,
+  FolderOpen20Regular,
+  MoreHorizontal20Regular,
+  Settings20Regular,
+  Share20Regular,
+} from "@vicons/fluent";
 import { NButton, NDropdown, NIcon, NTag, type DropdownOption } from "naive-ui";
 import { computed, h, type Component } from "vue";
 import { useI18n } from "vue-i18n";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 
-export type CardAction = "open" | "delete";
+export type CardAction = "details" | "open" | "rename" | "duplicate" | "export" | "delete";
 
 const props = defineProps<{ instance: InstanceSummary }>();
 const emit = defineEmits<{ action: [action: CardAction] }>();
@@ -20,10 +28,19 @@ function icon(component: Component) {
 }
 
 const menu = computed<DropdownOption[]>(() => {
-  const items: [CardAction, Component][] = [
-    ["open", FolderOpen20Regular],
-    ["delete", Delete20Regular],
-  ];
+  const items: [CardAction, Component][] = broken.value
+    ? [
+        ["open", FolderOpen20Regular],
+        ["delete", Delete20Regular],
+      ]
+    : [
+        ["details", Settings20Regular],
+        ["open", FolderOpen20Regular],
+        ["rename", Edit20Regular],
+        ["duplicate", Copy20Regular],
+        ["export", Share20Regular],
+        ["delete", Delete20Regular],
+      ];
   return items.map(([key, component]) => ({
     key,
     label: t(`instances.action.${key}`),
@@ -39,14 +56,25 @@ const lastPlayed = computed(() => {
     ? ""
     : t("instances.lastPlayed", { date: date.toLocaleDateString(locale.value) });
 });
+
+function open() {
+  if (!broken.value) emit("action", "details");
+}
 </script>
 
 <template>
-  <div class="instance-card" :class="{ broken }">
+  <div
+    class="instance-card"
+    :class="{ broken }"
+    role="button"
+    tabindex="0"
+    @click="open"
+    @keyup.enter="open"
+  >
     <div class="card-head">
       <div class="card-name" :title="instance.name">{{ instance.name }}</div>
       <NDropdown trigger="click" :options="menu" @select="(key: CardAction) => emit('action', key)">
-        <NButton quaternary circle size="small" :aria-label="t('instances.more')">
+        <NButton quaternary circle size="small" :aria-label="t('instances.more')" @click.stop>
           <template #icon
             ><NIcon><MoreHorizontal20Regular /></NIcon
           ></template>
@@ -84,6 +112,16 @@ const lastPlayed = computed(() => {
   border: 1px solid var(--tmcl-stroke);
   border-radius: 8px;
   background: var(--tmcl-card);
+  cursor: pointer;
+  transition: background-color 0.15s var(--tmcl-ease);
+}
+
+.instance-card:not(.broken):hover {
+  background: var(--tmcl-subtle);
+}
+
+.instance-card.broken {
+  cursor: default;
 }
 
 .card-head {
