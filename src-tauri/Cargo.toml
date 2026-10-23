@@ -22,6 +22,7 @@ tauri-build = { workspace = true }
 [dependencies]
 serde = { workspace = true }
 tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
 tmcl-auth = { path = "../core/auth" }
 tmcl-common = { path = "../core/common" }
 tmcl-game = { path = "../core/game" }

@@ -18,6 +18,7 @@
   "lastPlayed": "Last played {date}",
   "name": "Instance name",
   "cancel": "Cancel",
+  "browse": "Browse…",
   "pathPlaceholder": "Full file path, e.g. D:/backup/survival.tmclpack",
   "loader": {
     "vanilla": "Vanilla",

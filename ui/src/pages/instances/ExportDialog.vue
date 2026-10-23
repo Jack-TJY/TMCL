@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 导出实例为 .tmclpack：选择要包含的 game/ 条目并填写目标文件路径，导出任务进入任务中心。
-// 目标路径暂为文本框（默认放在数据目录下），系统“另存为”对话框待引入对话框插件后提供。
+// 目标路径默认放在数据目录下，可直接编辑或用系统“另存为”对话框选择。
 import {
   NButton,
   NCheckbox,
@@ -9,12 +9,14 @@ import {
   NForm,
   NFormItem,
   NInput,
+  NInputGroup,
   NModal,
   NSpin,
   useMessage,
 } from "naive-ui";
 import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { pickSavePath } from "../../api/dialog";
 import { INSTANCE_TASK_KINDS, instanceExport, instanceGameEntries } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
 import { settingsGet } from "../../api/settings";
@@ -25,6 +27,8 @@ import { joinPath, packFileName } from "./instances";
 
 /** 默认不勾选的条目：日志与缓存通常没有分享价值。 */
 const UNCHECKED = new Set(["logs", "crash-reports", ".cache", "screenshots"]);
+
+const PACK_FILTERS = [{ name: "TMCL", extensions: ["tmclpack"] }];
 
 const props = defineProps<{ instance: InstanceSummary | null }>();
 const emit = defineEmits<{ close: [] }>();
@@ -57,6 +61,15 @@ watch(
   },
   { immediate: true },
 );
+
+async function browse() {
+  try {
+    const picked = await pickSavePath(PACK_FILTERS, dest.value.trim() || undefined);
+    if (picked) dest.value = picked;
+  } catch (err) {
+    message.error(formatError(toAppError(err)));
+  }
+}
 
 async function confirm() {
   const instance = props.instance;
@@ -110,7 +123,10 @@ async function confirm() {
           </NCheckboxGroup>
         </NFormItem>
         <NFormItem :label="t('instances.export.dest')">
-          <NInput v-model:value="dest" :placeholder="t('instances.pathPlaceholder')" />
+          <NInputGroup>
+            <NInput v-model:value="dest" :placeholder="t('instances.pathPlaceholder')" />
+            <NButton @click="browse">{{ t("instances.browse") }}</NButton>
+          </NInputGroup>
         </NFormItem>
       </NForm>
     </NSpin>
