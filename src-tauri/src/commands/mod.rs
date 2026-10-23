@@ -3,5 +3,6 @@
 pub mod app;
 pub mod game;
 pub mod instance;
+pub mod launch;
 pub mod settings;
 pub mod task;

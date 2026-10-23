@@ -36,6 +36,10 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::instance::instance_refresh,
         commands::instance::instance_rename,
         commands::instance::instance_save,
+        // launch
+        commands::launch::launch_kill,
+        commands::launch::launch_running,
+        commands::launch::launch_start,
         // settings
         commands::settings::settings_get,
         commands::settings::settings_get_language,
@@ -459,5 +463,69 @@ mod tests {
         let err: AppError = serde_json::from_value(bad.unwrap_err()).unwrap();
         assert_eq!(err.code, ErrorCode::CommonInternal);
         assert_eq!(err.params["max_mb"], "false");
+    }
+
+    #[test]
+    fn launch_rejects_unknown_instance_and_bad_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(DataPaths::at(dir.path()))));
+        let body = json!({ "args": { "instance_id": "00000000-0000-0000-0000-000000000000",
+            "account": { "kind": "offline", "name": "Dev" } } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "launch_start", body).unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
+
+        let body = json!({ "args": { "name": "x", "game_version": "1.20.1" } });
+        let id = invoke(&webview, "instance_create", body).unwrap()["id"].clone();
+        let body = json!({ "args": { "instance_id": id,
+            "account": { "kind": "offline", "name": "a b" } } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "launch_start", body).unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::AuthOfflineInvalidName);
+
+        let kill = json!({ "args": { "instance_id": id } });
+        assert_eq!(
+            invoke(&webview, "launch_kill", kill).unwrap()["killed"],
+            false
+        );
+        let running = invoke(&webview, "launch_running", json!({})).unwrap();
+        assert_eq!(running["games"], json!([]));
+    }
+
+    #[test]
+    fn failed_launch_task_releases_the_instance() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path());
+        let (app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+        let finished_rx = finished_events(&app);
+        // 无需下载任何文件的自定义版本 + 无效的手动 Java：任务在选择 Java 时失败。
+        let version_dir = paths.shared_versions_dir().join("custom");
+        std::fs::create_dir_all(&version_dir).unwrap();
+        std::fs::write(
+            version_dir.join("custom.json"),
+            r#"{"id":"custom","type":"release","mainClass":"Main","libraries":[]}"#,
+        )
+        .unwrap();
+        let body = json!({ "args": { "name": "x", "game_version": "custom" } });
+        let mut config = invoke(&webview, "instance_create", body).unwrap();
+        config["java"] = json!({ "mode": "path", "path": dir.path().join("no-java") });
+        invoke(
+            &webview,
+            "instance_save",
+            json!({ "args": { "config": config } }),
+        )
+        .unwrap();
+
+        let body = json!({ "args": { "instance_id": config["id"],
+            "account": { "kind": "offline", "name": "Dev" } } });
+        for _ in 0..2 {
+            let started = invoke(&webview, "launch_start", body.clone()).unwrap();
+            let finished = finished_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+            assert_eq!(started["task_id"], json!(finished.task_id));
+            assert_eq!(finished.state, TaskState::Failed);
+            assert_eq!(finished.error.unwrap().code, ErrorCode::JavaProbeFailed);
+        }
+        let list = invoke(&webview, "task_list", json!({})).unwrap();
+        assert_eq!(list["tasks"][0]["kind"], "launch");
     }
 }

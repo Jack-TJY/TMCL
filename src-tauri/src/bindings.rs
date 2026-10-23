@@ -17,11 +17,14 @@ use crate::commands::instance::{
     InstanceCreateArgs, InstanceDuplicateArgs, InstanceExportArgs, InstanceGameEntries,
     InstanceIdArgs, InstanceImportArgs, InstanceList, InstanceRenameArgs, InstanceSaveArgs,
 };
+use crate::commands::launch::{
+    LaunchInstanceArgs, LaunchKillResult, LaunchRunning, LaunchStartArgs,
+};
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
-use crate::events::TaskStarted;
+use crate::events::{GameExited, GameLog, TaskStarted};
 
 /// 置为 `1` 时测试改为写入生成物。
 const UPDATE_ENV: &str = "TMCL_UPDATE_BINDINGS";
@@ -39,6 +42,8 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     TaskFinished::export_all(&cfg)?;
     TaskProgress::export_all(&cfg)?;
     TaskStarted::export_all(&cfg)?;
+    GameExited::export_all(&cfg)?;
+    GameLog::export_all(&cfg)?;
     // app
     AppDemoTaskArgs::export_all(&cfg)?;
     AppInfo::export_all(&cfg)?;
@@ -55,6 +60,11 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     InstanceList::export_all(&cfg)?;
     InstanceRenameArgs::export_all(&cfg)?;
     InstanceSaveArgs::export_all(&cfg)?;
+    // launch
+    LaunchInstanceArgs::export_all(&cfg)?;
+    LaunchKillResult::export_all(&cfg)?;
+    LaunchRunning::export_all(&cfg)?;
+    LaunchStartArgs::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
     SettingsSetArgs::export_all(&cfg)?;

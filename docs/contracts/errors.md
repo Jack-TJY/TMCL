@@ -31,6 +31,7 @@
 | `JAVA_PROBE_FAILED` | java | 无法识别 Java 的版本或架构（文件不存在、不是 Java 或运行超时） | `java` | 无法识别 Java：{java} | Cannot identify Java: {java} |
 | `JAVA_RUNTIME_UNAVAILABLE` | java | 官方源与 Adoptium 都没有该平台、该主版本的运行时 | `major`、`platform` | 没有适用于 {platform} 的 Java {major} 可供下载，请手动安装 | No downloadable Java {major} is available for {platform}; please install it manually |
 | `JAVA_VERSION_MISMATCH` | java | 手动指定的 Java 主版本与游戏要求不一致，仅作警告 | `java`、`expected`、`actual` | 所选 Java 为 {actual}，该版本游戏需要 Java {expected}，可能无法启动 | The selected Java is {actual}, but this game version needs Java {expected} and may not start |
+| `LAUNCH_ALREADY_RUNNING` | launch | 该实例已在启动或运行中，同一实例同时只能运行一个游戏 | `id` | 该实例已在运行 | This instance is already running |
 | `LAUNCH_SPAWN_FAILED` | launch | 无法启动游戏进程（Java 路径无效或无权限） | `java` | 无法启动 Java：{java} | Failed to start Java: {java} |
 | `LAUNCH_VERSION_NOT_INSTALLED` | launch | 实例需要的游戏版本尚未安装；目前用于带模组加载器的实例（加载器安装由 M1-09 提供） | `version`、`loader`（可选） | 实例需要的版本 {version} {loader} 尚未安装 | The version {version} {loader} required by this instance is not installed |
 | `NET_CONNECT` | net | 无法连接服务器（DNS、TCP 或 TLS 失败） | `url` | 无法连接到服务器 {url} | Cannot connect to {url} |

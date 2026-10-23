@@ -27,6 +27,8 @@ tmcl-auth = { path = "../core/auth" }
 tmcl-common = { path = "../core/common" }
 tmcl-game = { path = "../core/game" }
 tmcl-instance = { path = "../core/instance" }
+tmcl-java = { path = "../core/java" }
+tmcl-launch = { path = "../core/launch" }
 tmcl-net = { path = "../core/net" }
 tokio = { workspace = true, features = ["sync"] }
 tokio-util = { workspace = true }

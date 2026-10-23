@@ -61,6 +61,8 @@ pub enum ErrorCode {
     JavaRuntimeUnavailable,
     /// 手动指定的 Java 主版本与游戏要求不一致（仅作警告）。
     JavaVersionMismatch,
+    /// 该实例已在启动或运行中。
+    LaunchAlreadyRunning,
     /// 无法启动游戏进程（Java 路径无效或无权限）。
     LaunchSpawnFailed,
     /// 实例需要的游戏版本（含加载器版本）尚未安装。
@@ -105,6 +107,7 @@ impl ErrorCode {
             Self::JavaProbeFailed => "JAVA_PROBE_FAILED",
             Self::JavaRuntimeUnavailable => "JAVA_RUNTIME_UNAVAILABLE",
             Self::JavaVersionMismatch => "JAVA_VERSION_MISMATCH",
+            Self::LaunchAlreadyRunning => "LAUNCH_ALREADY_RUNNING",
             Self::LaunchSpawnFailed => "LAUNCH_SPAWN_FAILED",
             Self::LaunchVersionNotInstalled => "LAUNCH_VERSION_NOT_INSTALLED",
             Self::NetConnect => "NET_CONNECT",
@@ -218,6 +221,7 @@ mod tests {
             ErrorCode::JavaProbeFailed,
             ErrorCode::JavaRuntimeUnavailable,
             ErrorCode::JavaVersionMismatch,
+            ErrorCode::LaunchAlreadyRunning,
             ErrorCode::LaunchSpawnFailed,
             ErrorCode::LaunchVersionNotInstalled,
             ErrorCode::NetConnect,

@@ -9,6 +9,7 @@ use tmcl_instance::InstanceStore;
 use tmcl_net::{Downloader, HttpClient};
 use tokio::sync::Mutex;
 
+use crate::commands::launch::GameRegistry;
 use crate::tasks::TaskManager;
 
 /// 命令层共享的状态。
@@ -20,6 +21,8 @@ pub struct AppState {
     pub config_lock: Mutex<()>,
     /// 全局任务管理器。
     pub tasks: Arc<TaskManager>,
+    /// 正在启动或运行的游戏。
+    pub games: Arc<GameRegistry>,
     /// 全局唯一的下载引擎，所有下载共享同一个连接数上限。
     downloader: RwLock<AppResult<Downloader>>,
     /// 游戏文件的下载地址（版本清单、资源前缀）；测试中指向本地服务器。
@@ -50,6 +53,7 @@ impl AppState {
             data,
             config_lock: Mutex::new(()),
             tasks: Arc::new(TaskManager::new()),
+            games: Arc::new(GameRegistry::default()),
             downloader: RwLock::new(build_downloader(&download)),
             game: InstallOptions::default(),
             db: StdMutex::new(None),

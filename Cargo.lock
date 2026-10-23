@@ -4034,6 +4034,8 @@ dependencies = [
  "tmcl-common",
  "tmcl-game",
  "tmcl-instance",
+ "tmcl-java",
+ "tmcl-launch",
  "tmcl-net",
  "tokio",
  "tokio-util",

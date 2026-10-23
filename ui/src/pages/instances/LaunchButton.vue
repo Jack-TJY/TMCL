@@ -4,7 +4,6 @@ import { DocumentText20Regular, Play20Filled } from "@vicons/fluent";
 import { NButton, NIcon, useMessage } from "naive-ui";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { instanceGet } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import { isActive, useGameSessions } from "../../components/game-log/sessions";
@@ -25,8 +24,7 @@ async function launch() {
   if (preparing.value || running.value) return;
   preparing.value = true;
   try {
-    const config = await instanceGet({ id: props.instance.id });
-    await games.launch({ id: config.id, name: config.name, jvm_args: config.jvm_args });
+    await games.launch({ id: props.instance.id, name: props.instance.name });
     emit("launched");
   } catch (err) {
     message.error(

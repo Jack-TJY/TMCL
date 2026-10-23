@@ -8,7 +8,8 @@
     "game_install": "下载游戏",
     "instance_duplicate": "复制实例",
     "instance_export": "导出实例",
-    "instance_import": "导入实例"
+    "instance_import": "导入实例",
+    "launch": "启动游戏"
   },
   "stage": {
     "version_json": "版本信息",
@@ -17,7 +18,9 @@
     "assets": "资源文件",
     "copy": "复制文件",
     "export": "打包",
-    "import": "解包"
+    "import": "解包",
+    "java_runtime": "Java 运行时",
+    "verify": "校验文件"
   },
   "status": {
     "waiting": "准备中…",
