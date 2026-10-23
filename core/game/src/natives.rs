@@ -46,7 +46,7 @@ pub fn native_jars(files: &GameFiles, version: &VersionJson, env: &RuleEnv) -> V
                     .unwrap_or_default(),
                 flatten: false,
             });
-        } else if is_native_classifier(&library.name)
+        } else if native_classifier_matches(&library.name, env)
             && let Some(file) = library.file()
         {
             jars.push(NativeJar {
@@ -59,12 +59,24 @@ pub fn native_jars(files: &GameFiles, version: &VersionJson, env: &RuleEnv) -> V
     jars
 }
 
-fn is_native_classifier(name: &str) -> bool {
+/// 新式 natives 的分类器是否适用于 `env` 的架构。
+///
+/// 官方版本 JSON 只按系统名写规则，同一系统的各架构（如 `natives-windows`、
+/// `natives-windows-arm64`、`natives-windows-x86`）都会通过规则，需按分类器后缀再选一次，
+/// 否则同名的本地库会互相覆盖。没有架构后缀的是 x86_64。
+fn native_classifier_matches(name: &str, env: &RuleEnv) -> bool {
     let coords = name.split_once('@').map_or(name, |(c, _)| c);
-    coords
-        .split(':')
-        .nth(3)
-        .is_some_and(|c| c.starts_with("natives-"))
+    let Some(classifier) = coords.split(':').nth(3) else {
+        return false;
+    };
+    let Some(rest) = classifier.strip_prefix("natives-") else {
+        return false;
+    };
+    let suffix = rest.split_once('-').map(|(_, arch)| arch);
+    match env.arch {
+        "x86_64" => suffix.is_none(),
+        other => suffix == Some(other),
+    }
 }
 
 /// 为一次启动新建的 natives 目录路径：`cache/natives/<版本>-<时间戳>-<进程号>-<序号>/`，
@@ -157,15 +169,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn recognises_new_style_natives() {
-        assert!(is_native_classifier(
-            "org.lwjgl:lwjgl:3.3.1:natives-windows"
+    fn picks_new_style_natives_by_arch() {
+        let x64 = RuleEnv::new("windows", "x86_64");
+        let arm = RuleEnv::new("osx", "arm64");
+        let x86 = RuleEnv::new("windows", "x86");
+        let name = |c: &str| format!("org.lwjgl:lwjgl:3.3.1:{c}");
+        assert!(native_classifier_matches(&name("natives-windows"), &x64));
+        assert!(!native_classifier_matches(
+            &name("natives-windows-arm64"),
+            &x64
         ));
-        assert!(is_native_classifier(
-            "org.lwjgl:lwjgl:3.3.1:natives-macos-arm64"
+        assert!(!native_classifier_matches(
+            &name("natives-windows-x86"),
+            &x64
         ));
-        assert!(!is_native_classifier("org.lwjgl:lwjgl:3.3.1"));
-        assert!(!is_native_classifier("a:b:1:client"));
+        assert!(native_classifier_matches(
+            &name("natives-macos-arm64"),
+            &arm
+        ));
+        assert!(!native_classifier_matches(&name("natives-macos"), &arm));
+        assert!(native_classifier_matches(
+            &name("natives-windows-x86"),
+            &x86
+        ));
+        assert!(!native_classifier_matches("org.lwjgl:lwjgl:3.3.1", &x64));
+        assert!(!native_classifier_matches("a:b:1:client", &x64));
     }
 
     #[test]

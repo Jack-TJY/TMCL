@@ -119,11 +119,18 @@ fn legacy_natives_are_picked_per_os() {
 fn new_style_natives_are_flattened() {
     let files = GameFiles::new(DataPaths::at("root"));
     let version = resolved("1.20.1");
-    for (os, count) in [("windows", 21), ("osx", 14), ("linux", 7)] {
+    // 每个系统只取 x86_64 的那一份（7 个 LWJGL 模块）；arm64 / x86 的 jar 虽通过规则也不解压。
+    for os in ["windows", "osx", "linux"] {
         let jars = native_jars(&files, &version, &env(os));
-        assert_eq!(jars.len(), count, "{os}");
+        assert_eq!(jars.len(), 7, "{os}");
         assert!(jars.iter().all(|j| j.flatten));
+        assert!(jars.iter().all(|j| {
+            let name = j.path.file_name().unwrap().to_string_lossy();
+            !name.contains("arm64") && !name.contains("x86")
+        }));
     }
+    let arm = RuleEnv::new("osx", "arm64");
+    assert_eq!(native_jars(&files, &version, &arm).len(), 7);
 }
 
 #[test]
