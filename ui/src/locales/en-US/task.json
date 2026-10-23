@@ -9,7 +9,8 @@
     "instance_duplicate": "Copy instance",
     "instance_export": "Export instance",
     "instance_import": "Import instance",
-    "launch": "Launch game"
+    "launch": "Launch game",
+    "loader_install": "Install mod loader"
   },
   "stage": {
     "version_json": "Version info",
@@ -20,7 +21,11 @@
     "export": "Packing",
     "import": "Unpacking",
     "java_runtime": "Java runtime",
-    "verify": "Verifying files"
+    "verify": "Verifying files",
+    "loader_profile": "Loader info",
+    "loader_installer": "Loader installer",
+    "loader_libraries": "Loader libraries",
+    "loader_processors": "Processing loader files"
   },
   "status": {
     "waiting": "Preparing…",

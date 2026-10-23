@@ -4,5 +4,6 @@ pub mod app;
 pub mod game;
 pub mod instance;
 pub mod launch;
+pub mod loader;
 pub mod settings;
 pub mod task;

@@ -29,6 +29,7 @@ tmcl-game = { path = "../core/game" }
 tmcl-instance = { path = "../core/instance" }
 tmcl-java = { path = "../core/java" }
 tmcl-launch = { path = "../core/launch" }
+tmcl-loader = { path = "../core/loader" }
 tmcl-net = { path = "../core/net" }
 tokio = { workspace = true, features = ["sync"] }
 tokio-util = { workspace = true }

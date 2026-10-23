@@ -6,6 +6,7 @@ use tmcl_common::config::DownloadConfig;
 use tmcl_common::{AppResult, Config, DataPaths, Db};
 use tmcl_game::InstallOptions;
 use tmcl_instance::InstanceStore;
+use tmcl_loader::Endpoints;
 use tmcl_net::{Downloader, HttpClient};
 use tokio::sync::Mutex;
 
@@ -27,6 +28,8 @@ pub struct AppState {
     downloader: RwLock<AppResult<Downloader>>,
     /// 游戏文件的下载地址（版本清单、资源前缀）；测试中指向本地服务器。
     pub game: InstallOptions,
+    /// 加载器元数据与 maven 仓库地址；测试中指向本地服务器。
+    pub loader: Endpoints,
     /// 共享的数据库连接，首次使用时打开。长耗时任务另开连接，避免长时间占用。
     db: StdMutex<Option<Db>>,
 }
@@ -56,6 +59,7 @@ impl AppState {
             games: Arc::new(GameRegistry::default()),
             downloader: RwLock::new(build_downloader(&download)),
             game: InstallOptions::default(),
+            loader: Endpoints::default(),
             db: StdMutex::new(None),
         }
     }
