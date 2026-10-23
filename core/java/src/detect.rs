@@ -99,7 +99,7 @@ pub async fn detect(sources: &Sources) -> Vec<JavaInstall> {
 }
 
 /// 在 `dir` 下最多 `depth` 层内寻找 Java 主目录，返回其中的 `java` 可执行文件。
-fn scan(dir: &Path, depth: usize) -> Vec<PathBuf> {
+pub(crate) fn scan(dir: &Path, depth: usize) -> Vec<PathBuf> {
     let mut found = Vec::new();
     scan_into(dir, depth, &mut found);
     found

@@ -8,14 +8,22 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+flate2 = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tar = { workspace = true }
 tmcl-common = { path = "../common" }
+tmcl-net = { path = "../net" }
 tokio = { workspace = true, features = ["process"] }
 tracing = { workspace = true }
 ts-rs = { workspace = true }
+zip = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 winreg = { workspace = true }
 
 [dev-dependencies]
+sha1 = { workspace = true }
 tempfile = { workspace = true }
+tmcl-net = { path = "../net", features = ["test-util"] }
