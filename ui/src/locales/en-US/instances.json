@@ -1,0 +1,37 @@
+{
+  "search": "Search by name, version or group",
+  "sort": {
+    "recent": "Recently played",
+    "name": "By name"
+  },
+  "refresh": "Refresh",
+  "create": "New instance",
+  "loadFailed": "Couldn't load instances",
+  "retry": "Retry",
+  "empty": "No instances yet. Install a game version from the Download page.",
+  "noMatch": "No matching instances",
+  "ungrouped": "Ungrouped",
+  "more": "More actions",
+  "broken": "Broken",
+  "brokenHint": "Its config can't be read. Open the folder to fix it, or delete it.",
+  "neverPlayed": "Never played",
+  "lastPlayed": "Last played {date}",
+  "cancel": "Cancel",
+  "loader": {
+    "vanilla": "Vanilla",
+    "fabric": "Fabric",
+    "quilt": "Quilt",
+    "forge": "Forge",
+    "neoforge": "NeoForge"
+  },
+  "action": {
+    "open": "Open game folder",
+    "delete": "Delete"
+  },
+  "delete": {
+    "title": "Delete \"{name}\"?",
+    "content": "The instance moves to the trash and is removed automatically after 7 days.",
+    "confirm": "Delete",
+    "done": "Deleted \"{name}\""
+  }
+}

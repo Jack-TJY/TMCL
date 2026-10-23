@@ -23,6 +23,7 @@ describe("instance commands", () => {
       ["instance_get", () => api.instanceGet({ id: "a" }), { id: "a" }],
       ["instance_delete", () => api.instanceDelete({ id: "a" }), { id: "a" }],
       ["instance_game_entries", () => api.instanceGameEntries({ id: "a" }), { id: "a" }],
+      ["instance_open_dir", () => api.instanceOpenDir({ id: "a" }), { id: "a" }],
       [
         "instance_create",
         () => api.instanceCreate({ name: "n", game_version: "1.20.1" }),

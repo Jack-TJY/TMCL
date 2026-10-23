@@ -37,6 +37,7 @@
 | `instance_get` | `InstanceIdArgs { id }` | `InstanceConfig` | 读取 `instance.json`；不存在返回 `INSTANCE_NOT_FOUND`，损坏返回 `INSTANCE_CORRUPTED` / `INSTANCE_SCHEMA_UNSUPPORTED` |
 | `instance_import` | `InstanceImportArgs { pack }` | `TaskStarted` | 任务种类 `instance_import`：从 `.tmclpack` 导入为新实例；`pack` 须为绝对路径；包无效时任务以 `INSTANCE_PACK_INVALID` 失败 |
 | `instance_list` | 无 | `InstanceList { instances: InstanceSummary[] }` | 读取 SQLite 实例索引：最近启动的在前，从未启动的按创建时间倒序；损坏的实例 `error` 非空。应用首次访问数据库时先与磁盘对账并清理过期回收站 |
+| `instance_open_dir` | `InstanceIdArgs { id }` | 无 | 在系统文件管理器中打开实例的 `game/` 目录（不存在时先创建）；损坏的实例也可打开；实例目录不存在或 ID 非法返回 `INSTANCE_NOT_FOUND` |
 | `instance_refresh` | 无 | `InstanceList` | 先与 `instances/` 目录重新对账，再返回同 `instance_list` |
 | `instance_rename` | `InstanceRenameArgs { id, name }` | `InstanceConfig` | 只改显示名称，ID 与目录不变 |
 | `instance_save` | `InstanceSaveArgs { config: InstanceConfig }` | `InstanceConfig` | 保存修改后的完整配置（实例须已存在），返回规整后的配置（名称去掉首尾空白） |

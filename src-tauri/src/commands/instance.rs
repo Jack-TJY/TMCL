@@ -5,9 +5,11 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
 use tmcl_common::{AppError, AppResult, DataPaths, Db, ErrorCode, TaskCtx};
+use tmcl_instance::store::is_valid_id;
 use tmcl_instance::{InstanceConfig, InstanceStore, InstanceSummary, LoaderSpec};
 use ts_rs::TS;
 
+use crate::commands::settings::open_in_file_manager;
 use crate::events::{TaskStarted, spawn_task};
 use crate::state::AppState;
 
@@ -172,6 +174,27 @@ pub async fn instance_game_entries(
     })
 }
 
+/// 在系统文件管理器中打开实例的游戏目录（`game/`，不存在时先创建）；损坏的实例也可打开。
+#[tauri::command]
+pub async fn instance_open_dir(
+    state: State<'_, AppState>,
+    args: InstanceIdArgs,
+) -> Result<(), AppError> {
+    let paths = prepare(&state)?;
+    open_in_file_manager(&game_dir(&paths, &args.id)?)
+}
+
+/// 已存在实例的 `game/` 目录，按需创建。
+fn game_dir(paths: &DataPaths, id: &str) -> AppResult<PathBuf> {
+    if !is_valid_id(id) || !paths.instance_dir(id).is_dir() {
+        return Err(AppError::new(ErrorCode::InstanceNotFound).with_param("id", id));
+    }
+    let dir = paths.instance_game_dir(id);
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| AppError::from(e).with_param("path", dir.display()))?;
+    Ok(dir)
+}
+
 /// 复制实例，立即返回任务 ID；完成后重新读取实例列表即可看到新实例。
 #[tauri::command]
 pub async fn instance_duplicate<R: Runtime>(
@@ -259,6 +282,20 @@ fn absolute_path(path: &str) -> AppResult<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn game_dir_requires_existing_instance() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path());
+        for id in ["missing", "../escape", ""] {
+            let err = game_dir(&paths, id).unwrap_err();
+            assert_eq!(err.code, ErrorCode::InstanceNotFound);
+        }
+        std::fs::create_dir_all(paths.instance_dir("abc")).unwrap();
+        let game = game_dir(&paths, "abc").unwrap();
+        assert!(game.is_dir());
+        assert_eq!(game, paths.instance_game_dir("abc"));
+    }
 
     #[test]
     fn requires_absolute_paths() {

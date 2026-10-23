@@ -73,3 +73,8 @@ export function instanceExport(args: InstanceExportArgs): Promise<TaskStarted> {
 export function instanceImport(args: InstanceImportArgs): Promise<TaskStarted> {
   return invoke<TaskStarted>("instance_import", { args });
 }
+
+/** 在系统文件管理器中打开实例的游戏目录。 */
+export function instanceOpenDir(args: InstanceIdArgs): Promise<void> {
+  return invoke<void>("instance_open_dir", { args });
+}
