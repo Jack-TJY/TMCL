@@ -1,13 +1,15 @@
-//! 游戏进程：启动、按行转发 stdout/stderr、等待退出与强制结束。
+//! 游戏进程：启动、按行批量转发 stdout/stderr、崩溃识别与强制结束。
 
 use std::process::Stdio;
+use std::time::Duration;
 
 use tmcl_common::{AppError, AppResult, ErrorCode};
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
-use crate::args::LaunchCommand;
+use crate::args::{LaunchCommand, mask};
 
 /// 日志来源。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,8 +25,10 @@ pub enum LogStream {
 pub struct ExitInfo {
     /// 退出码；被信号结束时为 `None`。
     pub exit_code: Option<i32>,
-    /// 是否视为崩溃（退出码非 0 或被信号结束）。日志崩溃特征识别由 M1-07 补充。
+    /// 是否视为崩溃：未被强制结束，且退出码非 0 或日志中出现崩溃特征（见 [`is_crash_line`]）。
     pub crashed: bool,
+    /// 是否经 [`KillHandle::kill`] 强制结束。
+    pub killed: bool,
 }
 
 /// 运行中的游戏进程。
@@ -33,6 +37,24 @@ pub struct GameProcess {
     child: Child,
     pid: u32,
     lines: mpsc::UnboundedReceiver<(LogStream, String)>,
+    kill: CancellationToken,
+    secrets: Vec<String>,
+}
+
+/// 强制结束游戏进程的句柄，可在其他任务中使用；`Default` 得到不关联进程的句柄（测试用）。
+#[derive(Debug, Clone, Default)]
+pub struct KillHandle(CancellationToken);
+
+impl KillHandle {
+    /// 请求强制结束；进程已退出时不做任何事。
+    pub fn kill(&self) {
+        self.0.cancel();
+    }
+
+    /// 是否已请求强制结束。
+    pub fn is_killed(&self) -> bool {
+        self.0.is_cancelled()
+    }
 }
 
 /// 启动游戏进程；Java 无法执行时返回 `LAUNCH_SPAWN_FAILED`。
@@ -67,7 +89,26 @@ pub fn spawn(command: &LaunchCommand) -> AppResult<GameProcess> {
     if let Some(stderr) = child.stderr.take() {
         tokio::spawn(forward(stderr, LogStream::Stderr, tx));
     }
-    Ok(GameProcess { child, pid, lines })
+    Ok(GameProcess {
+        child,
+        pid,
+        lines,
+        kill: CancellationToken::new(),
+        secrets: command.secrets.clone(),
+    })
+}
+
+/// 日志行是否带有崩溃特征：游戏崩溃报告、JVM 致命错误、主线程未捕获异常、JVM 无法创建或内存不足。
+pub fn is_crash_line(line: &str) -> bool {
+    const SIGNATURES: &[&str] = &[
+        "---- Minecraft Crash Report ----",
+        "#@!@# Game crashed!",
+        "A fatal error has been detected by the Java Runtime Environment",
+        "Exception in thread \"main\"",
+        "Could not create the Java Virtual Machine",
+        "java.lang.OutOfMemoryError",
+    ];
+    SIGNATURES.iter().any(|s| line.contains(s))
 }
 
 impl GameProcess {
@@ -76,36 +117,60 @@ impl GameProcess {
         self.pid
     }
 
-    /// 读取下一行日志；两个输出流都关闭后返回 `None`。
-    pub async fn next_line(&mut self) -> Option<(LogStream, String)> {
-        self.lines.recv().await
+    /// 强制结束句柄。
+    pub fn kill_handle(&self) -> KillHandle {
+        KillHandle(self.kill.clone())
     }
 
-    /// 转发全部日志直到进程退出，返回退出信息。
-    pub async fn wait_with_logs(
+    /// 运行到进程退出：日志按来源分批交给 `on_batch`（同一来源的连续行最多攒 `interval`），
+    /// 访问令牌替换为 `***`；期间响应 [`KillHandle::kill`]。
+    pub async fn run(
         mut self,
-        mut on_line: impl FnMut(LogStream, &str),
+        interval: Duration,
+        mut on_batch: impl FnMut(LogStream, Vec<String>),
     ) -> AppResult<ExitInfo> {
-        while let Some((stream, line)) = self.lines.recv().await {
-            on_line(stream, &line);
-        }
-        self.wait().await
-    }
-
-    /// 等待进程退出（不读取剩余日志）。
-    pub async fn wait(&mut self) -> AppResult<ExitInfo> {
-        let status = self.child.wait().await?;
+        let mut pending: Option<(LogStream, Vec<String>)> = None;
+        let mut flush = |pending: &mut Option<(LogStream, Vec<String>)>| {
+            if let Some((stream, lines)) = pending.take() {
+                on_batch(stream, lines);
+            }
+        };
+        let mut ticker = tokio::time::interval(interval);
+        let mut killed = false;
+        let mut crash_seen = false;
+        let mut streams_open = true;
+        let status = loop {
+            tokio::select! {
+                _ = self.kill.cancelled(), if !killed => {
+                    killed = true;
+                    // 进程可能恰好已退出，start_kill 失败无需处理。
+                    let _ = self.child.start_kill();
+                }
+                line = self.lines.recv(), if streams_open => match line {
+                    Some((stream, line)) => {
+                        crash_seen |= is_crash_line(&line);
+                        let line = mask(&line, &self.secrets);
+                        match &mut pending {
+                            Some((s, lines)) if *s == stream => lines.push(line),
+                            _ => {
+                                flush(&mut pending);
+                                pending = Some((stream, vec![line]));
+                            }
+                        }
+                    }
+                    None => streams_open = false,
+                },
+                _ = ticker.tick() => flush(&mut pending),
+                status = self.child.wait(), if !streams_open => break status?,
+            }
+        };
+        flush(&mut pending);
         let exit_code = status.code();
         Ok(ExitInfo {
             exit_code,
-            crashed: exit_code != Some(0),
+            crashed: !killed && (exit_code != Some(0) || crash_seen),
+            killed,
         })
-    }
-
-    /// 强制结束进程。
-    pub async fn kill(&mut self) -> AppResult<()> {
-        self.child.kill().await?;
-        Ok(())
     }
 }
 
@@ -129,5 +194,26 @@ async fn forward(
                 let _ = tx.send((stream, line));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognises_crash_signatures() {
+        assert!(is_crash_line("---- Minecraft Crash Report ----"));
+        assert!(is_crash_line(
+            "#@!@# Game crashed! Crash report saved to: #@!@# C:\\x.txt"
+        ));
+        assert!(is_crash_line(
+            "Exception in thread \"main\" java.lang.NoClassDefFoundError: x"
+        ));
+        assert!(is_crash_line(
+            "Error: Could not create the Java Virtual Machine."
+        ));
+        assert!(!is_crash_line("[Render thread/INFO]: Sound engine started"));
+        assert!(!is_crash_line("[main/WARN]: Exception loading blockstate"));
     }
 }

@@ -63,6 +63,8 @@ pub enum ErrorCode {
     JavaVersionMismatch,
     /// 无法启动游戏进程（Java 路径无效或无权限）。
     LaunchSpawnFailed,
+    /// 实例需要的游戏版本（含加载器版本）尚未安装。
+    LaunchVersionNotInstalled,
     /// 无法连接服务器（DNS、TCP 或 TLS 失败）。
     NetConnect,
     /// 下载文件的 SHA1 与期望值不一致。
@@ -104,6 +106,7 @@ impl ErrorCode {
             Self::JavaRuntimeUnavailable => "JAVA_RUNTIME_UNAVAILABLE",
             Self::JavaVersionMismatch => "JAVA_VERSION_MISMATCH",
             Self::LaunchSpawnFailed => "LAUNCH_SPAWN_FAILED",
+            Self::LaunchVersionNotInstalled => "LAUNCH_VERSION_NOT_INSTALLED",
             Self::NetConnect => "NET_CONNECT",
             Self::NetHashMismatch => "NET_HASH_MISMATCH",
             Self::NetHttpStatus => "NET_HTTP_STATUS",
@@ -216,6 +219,7 @@ mod tests {
             ErrorCode::JavaRuntimeUnavailable,
             ErrorCode::JavaVersionMismatch,
             ErrorCode::LaunchSpawnFailed,
+            ErrorCode::LaunchVersionNotInstalled,
             ErrorCode::NetConnect,
             ErrorCode::NetHashMismatch,
             ErrorCode::NetHttpStatus,

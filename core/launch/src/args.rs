@@ -1,14 +1,15 @@
-//! 启动命令拼装：classpath、占位符替换、内存与窗口参数。
+//! 启动命令拼装：内存、版本 JSON 的参数模板、日志配置、自定义参数与窗口。
 //!
-//! M0-09 覆盖原版新式（`arguments`）与旧式（`minecraftArguments`）两种格式；
-//! 启动前检查、自定义 JVM/游戏参数与加载器由 M1-07 补充。
+//! 参数模板由 [`VersionJson::jvm_arguments`] / [`VersionJson::game_arguments`] 按规则展开
+//! （新式 `arguments`、旧式 `minecraftArguments` 与加载器追加的参数都在其中），
+//! 占位符见 [`crate::placeholders`]，classpath 见 [`crate::classpath`]。
 
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use tmcl_common::redact;
-use tmcl_game::version::{Argument, VersionJson};
-use tmcl_game::{GameFiles, RuleEnv, rules_allow};
+use tmcl_game::{GameFiles, RuleEnv, VersionJson};
+
+use crate::placeholders::Placeholders;
 
 /// 启动器名称，填入 `${launcher_name}`。
 pub const LAUNCHER_NAME: &str = "TMCL";
@@ -22,10 +23,25 @@ pub struct LaunchAccount {
     pub name: String,
     /// 不带连字符的 UUID。
     pub uuid: String,
-    /// 访问令牌；离线账号可为任意占位值。
+    /// 访问令牌；离线账号为占位值。
     pub access_token: String,
     /// `msa` 或 `legacy`（离线）。
     pub user_type: String,
+}
+
+/// 离线账号使用的访问令牌占位值。
+pub const OFFLINE_ACCESS_TOKEN: &str = "0";
+
+impl LaunchAccount {
+    /// 离线账号：令牌为占位值，`user_type` 为 `legacy`。离线账号仅限本地测试。
+    pub fn offline(name: &str, uuid: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            uuid: uuid.to_owned(),
+            access_token: OFFLINE_ACCESS_TOKEN.to_owned(),
+            user_type: "legacy".to_owned(),
+        }
+    }
 }
 
 /// 一次启动的输入。
@@ -33,11 +49,13 @@ pub struct LaunchAccount {
 pub struct LaunchSpec {
     /// `java` 可执行文件。
     pub java: PathBuf,
-    /// 已补全的版本。
+    /// 已补全并经 [`tmcl_game::resolve`] 合并的版本。
     pub version: VersionJson,
-    /// `--gameDir`。
+    /// `--gameDir`，也是进程的工作目录。
     pub game_dir: PathBuf,
-    /// natives 目录（LWJGL 会把本地库解压到这里）。
+    /// `${game_assets}`：旧版本为虚拟资源目录，见 [`tmcl_game::game_assets_dir`]。
+    pub game_assets_dir: PathBuf,
+    /// natives 目录（每次启动新建，见 [`tmcl_game::new_natives_dir`]）。
     pub natives_dir: PathBuf,
     /// 账号。
     pub account: LaunchAccount,
@@ -45,8 +63,14 @@ pub struct LaunchSpec {
     pub min_memory_mb: u32,
     /// 最大堆内存（MB）。
     pub max_memory_mb: u32,
+    /// 用户自定义 JVM 参数，排在版本模板之后、主类之前，可覆盖模板中的同名参数。
+    pub jvm_args: Vec<String>,
+    /// 用户自定义游戏参数，排在最后。
+    pub game_args: Vec<String>,
     /// 窗口大小，`None` 表示使用游戏默认值。
     pub window: Option<(u32, u32)>,
+    /// 全屏启动（追加 `--fullscreen`，此时不传窗口大小）。
+    pub fullscreen: bool,
 }
 
 /// 拼装好的启动命令。
@@ -58,6 +82,8 @@ pub struct LaunchCommand {
     pub args: Vec<String>,
     /// 工作目录（即 `--gameDir`）。
     pub cwd: PathBuf,
+    /// 写日志或转发游戏输出前要替换为 `***` 的值（访问令牌）。
+    pub secrets: Vec<String>,
 }
 
 impl LaunchCommand {
@@ -67,171 +93,69 @@ impl LaunchCommand {
             .chain(self.args.iter().cloned())
             .collect::<Vec<_>>()
             .join(" ");
-        redact(&line).into_owned()
+        mask(&redact(&line), &self.secrets)
+    }
+}
+
+/// 把 `text` 中出现的每个 `secrets` 替换为 `***`。
+pub fn mask(text: &str, secrets: &[String]) -> String {
+    secrets
+        .iter()
+        .filter(|s| !s.is_empty())
+        .fold(text.to_owned(), |acc, s| acc.replace(s.as_str(), "***"))
+}
+
+/// 本次启动在当前平台的规则环境：设置了窗口大小且非全屏时启用 `has_custom_resolution`。
+pub fn rule_env(spec: &LaunchSpec) -> RuleEnv {
+    let env = RuleEnv::current();
+    if spec.window.is_some() && !spec.fullscreen {
+        env.with_feature("has_custom_resolution", true)
+    } else {
+        env
     }
 }
 
 /// 按当前平台拼装启动命令。
 pub fn build_command(files: &GameFiles, spec: &LaunchSpec) -> LaunchCommand {
-    let mut env = RuleEnv::current();
-    if spec.window.is_some() {
-        env = env.with_feature("has_custom_resolution", true);
-    }
-    build_command_for(files, spec, &env)
+    build_command_for(files, spec, &rule_env(spec))
 }
 
 /// [`build_command`] 的可测试版本：显式给出规则环境。
+///
+/// 顺序：`-Xms`/`-Xmx` → 版本 JVM 参数模板 → 自定义 JVM 参数 → 日志配置 → 主类 →
+/// 版本游戏参数模板 → `--fullscreen` → 自定义游戏参数。自定义参数中的占位符同样会被替换。
 pub fn build_command_for(files: &GameFiles, spec: &LaunchSpec, env: &RuleEnv) -> LaunchCommand {
     let version = &spec.version;
-    let vars = placeholders(files, spec, env);
-    let subst = |s: &str| substitute(s, &vars);
+    let vars = Placeholders::new(files, spec, env);
+    let subst = |s: &String| vars.apply(s);
 
     let mut args = vec![
         format!("-Xms{}M", spec.min_memory_mb),
         format!("-Xmx{}M", spec.max_memory_mb),
     ];
-    match &version.arguments {
-        Some(arguments) => args.extend(expand(&arguments.jvm, env).map(subst)),
-        None => {
-            // 旧版本没有 JVM 参数模板，使用官方启动器的默认值。
-            args.push(subst("-Djava.library.path=${natives_directory}"));
-            args.push("-cp".to_owned());
-            args.push(subst("${classpath}"));
-        }
-    }
+    args.extend(version.jvm_arguments(env).iter().map(subst));
+    args.extend(spec.jvm_args.iter().map(subst));
     if let Some(log) = version.logging.as_ref().and_then(|l| l.client.as_ref()) {
         let path = files.log_config(&log.file.id);
         args.push(log.argument.replace("${path}", &path.display().to_string()));
     }
     args.push(version.main_class.clone());
-    match (&version.arguments, &version.minecraft_arguments) {
-        (Some(arguments), _) => args.extend(expand(&arguments.game, env).map(subst)),
-        (None, Some(legacy)) => {
-            args.extend(legacy.split_whitespace().map(subst));
-            if let Some((w, h)) = spec.window {
-                args.extend([
-                    "--width".into(),
-                    w.to_string(),
-                    "--height".into(),
-                    h.to_string(),
-                ]);
-            }
-        }
-        (None, None) => {}
+    args.extend(version.game_arguments(env).iter().map(subst));
+    if spec.fullscreen && !args.iter().any(|a| a == "--fullscreen") {
+        args.push("--fullscreen".to_owned());
     }
+    args.extend(spec.game_args.iter().map(subst));
 
+    let token = &spec.account.access_token;
+    let secrets = if token.len() > OFFLINE_ACCESS_TOKEN.len() {
+        vec![token.clone()]
+    } else {
+        Vec::new()
+    };
     LaunchCommand {
         program: spec.java.clone(),
         args,
         cwd: spec.game_dir.clone(),
-    }
-}
-
-/// 适用于 `env` 的依赖库与客户端 jar，按版本 JSON 中的顺序。
-pub fn classpath(files: &GameFiles, version: &VersionJson, env: &RuleEnv) -> Vec<PathBuf> {
-    let mut seen = std::collections::BTreeSet::new();
-    let mut entries: Vec<PathBuf> = version
-        .libraries
-        .iter()
-        .filter(|l| l.applies(env))
-        .filter_map(|l| l.artifact())
-        .filter(|a| seen.insert(a.path.clone()))
-        .map(|a| files.library(&a.path))
-        .collect();
-    entries.push(files.client_jar(&version.id));
-    entries
-}
-
-fn expand<'a>(args: &'a [Argument], env: &'a RuleEnv) -> impl Iterator<Item = &'a str> + 'a {
-    args.iter()
-        .flat_map(move |arg| match arg {
-            Argument::Plain(s) => std::slice::from_ref(s),
-            Argument::Conditional { rules, value } if rules_allow(rules, env) => value.values(),
-            Argument::Conditional { .. } => &[],
-        })
-        .map(String::as_str)
-}
-
-fn placeholders(
-    files: &GameFiles,
-    spec: &LaunchSpec,
-    env: &RuleEnv,
-) -> BTreeMap<&'static str, String> {
-    let version = &spec.version;
-    let separator = if env.os_name == "windows" { ";" } else { ":" };
-    let classpath = classpath(files, version, env)
-        .iter()
-        .map(|p| p.display().to_string())
-        .collect::<Vec<_>>()
-        .join(separator);
-    let assets_index = version
-        .asset_index
-        .as_ref()
-        .map(|i| i.id.clone())
-        .or_else(|| version.assets.clone())
-        .unwrap_or_default();
-    let (width, height) = spec.window.unwrap_or((854, 480));
-    let account = &spec.account;
-    BTreeMap::from([
-        ("assets_index_name", assets_index),
-        ("assets_root", files.assets_dir().display().to_string()),
-        ("auth_access_token", account.access_token.clone()),
-        ("auth_player_name", account.name.clone()),
-        ("auth_session", account.access_token.clone()),
-        ("auth_uuid", account.uuid.clone()),
-        ("auth_xuid", String::new()),
-        ("classpath", classpath),
-        ("clientid", String::new()),
-        ("game_assets", files.assets_dir().display().to_string()),
-        ("game_directory", spec.game_dir.display().to_string()),
-        ("launcher_name", LAUNCHER_NAME.to_owned()),
-        ("launcher_version", LAUNCHER_VERSION.to_owned()),
-        ("natives_directory", spec.natives_dir.display().to_string()),
-        ("resolution_height", height.to_string()),
-        ("resolution_width", width.to_string()),
-        ("user_properties", "{}".to_owned()),
-        ("user_type", account.user_type.clone()),
-        ("version_name", version.id.clone()),
-        ("version_type", version.kind.clone()),
-    ])
-}
-
-/// 替换 `${name}` 占位符；未知占位符保持原样。
-fn substitute(input: &str, vars: &BTreeMap<&'static str, String>) -> String {
-    let mut out = String::with_capacity(input.len());
-    let mut rest = input;
-    while let Some(start) = rest.find("${") {
-        out.push_str(&rest[..start]);
-        let after = &rest[start + 2..];
-        match after.find('}') {
-            Some(end) => {
-                let name = &after[..end];
-                match vars.get(name) {
-                    Some(value) => out.push_str(value),
-                    None => out.push_str(&rest[start..start + 2 + end + 1]),
-                }
-                rest = &after[end + 1..];
-            }
-            None => {
-                out.push_str(&rest[start..]);
-                rest = "";
-            }
-        }
-    }
-    out.push_str(rest);
-    out
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn substitute_handles_known_unknown_and_unclosed() {
-        let vars = BTreeMap::from([("a", "1".to_owned()), ("b", "two".to_owned())]);
-        assert_eq!(substitute("${a}-${b}", &vars), "1-two");
-        assert_eq!(substitute("x${c}y", &vars), "x${c}y");
-        assert_eq!(substitute("pre${a", &vars), "pre${a");
-        assert_eq!(substitute("no vars", &vars), "no vars");
+        secrets,
     }
 }
