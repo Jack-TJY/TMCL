@@ -8,3 +8,18 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tmcl-common = { path = "../common" }
+tmcl-game = { path = "../game" }
+tmcl-instance = { path = "../instance" }
+tmcl-net = { path = "../net" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+ts-rs = { workspace = true }
+
+[dev-dependencies]
+sha1 = { workspace = true }
+tempfile = { workspace = true }
+tmcl-net = { path = "../net", features = ["test-util"] }

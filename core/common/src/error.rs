@@ -67,6 +67,14 @@ pub enum ErrorCode {
     LaunchSpawnFailed,
     /// 实例需要的游戏版本（含加载器版本）尚未安装。
     LaunchVersionNotInstalled,
+    /// 加载器安装器或安装描述文件损坏、格式不受支持。
+    LoaderInstallerInvalid,
+    /// Forge/NeoForge 安装器的处理步骤（processor）运行失败或输出校验不符。
+    LoaderProcessorFailed,
+    /// 该加载器不支持这个游戏版本。
+    LoaderUnsupportedVersion,
+    /// 找不到该游戏版本对应的加载器版本。
+    LoaderVersionNotFound,
     /// 无法连接服务器（DNS、TCP 或 TLS 失败）。
     NetConnect,
     /// 下载文件的 SHA1 与期望值不一致。
@@ -110,6 +118,10 @@ impl ErrorCode {
             Self::LaunchAlreadyRunning => "LAUNCH_ALREADY_RUNNING",
             Self::LaunchSpawnFailed => "LAUNCH_SPAWN_FAILED",
             Self::LaunchVersionNotInstalled => "LAUNCH_VERSION_NOT_INSTALLED",
+            Self::LoaderInstallerInvalid => "LOADER_INSTALLER_INVALID",
+            Self::LoaderProcessorFailed => "LOADER_PROCESSOR_FAILED",
+            Self::LoaderUnsupportedVersion => "LOADER_UNSUPPORTED_VERSION",
+            Self::LoaderVersionNotFound => "LOADER_VERSION_NOT_FOUND",
             Self::NetConnect => "NET_CONNECT",
             Self::NetHashMismatch => "NET_HASH_MISMATCH",
             Self::NetHttpStatus => "NET_HTTP_STATUS",
@@ -224,6 +236,10 @@ mod tests {
             ErrorCode::LaunchAlreadyRunning,
             ErrorCode::LaunchSpawnFailed,
             ErrorCode::LaunchVersionNotInstalled,
+            ErrorCode::LoaderInstallerInvalid,
+            ErrorCode::LoaderProcessorFailed,
+            ErrorCode::LoaderUnsupportedVersion,
+            ErrorCode::LoaderVersionNotFound,
             ErrorCode::NetConnect,
             ErrorCode::NetHashMismatch,
             ErrorCode::NetHttpStatus,
