@@ -32,6 +32,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::instance::instance_get,
         commands::instance::instance_import,
         commands::instance::instance_list,
+        commands::instance::instance_open_dir,
         commands::instance::instance_refresh,
         commands::instance::instance_rename,
         commands::instance::instance_save,
@@ -404,6 +405,19 @@ mod tests {
         let list = invoke(&webview, "instance_refresh", json!({})).unwrap();
         assert_eq!(list["instances"][0]["id"], id);
         assert_eq!(list["instances"][0]["error"], "INSTANCE_CORRUPTED");
+    }
+
+    #[test]
+    fn instance_open_dir_rejects_unknown_instance() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(DataPaths::at(dir.path()))));
+        let err = invoke(
+            &webview,
+            "instance_open_dir",
+            json!({ "args": { "id": "missing" } }),
+        )
+        .unwrap_err();
+        assert_eq!(err["code"], "INSTANCE_NOT_FOUND");
     }
 
     #[test]

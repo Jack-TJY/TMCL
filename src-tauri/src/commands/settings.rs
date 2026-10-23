@@ -138,7 +138,8 @@ fn validate_settings(settings: &LauncherSettings) -> AppResult<()> {
     Ok(())
 }
 
-fn open_in_file_manager(dir: &Path) -> AppResult<()> {
+/// 在系统文件管理器中打开目录。
+pub(crate) fn open_in_file_manager(dir: &Path) -> AppResult<()> {
     let program = if cfg!(windows) {
         "explorer"
     } else if cfg!(target_os = "macos") {

@@ -3,6 +3,7 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from "vue-router";
 import PlaceholderPage from "./layouts/PlaceholderPage.vue";
 import DownloadPage from "./pages/download/DownloadPage.vue";
+import InstancesPage from "./pages/instances/InstancesPage.vue";
 import SettingsPage from "./pages/settings/SettingsPage.vue";
 
 declare module "vue-router" {
@@ -35,7 +36,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/instances",
     name: "instances",
-    component: PlaceholderPage,
+    component: InstancesPage,
     meta: { titleKey: "shell.nav.instances" },
   },
   {

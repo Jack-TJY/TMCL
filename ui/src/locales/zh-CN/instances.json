@@ -1,0 +1,37 @@
+{
+  "search": "搜索名称、版本或分组",
+  "sort": {
+    "recent": "最近游玩",
+    "name": "按名称"
+  },
+  "refresh": "刷新",
+  "create": "新建实例",
+  "loadFailed": "无法读取实例列表",
+  "retry": "重试",
+  "empty": "还没有实例，去下载页安装一个游戏版本吧",
+  "noMatch": "没有匹配的实例",
+  "ungrouped": "未分组",
+  "more": "更多操作",
+  "broken": "已损坏",
+  "brokenHint": "配置文件无法读取，可打开目录修复或删除",
+  "neverPlayed": "从未游玩",
+  "lastPlayed": "上次游玩：{date}",
+  "cancel": "取消",
+  "loader": {
+    "vanilla": "原版",
+    "fabric": "Fabric",
+    "quilt": "Quilt",
+    "forge": "Forge",
+    "neoforge": "NeoForge"
+  },
+  "action": {
+    "open": "打开游戏目录",
+    "delete": "删除"
+  },
+  "delete": {
+    "title": "删除“{name}”？",
+    "content": "实例会先移到回收站，7 天后自动清理。",
+    "confirm": "删除",
+    "done": "已删除“{name}”"
+  }
+}
