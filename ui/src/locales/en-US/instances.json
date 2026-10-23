@@ -39,6 +39,7 @@
     "loadFailed": "Couldn't load the instance config",
     "version": "Game version",
     "loader": "Loader",
+    "changeLoader": "Change",
     "created": "Created",
     "lastPlayed": "Last played",
     "group": "Group",

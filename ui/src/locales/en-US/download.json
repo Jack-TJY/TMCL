@@ -18,7 +18,6 @@
     "title": "Install {version}",
     "name": "Instance name",
     "loader": "Mod loader",
-    "loaderVanilla": "Vanilla (choosing Fabric, Forge and other loaders comes in a later version)",
     "cancel": "Cancel",
     "confirm": "Create and download",
     "started": "Started downloading “{name}”. Track it in the task center."

@@ -1,0 +1,22 @@
+{
+  "label": "Mod loader",
+  "vanilla": "Vanilla",
+  "loading": "Loading…",
+  "unsupported": "Not available",
+  "unsupportedHint": "This loader has no build for this game version",
+  "failed": "Failed to load",
+  "failedDetail": "Couldn't load {name} versions: {error}",
+  "retry": "Retry",
+  "recommended": "Recommended",
+  "unstable": "Beta",
+  "showUnstable": "Show beta versions",
+  "bmclapi": "{name} versions and files are mirrored by BMCLAPI (bangbang93, bmclapidoc.bangbang93.com), falling back to the official source on failure.",
+  "change": {
+    "title": "Change mod loader of \"{name}\"",
+    "warning": "This modifies the instance: installed mods may not work with the new loader, so consider exporting a backup first. The install runs in the task center and takes effect when it finishes.",
+    "cancel": "Cancel",
+    "confirm": "Apply",
+    "started": "Installing the mod loader for \"{name}\". Track progress in the task center.",
+    "removed": "Switched back to vanilla"
+  }
+}

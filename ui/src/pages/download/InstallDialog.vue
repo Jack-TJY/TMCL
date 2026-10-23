@@ -1,13 +1,16 @@
 <script setup lang="ts">
-// 新建实例并下载游戏文件：填写实例名后一键创建，下载任务进入任务中心。
-// 加载器选择由 M1-15 的组件提供，在此之前只能创建原版实例。
+// 新建实例并下载游戏文件：填写实例名、选择加载器（默认原版）后一键创建，下载任务进入任务中心。
+// 选了加载器时以 loader_install 任务补全原版并安装加载器，成功后实例才会带上加载器。
 import { NButton, NForm, NFormItem, NInput, NModal, useMessage } from "naive-ui";
 import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { gameInstall, GAME_INSTALL_KIND } from "../../api/game";
 import { instanceCreate, instanceList } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
+import { loaderInstall, LOADER_INSTALL_KIND } from "../../api/loader";
 import type { GameVersion } from "../../bindings/GameVersion";
+import type { LoaderSpec } from "../../bindings/LoaderSpec";
+import LoaderPicker from "../../components/loader-picker/LoaderPicker.vue";
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import { defaultInstanceName } from "./versions";
@@ -20,6 +23,7 @@ const message = useMessage();
 const tasks = useTasksStore();
 
 const name = ref("");
+const loader = ref<LoaderSpec | null>(null);
 const busy = ref(false);
 
 watch(
@@ -27,6 +31,7 @@ watch(
   async (version) => {
     if (!version) return;
     name.value = version.id;
+    loader.value = null;
     const existing = await instanceList()
       .then(({ instances }) => instances.map((i) => i.name))
       .catch(() => []);
@@ -44,12 +49,21 @@ async function confirm() {
   if (!version || !instanceName || busy.value) return;
   busy.value = true;
   try {
-    await instanceCreate({ name: instanceName, game_version: version.id });
-    await tasks.start({
-      kind: GAME_INSTALL_KIND,
-      label: instanceName,
-      start: () => gameInstall({ version_id: version.id }),
-    });
+    const instance = await instanceCreate({ name: instanceName, game_version: version.id });
+    const spec = loader.value;
+    await tasks.start(
+      spec
+        ? {
+            kind: LOADER_INSTALL_KIND,
+            label: instanceName,
+            start: () => loaderInstall({ instance_id: instance.id, ...spec }),
+          }
+        : {
+            kind: GAME_INSTALL_KIND,
+            label: instanceName,
+            start: () => gameInstall({ version_id: version.id }),
+          },
+    );
     message.success(t("download.install.started", { name: instanceName }));
     emit("close");
   } catch (err) {
@@ -64,7 +78,7 @@ async function confirm() {
   <NModal
     :show="version !== null"
     preset="card"
-    style="width: 440px"
+    style="width: 560px"
     :title="t('download.install.title', { version: version?.id ?? '' })"
     :mask-closable="!busy"
     :closable="!busy"
@@ -81,7 +95,7 @@ async function confirm() {
         />
       </NFormItem>
       <NFormItem :label="t('download.install.loader')">
-        <span class="loader-hint">{{ t("download.install.loaderVanilla") }}</span>
+        <LoaderPicker v-model="loader" :game-version="version?.id ?? null" :disabled="busy" />
       </NFormItem>
     </NForm>
     <template #footer>
@@ -98,11 +112,6 @@ async function confirm() {
 </template>
 
 <style scoped>
-.loader-hint {
-  font-size: 13px;
-  color: var(--tmcl-text-secondary);
-}
-
 .dialog-actions {
   display: flex;
   justify-content: flex-end;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 实例详情抽屉：版本与加载器（只读）、分组、Java、内存、JVM / 游戏参数、窗口；可打开游戏目录。
+// 实例详情抽屉：版本、加载器（可更换）、分组、Java、内存、JVM / 游戏参数、窗口；可打开游戏目录。
 import { FolderOpen20Regular } from "@vicons/fluent";
 import {
   NAlert,
@@ -27,7 +27,10 @@ import { toAppError } from "../../api/invoke";
 import type { AppError } from "../../bindings/AppError";
 import type { InstanceConfig } from "../../bindings/InstanceConfig";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
+import type { TaskId } from "../../bindings/TaskId";
+import LoaderChangeDialog from "../../components/loader-picker/LoaderChangeDialog.vue";
 import { formatError } from "../../i18n";
+import { useTasksStore } from "../../stores/tasks";
 import { formatArgs, parseArgs } from "./instances";
 
 const MEMORY_MIN_MB = 256;
@@ -38,12 +41,16 @@ const emit = defineEmits<{ close: []; saved: []; openDir: [id: string] }>();
 
 const { t, locale } = useI18n();
 const message = useMessage();
+const tasks = useTasksStore();
 
 const config = ref<InstanceConfig | null>(null);
 /** 读取或保存后的配置，用于回退被清空的数字框。 */
 const original = ref<InstanceConfig | null>(null);
 const loadError = ref<AppError | null>(null);
 const saving = ref(false);
+const changingLoader = ref(false);
+/** 本抽屉发起的加载器安装任务；成功后重新读取实例的加载器。 */
+const loaderTask = ref<TaskId | null>(null);
 
 // 表单中以文本编辑的字段，保存时再转换。
 const group = ref("");
@@ -58,6 +65,8 @@ watch(
     config.value = null;
     original.value = null;
     loadError.value = null;
+    loaderTask.value = null;
+    changingLoader.value = false;
     if (!id) return;
     try {
       const loaded = await instanceGet({ id });
@@ -78,6 +87,28 @@ watch(
 
 const groupOptions = computed(() =>
   props.groups.filter((g) => g.toLowerCase().includes(group.value.trim().toLowerCase())),
+);
+
+/** 只更新加载器字段，保留表单中尚未保存的修改。 */
+function applyLoader(loader: InstanceConfig["loader"]) {
+  if (config.value) config.value.loader = loader;
+  if (original.value) original.value.loader = loader;
+  emit("saved");
+}
+
+watch(
+  () => tasks.entries.find((e) => e.task_id === loaderTask.value)?.status,
+  async (status) => {
+    const id = config.value?.id;
+    if (status !== "succeeded" || !id) return;
+    loaderTask.value = null;
+    try {
+      const loaded = await instanceGet({ id });
+      if (config.value?.id === id) applyLoader(loaded.loader);
+    } catch (err) {
+      message.error(formatError(toAppError(err)));
+    }
+  },
 );
 
 const loaderText = computed(() => {
@@ -157,7 +188,18 @@ async function save() {
               {{ config.game_version }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('instances.detail.loader')">
-              {{ loaderText }}
+              <div class="loader">
+                <span>{{ loaderText }}</span>
+                <NButton
+                  text
+                  size="small"
+                  type="primary"
+                  :loading="loaderTask !== null"
+                  @click="changingLoader = true"
+                >
+                  {{ t("instances.detail.changeLoader") }}
+                </NButton>
+              </div>
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('instances.detail.created')">
               {{ formatDate(config.created_at) }}
@@ -261,6 +303,12 @@ async function save() {
           </NForm>
         </template>
       </NSpin>
+      <LoaderChangeDialog
+        :instance="changingLoader ? original : null"
+        @close="changingLoader = false"
+        @saved="(saved) => applyLoader(saved.loader)"
+        @started="(taskId) => (loaderTask = taskId)"
+      />
       <template #footer>
         <div class="footer">
           <NButton :disabled="!instance" @click="instance && emit('openDir', instance.id)">
@@ -288,6 +336,12 @@ async function save() {
 <style scoped>
 .summary {
   margin-bottom: 16px;
+}
+
+.loader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .stack {
