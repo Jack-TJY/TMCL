@@ -1,6 +1,7 @@
 {
   "edit": "Edit",
   "editHint": "Drag a widget to move it, drag its bottom-right corner to resize. Press Esc to discard changes.",
+  "addWidget": "Add widget",
   "reset": "Reset to default layout",
   "cancel": "Cancel",
   "done": "Done",
@@ -10,6 +11,16 @@
   "skipped": "{count} widget(s) couldn't be read and were skipped",
   "saveFailed": "Couldn't save the home layout: {error}",
   "widget": {
+    "configure": "Widget settings",
     "remove": "Remove widget"
+  },
+  "library": {
+    "title": "Add widget",
+    "add": "Add"
+  },
+  "settings": {
+    "title": "{name} settings",
+    "save": "OK",
+    "latestInstance": "Most recently played instance"
   }
 }

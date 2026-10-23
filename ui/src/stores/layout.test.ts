@@ -134,7 +134,7 @@ describe("layout store", () => {
 
     store.startEdit();
     store.remove("q");
-    const uid = store.add("quick-actions");
+    const uid = store.add("account");
     expect(store.items.map((i) => i.i)).toEqual([uid]);
     store.cancelEdit();
     expect(store.editing).toBe(false);
@@ -160,7 +160,7 @@ describe("layout store", () => {
     const store = useLayoutStore();
     await store.load();
     store.startEdit();
-    store.add("quick-actions");
+    store.add("account");
     tauriInvoke.mockRejectedValueOnce({ code: "COMMON_IO", params: {}, detail: null });
     await expect(store.finishEdit()).rejects.toMatchObject({ code: "COMMON_IO" });
     expect(store.editing).toBe(true);
