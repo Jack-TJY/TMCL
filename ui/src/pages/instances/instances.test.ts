@@ -7,6 +7,7 @@ import {
   groupInstances,
   groupNames,
   joinPath,
+  mostRecent,
   packFileName,
   parseArgs,
   sortInstances,
@@ -51,6 +52,14 @@ describe("instance list helpers", () => {
     expect(groups.map((g) => g.name)).toEqual(["Adventure", "Mods", null]);
     expect(groups[1].instances.map((i) => i.id)).toEqual(["b", "c"]);
     expect(groupNames(list)).toEqual(["Adventure", "Mods"]);
+  });
+});
+
+describe("most recent", () => {
+  it("skips broken instances", () => {
+    const broken = instance("x", { error: "INSTANCE_CORRUPTED" });
+    expect(mostRecent([broken, instance("a"), instance("b")])?.id).toBe("a");
+    expect(mostRecent([broken])).toBeNull();
   });
 });
 

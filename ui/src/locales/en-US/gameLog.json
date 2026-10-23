@@ -1,0 +1,21 @@
+{
+  "title": "Game log · {name}",
+  "search": "Search log",
+  "count": "{shown} / {total} lines",
+  "copy": "Copy",
+  "copied": "Log copied",
+  "copyFailed": "Couldn't copy",
+  "export": "Export",
+  "kill": "Force quit",
+  "killFailed": "Couldn't stop the game process",
+  "empty": "No log yet",
+  "noMatch": "No matching lines",
+  "failed": "Launch failed",
+  "status": {
+    "starting": "Starting",
+    "running": "Running",
+    "exited": "Exited ({code})",
+    "crashed": "Crashed ({code})",
+    "failed": "Launch failed"
+  }
+}

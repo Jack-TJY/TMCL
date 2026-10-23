@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 实例页（PLAN.md M1-13）：实例卡片按分组展示，可按最近游玩或名称排序；
-// 详情抽屉编辑配置，菜单中复制、重命名、导出、删除，工具栏导入。
+// 详情抽屉编辑配置，菜单中复制、重命名、导出、删除，工具栏导入；卡片上启动游戏并查看日志，
+// 崩溃时弹出提示。
 import {
   Add20Regular,
   ArrowClockwise20Regular,
@@ -20,23 +21,27 @@ import {
 } from "naive-ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { instanceDelete, instanceList, instanceOpenDir, instanceRefresh } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
 import type { AppError } from "../../bindings/AppError";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import type { TaskId } from "../../bindings/TaskId";
+import GameLogWindow from "../../components/game-log/GameLogWindow.vue";
+import { useGameSessions } from "../../components/game-log/sessions";
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import ExportDialog from "./ExportDialog.vue";
 import ImportDialog from "./ImportDialog.vue";
 import InstanceCard, { type CardAction } from "./InstanceCard.vue";
 import InstanceDetail from "./InstanceDetail.vue";
+import LaunchButton from "./LaunchButton.vue";
 import {
   filterInstances,
   groupInstances,
   groupNames,
   INSTANCE_SORTS,
+  mostRecent,
   sortInstances,
   type InstanceSort,
 } from "./instances";
@@ -46,6 +51,8 @@ const { t, locale } = useI18n();
 const message = useMessage();
 const dialog = useDialog();
 const router = useRouter();
+const route = useRoute();
+const games = useGameSessions();
 const tasks = useTasksStore();
 
 const instances = ref<InstanceSummary[]>([]);
@@ -58,6 +65,35 @@ const detail = ref<InstanceSummary | null>(null);
 const naming = ref<{ mode: "rename" | "duplicate"; instance: InstanceSummary } | null>(null);
 const exporting = ref<InstanceSummary | null>(null);
 const importing = ref(false);
+/** 打开日志窗口的实例 ID；也可经 `?log=<id>` 打开（崩溃提示在其他页面时跳转过来）。 */
+const logFor = ref<string | null>(null);
+
+watch(
+  () => route.query.log,
+  (id) => {
+    if (typeof id === "string" && games.sessions[id]) logFor.value = id;
+  },
+  { immediate: true },
+);
+
+function closeLog() {
+  logFor.value = null;
+  if (route.query.log) void router.replace({ query: {} });
+}
+
+// 对话框挂在应用级的 provider 上，离开本页后仍能弹出；“查看日志”经路由回到本页。
+games.setCrashHandler((session) => {
+  dialog.error({
+    title: t("instances.crash.title", { name: session.name }),
+    content: t("instances.crash.content", { code: session.exitCode ?? "-" }),
+    positiveText: t("instances.crash.viewLog"),
+    negativeText: t("instances.crash.close"),
+    onPositiveClick: () => {
+      logFor.value = session.instanceId;
+      void router.push({ name: "instances", query: { log: session.instanceId } });
+    },
+  });
+});
 
 async function load(reconcile = false) {
   loading.value = true;
@@ -81,6 +117,7 @@ const groups = computed(() =>
 );
 const existingGroups = computed(() => groupNames(instances.value, locale.value));
 const existingNames = computed(() => instances.value.map((i) => i.name));
+const recent = computed(() => mostRecent(instances.value));
 const sortOptions = computed(() =>
   INSTANCE_SORTS.map((value) => ({ label: t(`instances.sort.${value}`), value })),
 );
@@ -168,7 +205,14 @@ function onAction(instance: InstanceSummary, action: CardAction) {
         ></template>
         {{ t("instances.import.action") }}
       </NButton>
-      <NButton type="primary" @click="router.push({ name: 'download' })">
+      <LaunchButton
+        v-if="recent"
+        :instance="recent"
+        primary
+        @launched="load()"
+        @log="(id: string) => (logFor = id)"
+      />
+      <NButton :type="recent ? 'default' : 'primary'" @click="router.push({ name: 'download' })">
         <template #icon
           ><NIcon><Add20Regular /></NIcon
         ></template>
@@ -206,7 +250,15 @@ function onAction(instance: InstanceSummary, action: CardAction) {
             :key="instance.id"
             :instance="instance"
             @action="(action: CardAction) => onAction(instance, action)"
-          />
+          >
+            <template v-if="!instance.error" #actions>
+              <LaunchButton
+                :instance="instance"
+                @launched="load()"
+                @log="(id: string) => (logFor = id)"
+              />
+            </template>
+          </InstanceCard>
         </div>
       </section>
     </NSpin>
@@ -226,6 +278,7 @@ function onAction(instance: InstanceSummary, action: CardAction) {
       @started="reloadAfter"
     />
     <ExportDialog :instance="exporting" @close="exporting = null" />
+    <GameLogWindow :instance-id="logFor" @close="closeLog" />
     <ImportDialog :show="importing" @close="importing = false" @started="reloadAfter" />
   </div>
 </template>
@@ -240,6 +293,7 @@ function onAction(instance: InstanceSummary, action: CardAction) {
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
