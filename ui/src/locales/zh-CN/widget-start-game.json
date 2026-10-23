@@ -1,0 +1,14 @@
+{
+  "title": "开始游戏",
+  "description": "一键启动最近游玩的实例",
+  "empty": "还没有实例",
+  "create": "新建实例",
+  "play": "开始游戏",
+  "running": "游戏运行中",
+  "lastPlayed": "上次游玩 {date}",
+  "neverPlayed": "尚未游玩",
+  "failed": "启动 {name} 失败：{reason}",
+  "settings": {
+    "instance": "启动的实例"
+  }
+}

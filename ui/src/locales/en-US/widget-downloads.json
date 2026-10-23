@@ -1,0 +1,8 @@
+{
+  "title": "Downloads",
+  "description": "Downloads and other tasks in progress",
+  "empty": "No tasks in progress",
+  "settings": {
+    "showFinished": "Show finished tasks"
+  }
+}

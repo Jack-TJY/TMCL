@@ -1,0 +1,11 @@
+{
+  "title": "实例",
+  "description": "最近游玩的实例，可直接启动",
+  "empty": "还没有实例",
+  "play": "启动 {name}",
+  "all": "查看全部实例",
+  "failed": "启动 {name} 失败：{reason}",
+  "settings": {
+    "count": "显示数量"
+  }
+}
