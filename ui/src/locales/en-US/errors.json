@@ -8,6 +8,7 @@
   "COMMON_IO": "Failed to read or write file {path}",
   "COMMON_JSON": "Invalid data format",
   "COMMON_LOG_INIT": "Failed to initialize logging",
+  "GAME_FILE_MISSING": "Version {version} is missing {path}, please reinstall the mod loader",
   "GAME_VERSION_JSON_INVALID": "The metadata of version {version} is invalid",
   "GAME_VERSION_NOT_FOUND": "Version {version} was not found",
   "INSTANCE_CORRUPTED": "The configuration of instance {id} is corrupted",

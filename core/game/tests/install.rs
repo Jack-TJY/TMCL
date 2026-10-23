@@ -7,8 +7,11 @@ use std::time::Duration;
 use serde_json::json;
 use sha1::{Digest, Sha1};
 use tmcl_common::{DataPaths, ErrorCode, TaskCtx};
-use tmcl_game::install::library_items;
-use tmcl_game::{GameFiles, InstallOptions, RuleEnv, install_version, parse_version};
+use tmcl_game::natives::native_jars;
+use tmcl_game::{
+    GameFiles, InstallOptions, RuleEnv, VersionJson, install_version, library_files, library_items,
+    parse_version, resolve,
+};
 use tmcl_net::testing::TestServer;
 use tmcl_net::{DownloadOptions, Downloader, HttpClient};
 
@@ -69,6 +72,79 @@ fn parses_1_20_1_fixture() {
     }
 }
 
+fn resolved(id: &str) -> VersionJson {
+    resolve(id, |id| parse_version(id, &fixture(&format!("{id}.json")))).unwrap()
+}
+
+#[test]
+fn legacy_natives_are_picked_per_os() {
+    let files = GameFiles::new(DataPaths::at("root"));
+    // 期望值由独立的 Python 模型按官方规则从 fixture 算出：（文件数含 jar 与日志配置，natives jar 数）。
+    for (id, expected) in [
+        (
+            "1.7.10",
+            [("windows", 35, 4), ("osx", 34, 3), ("linux", 33, 2)],
+        ),
+        (
+            "1.12.2",
+            [("windows", 37, 3), ("osx", 37, 3), ("linux", 37, 3)],
+        ),
+        (
+            "1.16.5",
+            [("windows", 43, 8), ("osx", 44, 8), ("linux", 43, 8)],
+        ),
+    ] {
+        let version = resolved(id);
+        for (os, count, natives) in expected {
+            let all = library_files(&files, &version, &env(os));
+            assert_eq!(all.len(), count, "{id} {os}");
+            assert!(all.iter().all(|f| f.url.is_some() && f.sha1.is_some()));
+            let jars = native_jars(&files, &version, &env(os));
+            assert_eq!(jars.len(), natives, "{id} {os}");
+            // 1.16.5 的 LWJGL 3.2 natives 没有 `extract` 字段。
+            assert!(
+                jars.iter()
+                    .all(|j| !j.flatten && (j.exclude.is_empty() || j.exclude == ["META-INF/"]))
+            );
+        }
+    }
+    let twitch = native_jars(&files, &resolved("1.7.10"), &env("windows"));
+    assert!(twitch.iter().any(|j| {
+        j.path
+            .ends_with("twitch-platform-5.16-natives-windows-64.jar")
+    }));
+}
+
+#[test]
+fn new_style_natives_are_flattened() {
+    let files = GameFiles::new(DataPaths::at("root"));
+    let version = resolved("1.20.1");
+    for (os, count) in [("windows", 21), ("osx", 14), ("linux", 7)] {
+        let jars = native_jars(&files, &version, &env(os));
+        assert_eq!(jars.len(), count, "{os}");
+        assert!(jars.iter().all(|j| j.flatten));
+    }
+}
+
+#[test]
+fn fabric_libraries_and_parent_jar_are_included() {
+    let files = GameFiles::new(DataPaths::at("root"));
+    let version = resolved("fabric-loader-0.20.1-1.20.1");
+    let all = library_files(&files, &version, &env("windows"));
+    assert_eq!(all.len(), 64 + 8 + 2);
+    assert_eq!(all[0].path, files.client_jar("1.20.1"));
+    let loader = all
+        .iter()
+        .find(|f| f.path.ends_with("fabric-loader-0.20.1.jar"))
+        .unwrap();
+    assert_eq!(
+        loader.url.as_deref(),
+        Some(
+            "https://maven.fabricmc.net/net/fabricmc/fabric-loader/0.20.1/fabric-loader-0.20.1.jar"
+        )
+    );
+}
+
 #[test]
 fn invalid_version_json_is_reported() {
     let err = parse_version("1.20.1", br#"{"id": "1.20.1"}"#).unwrap_err();
@@ -102,6 +178,8 @@ async fn fake_release() -> (TestServer, InstallOptions) {
     lib["path"] = json!("a/lib/1/lib-1.jar");
     let mut mac = add("/lib/a/mac/1/mac-1.jar", b"mac only");
     mac["path"] = json!("a/mac/1/mac-1.jar");
+    let mut natives = add("/lib/a/nat/1/nat-1-natives-x.jar", b"natives jar");
+    natives["path"] = json!("a/nat/1/nat-1-natives-x.jar");
     let mut log = add("/log.xml", b"<Configuration/>");
     log["id"] = json!("client.xml");
 
@@ -115,6 +193,10 @@ async fn fake_release() -> (TestServer, InstallOptions) {
             {"name": "a:lib:1", "downloads": {"artifact": lib}},
             {"name": "a:mac:1", "downloads": {"artifact": mac},
              "rules": [{"action": "allow", "os": {"name": "nowhere"}}]},
+            {"name": "a:nat:1",
+             "natives": {"windows": "natives-x", "osx": "natives-x", "linux": "natives-x"},
+             "extract": {"exclude": ["META-INF/"]},
+             "downloads": {"classifiers": {"natives-x": natives}}},
         ],
         "logging": {"client": {"argument": "-Dlog4j.configurationFile=${path}", "type": "log4j2-xml", "file": log}},
     }))
@@ -154,12 +236,13 @@ async fn installs_then_skips_everything_on_second_run() {
     let report = install_version(&engine, &paths, "fake", &options, &ctx)
         .await
         .unwrap();
-    // 版本 JSON、索引、jar、库、日志配置、两个去重后的资源；mac 专用库被规则排除。
-    assert_eq!((report.downloaded, report.skipped), (7, 0));
+    // 版本 JSON、索引、jar、库、natives、日志配置、两个去重后的资源；mac 专用库被规则排除。
+    assert_eq!((report.downloaded, report.skipped), (8, 0));
     let files = GameFiles::new(paths.clone());
     assert!(files.client_jar("fake").is_file());
     assert!(files.library("a/lib/1/lib-1.jar").is_file());
     assert!(!files.library("a/mac/1/mac-1.jar").exists());
+    assert!(files.library("a/nat/1/nat-1-natives-x.jar").is_file());
     assert!(files.log_config("client.xml").is_file());
     assert!(files.asset_index("fake-index").is_file());
     let hits = server.hits();
@@ -167,8 +250,127 @@ async fn installs_then_skips_everything_on_second_run() {
     let report = install_version(&engine, &paths, "fake", &options, &ctx)
         .await
         .unwrap();
-    assert_eq!((report.downloaded, report.skipped), (0, 7));
+    assert_eq!((report.downloaded, report.skipped), (0, 8));
     assert_eq!(server.hits(), hits + 1, "第二次只应请求版本清单");
+
+    // 修复：删掉一个库、改坏一个资源后再次补全，只重新下载这两个文件。
+    std::fs::remove_file(files.library("a/lib/1/lib-1.jar")).unwrap();
+    let hash = sha1_hex(b"asset a");
+    std::fs::write(files.asset_object(&hash), b"broken").unwrap();
+    let report = install_version(&engine, &paths, "fake", &options, &ctx)
+        .await
+        .unwrap();
+    assert_eq!((report.downloaded, report.skipped), (2, 6));
+    assert_eq!(
+        std::fs::read(files.library("a/lib/1/lib-1.jar")).unwrap(),
+        b"library"
+    );
+}
+
+/// 在本地写一个继承 `fake` 的加载器版本 JSON。
+fn write_loader(paths: &DataPaths, libraries: serde_json::Value) {
+    let files = GameFiles::new(paths.clone());
+    let path = files.version_json("loader");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let json = json!({"id": "loader", "inheritsFrom": "fake", "mainClass": "Loader",
+        "libraries": libraries});
+    std::fs::write(path, serde_json::to_vec(&json).unwrap()).unwrap();
+}
+
+#[tokio::test]
+async fn installs_loader_version_with_parent() {
+    let (server, options) = fake_release().await;
+    server.route("/maven/l/loader/1/loader-1.jar", b"loader".to_vec());
+    let dir = tempfile::tempdir().unwrap();
+    let paths = DataPaths::at(dir.path());
+    write_loader(
+        &paths,
+        json!([{"name": "l:loader:1", "url": server.url("/maven/")}]),
+    );
+
+    let report = install_version(
+        &downloader(4),
+        &paths,
+        "loader",
+        &options,
+        &TaskCtx::noop("game_install"),
+    )
+    .await
+    .unwrap();
+    // 父版本的 8 个文件 + 加载器库；加载器自己的 JSON 不经过清单。
+    assert_eq!((report.downloaded, report.skipped), (9, 0));
+    let files = GameFiles::new(paths.clone());
+    assert!(files.library("l/loader/1/loader-1.jar").is_file());
+    assert!(files.client_jar("fake").is_file());
+    assert!(!files.client_jar("loader").exists());
+}
+
+#[tokio::test]
+async fn missing_local_only_library_is_reported() {
+    let (_server, options) = fake_release().await;
+    let dir = tempfile::tempdir().unwrap();
+    let paths = DataPaths::at(dir.path());
+    let generated = "f/client/1/client-1.jar";
+    write_loader(
+        &paths,
+        json!([{"name": "f:client:1", "downloads": {"artifact":
+            {"path": generated, "sha1": "", "size": 0, "url": ""}}}]),
+    );
+    let run = || {
+        let paths = paths.clone();
+        let options = options.clone();
+        async move {
+            install_version(
+                &downloader(4),
+                &paths,
+                "loader",
+                &options,
+                &TaskCtx::noop("game_install"),
+            )
+            .await
+        }
+    };
+
+    let err = run().await.unwrap_err();
+    assert_eq!(err.code, ErrorCode::GameFileMissing);
+    assert_eq!(err.params["version"], "loader");
+
+    let path = GameFiles::new(paths.clone()).library(generated);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, b"generated by installer").unwrap();
+    let report = run().await.unwrap();
+    // 第一次只下载了版本 JSON 与资源索引。
+    assert_eq!(report.downloaded, 6, "缺失时不应先下载库与资源");
+}
+
+#[tokio::test]
+async fn uses_local_json_when_manifest_is_unreachable() {
+    let (_server, mut options) = fake_release().await;
+    let dir = tempfile::tempdir().unwrap();
+    let paths = DataPaths::at(dir.path());
+    let ctx = TaskCtx::noop("game_install");
+    install_version(&downloader(4), &paths, "fake", &options, &ctx)
+        .await
+        .unwrap();
+
+    options.manifest_url = "http://127.0.0.1:9/manifest.json".to_owned();
+    let engine = Downloader::new(
+        HttpClient::new().unwrap(),
+        DownloadOptions {
+            retry: tmcl_net::RetryPolicy::none(),
+            ..DownloadOptions::default()
+        },
+    );
+    let report = install_version(&engine, &paths, "fake", &options, &ctx)
+        .await
+        .unwrap();
+    assert_eq!(report.downloaded, 0);
+
+    // 本地也没有时，返回获取清单的错误。
+    let err = install_version(&engine, &paths, "other", &options, &ctx)
+        .await
+        .unwrap_err();
+    assert_ne!(err.code, ErrorCode::GameVersionNotFound);
 }
 
 #[tokio::test]

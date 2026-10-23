@@ -18,6 +18,7 @@
 | `COMMON_IO` | common | 文件系统读写失败 | `path`（可选） | 读写文件失败 {path} | Failed to read or write file {path} |
 | `COMMON_JSON` | common | JSON 序列化或反序列化失败 | — | 数据格式错误 | Invalid data format |
 | `COMMON_LOG_INIT` | common | 日志系统初始化失败 | — | 日志系统初始化失败 | Failed to initialize logging |
+| `GAME_FILE_MISSING` | game | 运行该版本需要的文件缺失，且没有下载地址（由加载器安装器生成，需重新安装加载器） | `version`、`path` | 版本 {version} 缺少文件 {path}，请重新安装模组加载器 | Version {version} is missing {path}, please reinstall the mod loader |
 | `GAME_VERSION_JSON_INVALID` | game | 版本 JSON 格式错误或缺少必需字段 | `version` | 版本 {version} 的描述文件已损坏 | The metadata of version {version} is invalid |
 | `GAME_VERSION_NOT_FOUND` | game | 版本清单中没有该版本 | `version` | 找不到版本 {version} | Version {version} was not found |
 | `INSTANCE_CORRUPTED` | instance | 实例的 `instance.json` 缺失或格式错误 | `id`（可选） | 实例 {id} 的配置文件已损坏 | The configuration of instance {id} is corrupted |

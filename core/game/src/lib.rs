@@ -4,14 +4,18 @@
 
 pub mod arguments;
 pub mod install;
+pub mod libraries;
 pub mod manifest;
+pub mod natives;
 pub mod rules;
 pub mod version;
 
 pub use install::{GameFiles, InstallOptions, InstallReport, install_version};
+pub use libraries::{GameFile, library_files, library_items};
 pub use manifest::{
     MANIFEST_MAX_AGE, MANIFEST_URL, ManifestEntry, ManifestPolicy, ManifestStore, VersionManifest,
     VersionType, load_manifest,
 };
+pub use natives::{extract_natives, new_natives_dir};
 pub use rules::{RuleEnv, rules_allow};
 pub use version::{Library, LibraryFile, VersionJson, maven_path, parse_version, resolve};
