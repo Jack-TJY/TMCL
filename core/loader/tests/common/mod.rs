@@ -9,7 +9,7 @@ use tmcl_net::{DownloadOptions, Downloader, HttpClient, RetryPolicy};
 /// 本测试使用的游戏版本号。
 pub const GAME: &str = "1.20.1";
 
-/// 指向本地服务器的端点：`/fabric`、`/quilt`、`/forge`、`/forge-files`、`/neoforge`。
+/// 指向本地服务器的端点：`/fabric`、`/quilt`、`/forge`、`/forge-files`、`/neoforge`、`/bmclapi`。
 pub fn endpoints(server: &TestServer) -> Endpoints {
     Endpoints {
         fabric_meta: server.url("/fabric"),
@@ -17,6 +17,7 @@ pub fn endpoints(server: &TestServer) -> Endpoints {
         forge_maven: server.url("/forge"),
         forge_files: server.url("/forge-files"),
         neoforge_maven: server.url("/neoforge"),
+        bmclapi: server.url("/bmclapi"),
     }
 }
 

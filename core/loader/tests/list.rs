@@ -5,8 +5,10 @@ mod common;
 use common::{GAME, downloader, endpoints};
 use serde_json::json;
 use tmcl_common::{ErrorCode, TaskCtx};
+use tmcl_loader::list::forge_versions;
 use tmcl_loader::{LoaderKind, list_versions};
 use tmcl_net::testing::TestServer;
+use tmcl_net::{PrefixMirror, Sources};
 
 async fn server() -> TestServer {
     TestServer::start(Vec::<(String, Vec<u8>)>::new()).await
@@ -182,4 +184,75 @@ async fn lists_neoforge_including_legacy_1_20_1() {
     assert_eq!(list("1.21.1").await, ["21.1.10", "21.1.1"]);
     assert_eq!(list("1.21").await, ["21.0.5-beta"]);
     assert_eq!(list("1.20.1").await, ["47.1.106", "47.1.5"]);
+}
+
+#[tokio::test]
+async fn forge_prefers_bmclapi_lists_when_mirror_is_enabled() {
+    let server = server().await;
+    // 镜像的 maven-metadata.xml 是旧的，不应被使用。
+    server.route(
+        "/mirror/net/minecraftforge/forge/maven-metadata.xml",
+        metadata(&["1.20.1-47.0.1"]),
+    );
+    server.route(
+        "/bmclapi/forge/minecraft/1.7.10",
+        serde_json::to_vec(&json!([
+            {"version": "10.13.4.1614", "branch": "1.7.10", "build": 1614},
+            {"version": "10.13.0.1150", "branch": null, "build": 1150},
+        ]))
+        .unwrap(),
+    );
+    server.route(
+        "/bmclapi/forge/promos",
+        serde_json::to_vec(&json!([
+            {"name": "1.7.10-recommended", "build": {"version": "10.13.4.1614"}},
+            {"name": "latest", "build": null},
+        ]))
+        .unwrap(),
+    );
+    let mut sources = Sources::new("test-mirror");
+    sources.add_mirror(PrefixMirror::new(
+        "test-mirror",
+        [(server.url("/forge"), server.url("/mirror"))],
+    ));
+    let downloader = downloader().with_sources(sources);
+    let endpoints = endpoints(&server);
+    let ctx = TaskCtx::noop("t");
+
+    let versions = forge_versions(&downloader, &endpoints, "1.7.10", &ctx)
+        .await
+        .unwrap();
+    assert_eq!(
+        versions,
+        [
+            (
+                "10.13.4.1614".to_owned(),
+                "1.7.10-10.13.4.1614-1.7.10".to_owned()
+            ),
+            ("10.13.0.1150".to_owned(), "1.7.10-10.13.0.1150".to_owned()),
+        ]
+    );
+    let list = list_versions(&downloader, &endpoints, LoaderKind::Forge, "1.7.10", &ctx)
+        .await
+        .unwrap();
+    assert!(list[0].recommended && !list[1].recommended);
+    assert!(
+        server
+            .requests()
+            .iter()
+            .all(|r| !r.path.ends_with("maven-metadata.xml"))
+    );
+
+    // BMCLAPI 没有该版本时直连官方 maven（不经镜像改写）。
+    server.route(
+        "/forge/net/minecraftforge/forge/maven-metadata.xml",
+        metadata(&["1.20.1-47.2.0"]),
+    );
+    let versions = forge_versions(&downloader, &endpoints, GAME, &ctx)
+        .await
+        .unwrap();
+    assert_eq!(
+        versions,
+        [("47.2.0".to_owned(), "1.20.1-47.2.0".to_owned())]
+    );
 }

@@ -49,6 +49,8 @@ pub struct Endpoints {
     pub forge_files: String,
     /// NeoForge maven 仓库（`releases`）。
     pub neoforge_maven: String,
+    /// BMCLAPI 根地址：下载源启用镜像时，Forge 列表与推荐版本先从这里获取。
+    pub bmclapi: String,
 }
 
 impl Default for Endpoints {
@@ -59,6 +61,7 @@ impl Default for Endpoints {
             forge_maven: "https://maven.minecraftforge.net".to_owned(),
             forge_files: "https://files.minecraftforge.net".to_owned(),
             neoforge_maven: "https://maven.neoforged.net/releases".to_owned(),
+            bmclapi: "https://bmclapi2.bangbang93.com".to_owned(),
         }
     }
 }

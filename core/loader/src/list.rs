@@ -4,8 +4,12 @@
 //! | --- | --- |
 //! | Fabric | `<fabric_meta>/v2/versions/loader/<游戏>`，带 `stable` 标记 |
 //! | Quilt | `<quilt_meta>/v3/versions/loader/<游戏>`，版本号含 `-`（如 `-beta.9`）视为测试版 |
-//! | Forge | maven 的 `maven-metadata.xml`，推荐版本来自 `promotions_slim.json` |
+//! | Forge | 启用镜像时先用 BMCLAPI 的 Forge 列表与推荐版本，再回退官方 `maven-metadata.xml` 与 `promotions_slim.json` |
 //! | NeoForge | maven 的 `maven-metadata.xml`；1.20.1 使用旧的 `net.neoforged:forge` 构件 |
+//!
+//! BMCLAPI 镜像的 Forge `maven-metadata.xml` 停在 2022 年，所以 Forge 的版本列表不走 maven 镜像改写：
+//! 下载源启用镜像时用 BMCLAPI 自己的 `/forge/minecraft/<游戏>` 与 `/forge/promos`，失败再直连官方；
+//! 只用官方源时直连官方。NeoForge 的镜像元数据是最新的，照常经下载源获取。
 
 use std::cmp::Ordering;
 use std::sync::LazyLock;
@@ -14,6 +18,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::Downloader;
+use tmcl_net::source::OFFICIAL;
 use ts_rs::TS;
 
 use crate::{Endpoints, LoaderKind, display_name};
@@ -181,9 +186,77 @@ pub async fn forge_versions(
         "{}/net/minecraftforge/forge/maven-metadata.xml",
         endpoints.forge_maven
     );
-    let mut out = forge_versions_from(&maven_metadata(downloader, &url, ctx).await?, game_version);
+    let mut out = Vec::new();
+    if uses_mirror(downloader, &url) {
+        let list_url = format!(
+            "{}/forge/minecraft/{}",
+            endpoints.bmclapi,
+            segment(game_version)
+        );
+        match get_direct(downloader, &list_url, ctx)
+            .await
+            .and_then(|b| serde_json::from_slice::<Vec<BmclapiForge>>(&b).map_err(AppError::from))
+        {
+            Ok(list) => {
+                out = list
+                    .into_iter()
+                    .map(|f| {
+                        let maven = match &f.branch {
+                            Some(branch) => format!("{game_version}-{}-{branch}", f.version),
+                            None => format!("{game_version}-{}", f.version),
+                        };
+                        (f.version, maven)
+                    })
+                    .collect();
+            }
+            Err(e) if e.is_cancelled() => return Err(e),
+            Err(e) => tracing::warn!(error = %e, "BMCLAPI 的 Forge 列表获取失败，改用官方源"),
+        }
+    }
+    if out.is_empty() {
+        let xml = get_direct(downloader, &url, ctx).await?;
+        out = forge_versions_from(
+            &parse_maven_metadata(&String::from_utf8_lossy(&xml)),
+            game_version,
+        );
+    }
     out.sort_by(|a, b| compare_versions(&b.0, &a.0));
+    out.dedup_by(|a, b| a.0 == b.0);
     Ok(out)
+}
+
+/// BMCLAPI `/forge/minecraft/<游戏>` 的一项。
+#[derive(Deserialize)]
+struct BmclapiForge {
+    version: String,
+    #[serde(default)]
+    branch: Option<String>,
+}
+
+/// BMCLAPI `/forge/promos` 的一项。
+#[derive(Deserialize)]
+struct BmclapiPromo {
+    name: String,
+    #[serde(default)]
+    build: Option<BmclapiForge>,
+}
+
+/// 下载源对 `url` 是否先用镜像。
+fn uses_mirror(downloader: &Downloader, url: &str) -> bool {
+    downloader
+        .sources()
+        .candidates(url)
+        .first()
+        .is_some_and(|c| c.source != OFFICIAL)
+}
+
+/// 不经下载源改写，按下载引擎的重试策略直接请求 `url`。
+async fn get_direct(downloader: &Downloader, url: &str, ctx: &TaskCtx) -> AppResult<Vec<u8>> {
+    downloader
+        .options()
+        .retry
+        .run(ctx, |_| downloader.client().get_bytes(url, ctx))
+        .await
 }
 
 /// 从 maven 版本列表中挑出 `game_version` 的 Forge 版本：`(加载器版本, maven 版本)`。
@@ -205,6 +278,49 @@ struct Promotions {
     promos: std::collections::BTreeMap<String, String>,
 }
 
+/// Forge 的推荐版本：`<游戏>-recommended`，没有时取 `<游戏>-latest`。启用镜像时先查 BMCLAPI。
+async fn forge_recommended(
+    downloader: &Downloader,
+    endpoints: &Endpoints,
+    game_version: &str,
+    ctx: &TaskCtx,
+) -> AppResult<Option<String>> {
+    let keys = [
+        format!("{game_version}-recommended"),
+        format!("{game_version}-latest"),
+    ];
+    let maven = format!("{}/net/minecraftforge/forge/", endpoints.forge_maven);
+    if uses_mirror(downloader, &maven) {
+        let url = format!("{}/forge/promos", endpoints.bmclapi);
+        let promos = get_direct(downloader, &url, ctx)
+            .await
+            .and_then(|b| serde_json::from_slice::<Vec<BmclapiPromo>>(&b).map_err(AppError::from));
+        match promos {
+            Ok(promos) => {
+                let found = keys.iter().find_map(|k| {
+                    promos
+                        .iter()
+                        .find(|p| &p.name == k)
+                        .and_then(|p| p.build.as_ref())
+                        .map(|b| b.version.clone())
+                });
+                if found.is_some() {
+                    return Ok(found);
+                }
+            }
+            Err(e) if e.is_cancelled() => return Err(e),
+            Err(e) => tracing::warn!(error = %e, "BMCLAPI 的 Forge 推荐版本获取失败，改用官方源"),
+        }
+    }
+    let url = format!(
+        "{}/net/minecraftforge/forge/promotions_slim.json",
+        endpoints.forge_files
+    );
+    let bytes = get_direct(downloader, &url, ctx).await?;
+    let promotions: Promotions = serde_json::from_slice(&bytes)?;
+    Ok(keys.iter().find_map(|k| promotions.promos.get(k).cloned()))
+}
+
 async fn forge(
     downloader: &Downloader,
     endpoints: &Endpoints,
@@ -212,16 +328,8 @@ async fn forge(
     ctx: &TaskCtx,
 ) -> AppResult<Vec<LoaderVersion>> {
     let versions = forge_versions(downloader, endpoints, game_version, ctx).await?;
-    let url = format!(
-        "{}/net/minecraftforge/forge/promotions_slim.json",
-        endpoints.forge_files
-    );
-    let recommended = match downloader.get_json::<Promotions>(&url, ctx).await {
-        Ok(p) => p
-            .promos
-            .get(&format!("{game_version}-recommended"))
-            .or_else(|| p.promos.get(&format!("{game_version}-latest")))
-            .cloned(),
+    let recommended = match forge_recommended(downloader, endpoints, game_version, ctx).await {
+        Ok(v) => v,
         Err(e) if e.is_cancelled() => return Err(e),
         Err(e) => {
             tracing::warn!(error = %e, "获取 Forge 推荐版本失败");
