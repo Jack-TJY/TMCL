@@ -7,4 +7,8 @@ export type DownloadConfig = {
 /**
  * 同时进行的下载数。
  */
-max_concurrency: number, };
+max_concurrency: number, 
+/**
+ * 下载源策略：`auto`（默认镜像优先，失败回退官方）、`official` 或镜像名。
+ */
+source: string, };

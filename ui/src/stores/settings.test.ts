@@ -8,8 +8,11 @@ import { DEFAULT_ACCENT } from "../theme/fluent";
 import { DEFAULT_SETTINGS, useSettingsStore } from "./settings";
 
 const { download, ...backendDefaults } = DEFAULT_SETTINGS;
-/** 后端返回的设置（尚无 `download.source`）。 */
-const BACKEND = { ...backendDefaults, download: { max_concurrency: download.max_concurrency } };
+/** 后端返回的设置；`download.source` 无效时界面沿用前端暂存的下载源。 */
+const BACKEND = {
+  ...backendDefaults,
+  download: { max_concurrency: download.max_concurrency, source: "" },
+};
 
 /** 测试运行在 Node 环境，没有 localStorage。 */
 function memoryStorage() {
@@ -53,6 +56,17 @@ describe("settings store", () => {
     expect(store.accent).toBe("#FF0000");
     expect(store.dataDir).toBe("D:/TMCL/tmcl-data");
     expect(store.settings.download.source).toBe("auto");
+  });
+
+  it("prefers the download source saved by the backend", async () => {
+    tauriInvoke.mockResolvedValue({
+      settings: { ...BACKEND, download: { max_concurrency: 16, source: "bmclapi" } },
+      data_dir: "",
+      config_backup: null,
+    });
+    const store = useSettingsStore();
+    await store.load();
+    expect(store.settings.download.source).toBe("bmclapi");
   });
 
   it("keeps defaults without a backend", async () => {

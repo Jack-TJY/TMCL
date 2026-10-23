@@ -4,6 +4,7 @@ import { defineStore } from "pinia";
 import { computed, ref, toRaw } from "vue";
 import {
   DEFAULT_SOURCE,
+  isSource,
   mockSourceGet,
   mockSourceSave,
   type DownloadSource,
@@ -40,7 +41,11 @@ function useSystemDark() {
 
 /** 合并后端设置与前端暂存的下载源；后端提供 `source` 时以后端为准。 */
 function withSource(saved: LauncherSettings, source: DownloadSource): Settings {
-  return { ...saved, download: { source, ...saved.download } };
+  const backend = saved.download.source;
+  return {
+    ...saved,
+    download: { ...saved.download, source: isSource(backend) ? backend : source },
+  };
 }
 
 export const useSettingsStore = defineStore("settings", () => {
