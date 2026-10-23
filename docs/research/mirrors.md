@@ -2,7 +2,7 @@
 
 测试日期：2026-10-23 · 测试人：claude-mirror · 程序：`core/net/examples/bench_sources.rs`
 
-本报告供维护者决定 `auto` 策略的默认镜像。决定前 `auto` 等同于只用官方源（`core/net/src/source.rs` 的 `DEFAULT_MIRROR = None`）。
+本报告供维护者决定 `auto` 策略的默认镜像。**结论（2026-10-23 维护者选定方案 B）**：`auto` 下 Forge、NeoForge、Fabric 先走 BMCLAPI（内置镜像 `bmclapi-loaders`），Mojang 的文件走官方源，失败都回退官方源。见第 5 节与 `core/net/src/source.rs` 的 `DEFAULT_MIRROR`。
 
 ## 1. 方法
 
@@ -93,7 +93,7 @@
 - **中科大镜像站**：本次未核对其针对 BMCLAPI 缓存的使用说明。若采用，需先确认。
 - TMCL 所有请求都带 `User-Agent: TMCL/<版本>`（`core/net/src/client.rs`），可被各源识别。
 
-## 5. 供维护者选择
+## 5. 选项（已选 B）
 
 | 选项 | 内容 | 后果 |
 | --- | --- | --- |
@@ -101,4 +101,4 @@
 | **B. 加载器走 BMCLAPI（推荐）** | `auto`：Mojang 内容走官方源；Forge、NeoForge、Fabric 的 maven 与 meta 先走 BMCLAPI，失败再回退官方源 | 国内能装加载器（实测 6/6）；海外 BMCLAPI 失败时自动回退官方源，只损失时间；需要在下载界面标明 BMCLAPI 来源 |
 | C. 整体走 BMCLAPI | `auto` = `bmclapi` 后回退官方 | 不推荐：两种网络下原版内容都更慢，大量小文件要等超时后才回退 |
 
-选 B 的实现量很小：内置一个只含加载器规则的镜像（例如名为 `bmclapi-loaders`），把 `DEFAULT_MIRROR` 设为它即可。用户仍可在设置里把 `download.source` 设为 `bmclapi` 或 `official`。
+B 已实现为内置镜像 `bmclapi-loaders`，并设为 `DEFAULT_MIRROR`。用户仍可在设置里把 `download.source` 设为 `bmclapi`（全部先走 BMCLAPI）或 `official`（只用官方源）。按 BMCLAPI 条款，下载界面需要标明来源，待下载界面实现时处理。
