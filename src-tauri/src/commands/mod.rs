@@ -5,6 +5,7 @@ pub mod appearance;
 pub mod game;
 pub mod instance;
 pub mod launch;
+pub mod layout;
 pub mod loader;
 pub mod settings;
 pub mod task;

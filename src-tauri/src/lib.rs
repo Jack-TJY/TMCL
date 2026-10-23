@@ -43,6 +43,9 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::launch::launch_kill,
         commands::launch::launch_running,
         commands::launch::launch_start,
+        // layout
+        commands::layout::layout_get,
+        commands::layout::layout_save,
         // loader
         commands::loader::loader_install,
         commands::loader::loader_list,
@@ -430,6 +433,37 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(err["code"], "INSTANCE_NOT_FOUND");
+    }
+
+    #[test]
+    fn layout_get_and_save_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path());
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+
+        let empty = invoke(&webview, "layout_get", json!({})).unwrap();
+        assert_eq!(empty["widgets"], Value::Null);
+
+        let widgets = json!([{ "uid": "a", "type": "start-game", "x": 0, "y": 0, "w": 6, "h": 4,
+            "settings": { "instance": null } }]);
+        invoke(
+            &webview,
+            "layout_save",
+            json!({ "args": { "widgets": widgets } }),
+        )
+        .unwrap();
+        assert!(paths.ui_layout_file().is_file());
+        let saved = invoke(&webview, "layout_get", json!({})).unwrap();
+        assert_eq!(saved["widgets"], widgets);
+        assert_eq!(saved["skipped"], 0);
+
+        let bad = json!([{ "uid": "a", "type": "x", "x": 11, "y": 0, "w": 2, "h": 1 }]);
+        let err = invoke(
+            &webview,
+            "layout_save",
+            json!({ "args": { "widgets": bad } }),
+        );
+        assert_eq!(err.unwrap_err()["code"], "COMMON_INTERNAL");
     }
 
     #[test]
