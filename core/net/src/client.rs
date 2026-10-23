@@ -31,7 +31,34 @@ impl HttpClient {
 
     /// 发送 GET 请求，返回状态码为 2xx 的响应；可被 `ctx` 取消。
     pub async fn get(&self, url: &str, ctx: &TaskCtx) -> AppResult<reqwest::Response> {
-        let send = self.inner.get(url).send();
+        self.send(self.inner.get(url), url, ctx).await
+    }
+
+    /// 发送带 `Range: bytes=<start>-[<end>]` 的 GET 请求，`end` 为闭区间终点。
+    ///
+    /// 服务器可能忽略 `Range` 而返回 200 和完整内容，调用方需检查状态码。
+    pub async fn get_range(
+        &self,
+        url: &str,
+        start: u64,
+        end: Option<u64>,
+        ctx: &TaskCtx,
+    ) -> AppResult<reqwest::Response> {
+        let range = match end {
+            Some(end) => format!("bytes={start}-{end}"),
+            None => format!("bytes={start}-"),
+        };
+        let request = self.inner.get(url).header(reqwest::header::RANGE, range);
+        self.send(request, url, ctx).await
+    }
+
+    async fn send(
+        &self,
+        request: reqwest::RequestBuilder,
+        url: &str,
+        ctx: &TaskCtx,
+    ) -> AppResult<reqwest::Response> {
+        let send = request.send();
         let response = tokio::select! {
             biased;
             _ = ctx.cancel.cancelled() => return Err(AppError::cancelled()),
