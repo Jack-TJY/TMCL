@@ -1,7 +1,8 @@
 //! 测试辅助：本地最小 HTTP 服务器（仅在 `test-util` 特性下编译）。
 //!
 //! 按路径返回固定内容，未知路径返回 404，支持 `Range` 请求，
-//! 并可按路径注入故障（错误状态码、中途断开、卡住、忽略 `Range`、响应延迟）。
+//! 并可按路径注入故障（错误状态码、中途断开、卡住、不回响应头、极慢发送、
+//! 忽略 `Range`、响应延迟）。
 //! 记录每个请求与同时处理的最大连接数，供本 crate 与下游 crate
 //! （如 `tmcl-game`）的离线测试使用。
 
@@ -31,6 +32,10 @@ pub enum Fault {
     Truncate(usize),
     /// 发送前 n 个字节后一直不再发送（模拟卡住，供取消测试）。
     Stall(usize),
+    /// 读完请求后一直不回响应头。
+    Hang,
+    /// 正常回响应头，然后每隔给定时间只发送 1 个字节。
+    Trickle(Duration),
 }
 
 #[derive(Default)]
@@ -165,6 +170,11 @@ async fn serve(mut socket: TcpStream, state: &Mutex<State>) {
         tokio::time::sleep(delay).await;
     }
 
+    if fault == Some(Fault::Hang) {
+        tokio::time::sleep(Duration::from_secs(60)).await;
+        return;
+    }
+
     let (head, payload) = match (body, fault) {
         (_, Some(Fault::Status(status))) => (status_head(status), Vec::new()),
         (None, _) => (status_head(404), Vec::new()),
@@ -205,6 +215,14 @@ async fn serve(mut socket: TcpStream, state: &Mutex<State>) {
             let _ = socket.write_all(&payload[..n.min(payload.len())]).await;
             let _ = socket.flush().await;
             tokio::time::sleep(Duration::from_secs(60)).await;
+        }
+        Some(Fault::Trickle(interval)) => {
+            for byte in payload.chunks(1) {
+                if socket.write_all(byte).await.is_err() || socket.flush().await.is_err() {
+                    return;
+                }
+                tokio::time::sleep(interval).await;
+            }
         }
         _ => {
             let _ = socket.write_all(&payload).await;

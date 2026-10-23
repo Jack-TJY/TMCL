@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
-use tmcl_game::{InstallOptions, VersionManifest, VersionType, install_version};
+use tmcl_game::{VersionManifest, VersionType, install_version};
 use ts_rs::TS;
 
 use crate::events::{TaskStarted, spawn_task};
@@ -63,19 +63,9 @@ pub async fn game_install<R: Runtime>(
     validate_version_id(&args.version_id)?;
     let paths = state.data()?.clone();
     let downloader = state.downloader()?;
-    let options = InstallOptions {
-        concurrency: downloader.options().concurrency,
-        ..state.game.clone()
-    };
+    let options = state.game.clone();
     Ok(spawn_task(&app, GAME_INSTALL_KIND, move |ctx| async move {
-        install_version(
-            downloader.client(),
-            &paths,
-            &args.version_id,
-            &options,
-            &ctx,
-        )
-        .await?;
+        install_version(&downloader, &paths, &args.version_id, &options, &ctx).await?;
         Ok(())
     }))
 }

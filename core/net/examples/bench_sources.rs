@@ -278,7 +278,7 @@ async fn run_round(
 async fn measure(client: &HttpClient, url: &str, expected: &str) -> Sample {
     let ctx = TaskCtx::noop("bench");
     let started = Instant::now();
-    // 客户端只有连接与单次读取超时，TLS 握手等阶段可能无限挂起，这里加总时限。
+    // 客户端自带响应头与空闲超时；这里再加一层总时限，测速程序不依赖默认值。
     let Ok(response) = tokio::time::timeout(HEADER_TIMEOUT, client.get(url, &ctx)).await else {
         return Sample::failed("响应超时");
     };

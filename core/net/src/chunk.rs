@@ -15,7 +15,6 @@ use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::task::JoinSet;
 
-use crate::client::map_reqwest_error;
 use crate::download::{
     DownloadItem, Downloader, ItemProgress, acquire, content_range_start, io_error, part_len,
     to_hex, verify,
@@ -153,7 +152,7 @@ async fn fetch_chunk(
         return Ok(());
     }
     let from = start + have;
-    let mut response = engine.client().get_range(url, from, Some(end), ctx).await?;
+    let response = engine.client().get_range(url, from, Some(end), ctx).await?;
     if response.status() != StatusCode::PARTIAL_CONTENT
         || content_range_start(&response) != Some(from)
     {
@@ -168,13 +167,8 @@ async fn fetch_chunk(
     }
     .map_err(|e| io_error(path, &e))?;
     let mut written = have;
-    loop {
-        let chunk = tokio::select! {
-            biased;
-            _ = ctx.cancel.cancelled() => return Err(AppError::cancelled()),
-            c = response.chunk() => c.map_err(|e| map_reqwest_error(url, &e))?,
-        };
-        let Some(chunk) = chunk else { break };
+    let mut body = engine.client().body(response, url);
+    while let Some(chunk) = body.next(ctx).await? {
         let n = chunk.len() as u64;
         if written + n > expected {
             return Err(AppError::new(ErrorCode::NetSizeMismatch)
