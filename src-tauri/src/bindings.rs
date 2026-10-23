@@ -20,6 +20,7 @@ use crate::commands::instance::{
 use crate::commands::launch::{
     LaunchInstanceArgs, LaunchKillResult, LaunchRunning, LaunchStartArgs,
 };
+use crate::commands::loader::{LoaderInstallArgs, LoaderListArgs, LoaderVersionList};
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
@@ -65,6 +66,10 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     LaunchKillResult::export_all(&cfg)?;
     LaunchRunning::export_all(&cfg)?;
     LaunchStartArgs::export_all(&cfg)?;
+    // loader
+    LoaderInstallArgs::export_all(&cfg)?;
+    LoaderListArgs::export_all(&cfg)?;
+    LoaderVersionList::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
     SettingsSetArgs::export_all(&cfg)?;

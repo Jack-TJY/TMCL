@@ -40,6 +40,9 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::launch::launch_kill,
         commands::launch::launch_running,
         commands::launch::launch_start,
+        // loader
+        commands::loader::loader_install,
+        commands::loader::loader_list,
         // settings
         commands::settings::settings_get,
         commands::settings::settings_get_language,
@@ -527,5 +530,97 @@ mod tests {
         }
         let list = invoke(&webview, "task_list", json!({})).unwrap();
         assert_eq!(list["tasks"][0]["kind"], "launch");
+    }
+    /// 本地加载器元数据服务器 + 临时数据目录，带一个继承自本地自定义版本 `custom` 的实例。
+    fn loader_app() -> (
+        tauri::App<MockRuntime>,
+        tauri::WebviewWindow<MockRuntime>,
+        TestServer,
+        tempfile::TempDir,
+        Value,
+    ) {
+        let server = tauri::async_runtime::block_on(TestServer::start([(
+            "/fabric/v2/versions/loader/custom",
+            br#"[{"loader":{"version":"0.17.0","stable":false}},
+                 {"loader":{"version":"0.16.5","stable":true}}]"#
+                .to_vec(),
+        )]));
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path());
+        let version_dir = paths.shared_versions_dir().join("custom");
+        std::fs::create_dir_all(&version_dir).unwrap();
+        std::fs::write(
+            version_dir.join("custom.json"),
+            r#"{"id":"custom","type":"release","mainClass":"Main","libraries":[]}"#,
+        )
+        .unwrap();
+        let mut state = AppState::with_data(Ok(paths));
+        state.game.manifest_url = server.url("/manifest.json");
+        state.loader.fabric_meta = server.url("/fabric");
+        let (app, webview) = mock_app_with(state);
+        let body = json!({ "args": { "name": "x", "game_version": "custom" } });
+        let config = invoke(&webview, "instance_create", body).unwrap();
+        (app, webview, server, dir, config)
+    }
+
+    #[test]
+    fn loader_list_over_ipc() {
+        let (_app, webview, _server, _dir, _config) = loader_app();
+        let body = json!({ "args": { "kind": "fabric", "game_version": "custom" } });
+        let list = invoke(&webview, "loader_list", body).unwrap();
+        assert_eq!(list["versions"][0]["version"], "0.17.0");
+        assert_eq!(list["versions"][1]["recommended"], true);
+        // 元数据服务器不认识的版本（404）视为不支持：空列表。
+        let body = json!({ "args": { "kind": "fabric", "game_version": "9.9" } });
+        let list = invoke(&webview, "loader_list", body).unwrap();
+        assert_eq!(list["versions"], json!([]));
+        let body = json!({ "args": { "kind": "forge", "game_version": "1.5.2" } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "loader_list", body).unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::LoaderUnsupportedVersion);
+        let body = json!({ "args": { "kind": "fabric", "game_version": "../x" } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "loader_list", body).unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::CommonInternal);
+    }
+
+    #[test]
+    fn loader_install_sets_loader_only_on_success() {
+        let (app, webview, server, _dir, config) = loader_app();
+        let finished_rx = finished_events(&app);
+        let id = config["id"].clone();
+
+        let body = json!({ "args": { "instance_id": "missing", "kind": "fabric",
+            "version": "0.16.5" } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "loader_install", body).unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
+
+        // profile 不存在：任务失败，实例仍是原版。
+        let body = json!({ "args": { "instance_id": id, "kind": "fabric", "version": "0.16.5" } });
+        let finished = run_task(&webview, &finished_rx, "loader_install", body.clone());
+        assert_eq!(finished.state, TaskState::Failed);
+        assert_eq!(
+            finished.error.unwrap().code,
+            ErrorCode::LoaderVersionNotFound
+        );
+        let get = json!({ "args": { "id": id } });
+        assert_eq!(
+            invoke(&webview, "instance_get", get.clone()).unwrap()["loader"],
+            Value::Null
+        );
+
+        server.route(
+            "/fabric/v2/versions/loader/custom/0.16.5/profile/json",
+            br#"{"id":"fabric-loader-0.16.5-custom","inheritsFrom":"custom","type":"release",
+                 "mainClass":"net.fabricmc.loader.impl.launch.knot.KnotClient","libraries":[]}"#
+                .to_vec(),
+        );
+        let finished = run_task(&webview, &finished_rx, "loader_install", body);
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+        let loader = invoke(&webview, "instance_get", get).unwrap()["loader"].clone();
+        assert_eq!(loader, json!({ "kind": "fabric", "version": "0.16.5" }));
+        let list = invoke(&webview, "task_list", json!({})).unwrap();
+        assert_eq!(list["tasks"][0]["kind"], "loader_install");
     }
 }

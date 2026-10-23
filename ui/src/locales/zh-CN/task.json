@@ -9,7 +9,8 @@
     "instance_duplicate": "复制实例",
     "instance_export": "导出实例",
     "instance_import": "导入实例",
-    "launch": "启动游戏"
+    "launch": "启动游戏",
+    "loader_install": "安装加载器"
   },
   "stage": {
     "version_json": "版本信息",
@@ -20,7 +21,11 @@
     "export": "打包",
     "import": "解包",
     "java_runtime": "Java 运行时",
-    "verify": "校验文件"
+    "verify": "校验文件",
+    "loader_profile": "加载器信息",
+    "loader_installer": "加载器安装器",
+    "loader_libraries": "加载器依赖库",
+    "loader_processors": "处理加载器文件"
   },
   "status": {
     "waiting": "准备中…",
