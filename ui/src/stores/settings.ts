@@ -23,7 +23,20 @@ export type Settings = LauncherSettings & {
 /** 与后端 `Config::default()` 一致的默认设置。 */
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
-  appearance: { accent: null, window_material: true },
+  appearance: {
+    accent: null,
+    window_material: true,
+    background: {
+      kind: "default",
+      color: "#1F4E79",
+      image: null,
+      fit: "fill",
+      opacity: 100,
+      blur: 0,
+      mask: 0,
+      card_opacity: 85,
+    },
+  },
   memory: { max_mb: 4096 },
   download: { max_concurrency: 16, source: DEFAULT_SOURCE },
 };

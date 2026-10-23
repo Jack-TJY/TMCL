@@ -12,6 +12,7 @@ use tmcl_common::config::{AppearanceConfig, DownloadConfig, MemoryConfig, ThemeM
 use tmcl_common::{AppError, AppResult, Config, DataPaths, ErrorCode};
 use ts_rs::TS;
 
+use crate::commands::appearance::background_valid;
 use crate::state::AppState;
 
 /// 同时下载数的上限。
@@ -128,11 +129,13 @@ fn validate_settings(settings: &LauncherSettings) -> AppResult<()> {
     });
     let concurrency_ok = (1..=MAX_CONCURRENCY).contains(&settings.download.max_concurrency);
     let memory_ok = MEMORY_RANGE_MB.contains(&settings.memory.max_mb);
-    if !(accent_ok && concurrency_ok && memory_ok) {
+    let background_ok = background_valid(&settings.appearance.background);
+    if !(accent_ok && concurrency_ok && memory_ok && background_ok) {
         return Err(AppError::new(ErrorCode::CommonInternal)
             .with_param("accent", accent_ok)
             .with_param("max_concurrency", concurrency_ok)
             .with_param("max_mb", memory_ok)
+            .with_param("background", background_ok)
             .with_detail("settings_set: value out of range"));
     }
     Ok(())
@@ -313,12 +316,13 @@ mod tests {
     #[test]
     fn rejects_out_of_range_settings() {
         assert!(validate_settings(&sample()).is_ok());
-        let cases: [fn(&mut LauncherSettings); 5] = [
+        let cases: [fn(&mut LauncherSettings); 6] = [
             |s| s.appearance.accent = Some("red".to_owned()),
             |s| s.appearance.accent = Some("#GGGGGG".to_owned()),
             |s| s.download.max_concurrency = 0,
             |s| s.download.max_concurrency = MAX_CONCURRENCY + 1,
             |s| s.memory.max_mb = 256,
+            |s| s.appearance.background.blur = 41,
         ];
         for change in cases {
             let mut settings = sample();

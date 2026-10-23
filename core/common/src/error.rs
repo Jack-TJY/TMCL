@@ -17,6 +17,10 @@ use crate::log::redact;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
+    /// 背景图片已被删除或无法读取。
+    AppearanceImageMissing,
+    /// 背景图片不是 png/jpg/webp，或超过大小上限。
+    AppearanceImageUnsupported,
     /// 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$`。
     AuthOfflineInvalidName,
     /// 任务被用户或上层取消。
@@ -93,6 +97,8 @@ impl ErrorCode {
     /// 返回序列化后的错误码字符串，例如 `COMMON_IO`。
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::AppearanceImageMissing => "APPEARANCE_IMAGE_MISSING",
+            Self::AppearanceImageUnsupported => "APPEARANCE_IMAGE_UNSUPPORTED",
             Self::AuthOfflineInvalidName => "AUTH_OFFLINE_INVALID_NAME",
             Self::CommonCancelled => "COMMON_CANCELLED",
             Self::CommonConfigSchemaUnsupported => "COMMON_CONFIG_SCHEMA_UNSUPPORTED",
@@ -211,6 +217,8 @@ mod tests {
     #[test]
     fn as_str_matches_serde() {
         for code in [
+            ErrorCode::AppearanceImageMissing,
+            ErrorCode::AppearanceImageUnsupported,
             ErrorCode::AuthOfflineInvalidName,
             ErrorCode::CommonCancelled,
             ErrorCode::CommonConfigSchemaUnsupported,
