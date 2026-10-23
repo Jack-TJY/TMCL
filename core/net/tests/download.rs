@@ -37,6 +37,7 @@ fn fast(concurrency: usize) -> Downloader {
         DownloadOptions {
             concurrency,
             retry: RetryPolicy::with_delays([Duration::from_millis(10); 3]),
+            ..DownloadOptions::default()
         },
     )
 }

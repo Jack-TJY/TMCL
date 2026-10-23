@@ -4,6 +4,8 @@
 //! 网络中断或取消时保留 `.part`，下一次尝试（或下一次运行）从已有长度用
 //! `Range` 续传；服务器不支持 `Range` 时从头重下。大小或 SHA1 不符时删除
 //! `.part` 并从头重试。已存在且大小、SHA1 均匹配的文件直接跳过。
+//! 大于 [`DownloadOptions::chunk_threshold`] 且服务器支持 `Range` 的文件
+//! 分片并发下载（`chunk.rs`）。
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -20,12 +22,17 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinSet;
 use tokio::time::MissedTickBehavior;
 
+use crate::chunk;
 use crate::client::{HttpClient, map_reqwest_error};
 use crate::progress::ProgressTracker;
 use crate::retry::RetryPolicy;
 
 /// 默认同时进行的连接数。
 pub const DEFAULT_CONCURRENCY: usize = 16;
+/// 默认分片阈值：大于 8 MiB 的文件分片下载。
+pub const DEFAULT_CHUNK_THRESHOLD: u64 = 8 * 1024 * 1024;
+/// 默认分片大小：4 MiB。
+pub const DEFAULT_CHUNK_SIZE: u64 = 4 * 1024 * 1024;
 
 /// 一个待下载的文件。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,6 +74,10 @@ pub struct DownloadOptions {
     pub concurrency: usize,
     /// 可恢复错误的重试策略。
     pub retry: RetryPolicy,
+    /// 大于该字节数且服务器支持 `Range` 的文件分片下载。
+    pub chunk_threshold: u64,
+    /// 每个分片的字节数。
+    pub chunk_size: u64,
 }
 
 impl Default for DownloadOptions {
@@ -74,6 +85,8 @@ impl Default for DownloadOptions {
         Self {
             concurrency: DEFAULT_CONCURRENCY,
             retry: RetryPolicy::default(),
+            chunk_threshold: DEFAULT_CHUNK_THRESHOLD,
+            chunk_size: DEFAULT_CHUNK_SIZE,
         }
     }
 }
@@ -117,6 +130,11 @@ impl Downloader {
         &self.options
     }
 
+    /// 全局连接数上限。
+    pub(crate) fn connections(&self) -> Arc<Semaphore> {
+        self.connections.clone()
+    }
+
     /// 下载单个文件；已存在且校验通过时跳过。不上报进度。
     pub async fn download_one(&self, item: &DownloadItem, ctx: &TaskCtx) -> AppResult<Outcome> {
         self.fetch(item, None, ctx).await
@@ -149,7 +167,7 @@ impl Downloader {
             let tracker = tracker.clone();
             set.spawn(async move {
                 let _permit = acquire(files, &ctx).await?;
-                this.fetch(&item, Some(&tracker), &ctx).await
+                this.fetch(&item, Some(tracker), &ctx).await
             });
         }
 
@@ -201,12 +219,12 @@ impl Downloader {
     async fn fetch(
         &self,
         item: &DownloadItem,
-        tracker: Option<&ProgressTracker>,
+        tracker: Option<Arc<ProgressTracker>>,
         ctx: &TaskCtx,
     ) -> AppResult<Outcome> {
         ctx.check_cancelled()?;
         if is_valid(&item.path, item.size, item.sha1.as_deref()).await? {
-            if let Some(tracker) = tracker {
+            if let Some(tracker) = &tracker {
                 tracker.add_bytes(item.size.unwrap_or(0));
                 tracker.finish_item();
             }
@@ -219,29 +237,36 @@ impl Downloader {
         }
         let part = part_path(&item.path);
         let progress = ItemProgress {
-            tracker,
-            counted: AtomicU64::new(0),
+            tracker: tracker.clone(),
+            counted: Arc::new(AtomicU64::new(0)),
         };
         let bytes = self
             .options
             .retry
-            .run(ctx, |_| self.attempt(item, &part, &progress, ctx))
+            .run(ctx, |_| async {
+                match item.size {
+                    Some(size) if size > self.options.chunk_threshold => {
+                        chunk::attempt(self, item, size, &part, &progress, ctx).await
+                    }
+                    _ => self.attempt(item, &part, &progress, ctx).await,
+                }
+            })
             .await?;
         fs::rename(&part, &item.path)
             .await
             .map_err(|e| io_error(&item.path, &e))?;
-        if let Some(tracker) = tracker {
+        if let Some(tracker) = &tracker {
             tracker.finish_item();
         }
         Ok(Outcome::Downloaded(bytes))
     }
 
-    /// 一次下载尝试：从 `.part` 已有长度续传，写完后校验，返回文件字节数。
-    async fn attempt(
+    /// 一次单连接下载尝试：从 `.part` 已有长度续传，写完后校验，返回文件字节数。
+    pub(crate) async fn attempt(
         &self,
         item: &DownloadItem,
         part: &Path,
-        progress: &ItemProgress<'_>,
+        progress: &ItemProgress,
         ctx: &TaskCtx,
     ) -> AppResult<u64> {
         let _permit = acquire(self.connections.clone(), ctx).await?;
@@ -329,22 +354,34 @@ impl Downloader {
 }
 
 /// 单个文件计入批次进度的字节数，重试从头开始时能准确撤回。
-struct ItemProgress<'a> {
-    tracker: Option<&'a ProgressTracker>,
-    counted: AtomicU64,
+/// 克隆体共享计数，供同一文件的各分片使用。
+#[derive(Clone)]
+pub(crate) struct ItemProgress {
+    tracker: Option<Arc<ProgressTracker>>,
+    counted: Arc<AtomicU64>,
 }
 
-impl ItemProgress<'_> {
-    fn add(&self, n: u64) {
+impl ItemProgress {
+    /// 累加本文件新传输的字节。
+    pub(crate) fn add(&self, n: u64) {
         self.counted.fetch_add(n, Ordering::Relaxed);
-        if let Some(tracker) = self.tracker {
+        if let Some(tracker) = &self.tracker {
             tracker.add_bytes(n);
         }
     }
 
-    fn set(&self, now: u64) {
+    /// 撤回本文件已计入的 `n` 个字节。
+    pub(crate) fn sub(&self, n: u64) {
+        self.counted.fetch_sub(n, Ordering::Relaxed);
+        if let Some(tracker) = &self.tracker {
+            tracker.sub_bytes(n);
+        }
+    }
+
+    /// 把本文件已计入的字节数校正为 `now`。
+    pub(crate) fn set(&self, now: u64) {
         let before = self.counted.swap(now, Ordering::Relaxed);
-        if let Some(tracker) = self.tracker {
+        if let Some(tracker) = &self.tracker {
             if now >= before {
                 tracker.add_bytes(now - before);
             } else {
@@ -410,7 +447,10 @@ pub async fn download_all(
 }
 
 /// 等待一个许可，可被取消。
-async fn acquire(semaphore: Arc<Semaphore>, ctx: &TaskCtx) -> AppResult<OwnedSemaphorePermit> {
+pub(crate) async fn acquire(
+    semaphore: Arc<Semaphore>,
+    ctx: &TaskCtx,
+) -> AppResult<OwnedSemaphorePermit> {
     tokio::select! {
         biased;
         _ = ctx.cancel.cancelled() => Err(AppError::cancelled()),
@@ -421,7 +461,7 @@ async fn acquire(semaphore: Arc<Semaphore>, ctx: &TaskCtx) -> AppResult<OwnedSem
 }
 
 /// 校验写入的大小与 SHA1。
-fn verify(item: &DownloadItem, written: u64, actual_sha1: &str) -> AppResult<()> {
+pub(crate) fn verify(item: &DownloadItem, written: u64, actual_sha1: &str) -> AppResult<()> {
     if let Some(expected) = item.size
         && expected != written
     {
@@ -442,7 +482,7 @@ fn verify(item: &DownloadItem, written: u64, actual_sha1: &str) -> AppResult<()>
 }
 
 /// `.part` 当前长度，不存在时为 0。
-async fn part_len(part: &Path) -> AppResult<u64> {
+pub(crate) async fn part_len(part: &Path) -> AppResult<u64> {
     match fs::metadata(part).await {
         Ok(meta) => Ok(meta.len()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(0),
@@ -451,7 +491,7 @@ async fn part_len(part: &Path) -> AppResult<u64> {
 }
 
 /// 把文件的前 `limit` 个字节喂给 `hasher`。
-async fn hash_prefix(path: &Path, limit: u64, hasher: &mut Sha1) -> AppResult<()> {
+pub(crate) async fn hash_prefix(path: &Path, limit: u64, hasher: &mut Sha1) -> AppResult<()> {
     let file = fs::File::open(path).await.map_err(|e| io_error(path, &e))?;
     let mut reader = file.take(limit);
     let mut buf = vec![0u8; 64 * 1024];
@@ -468,7 +508,7 @@ async fn hash_prefix(path: &Path, limit: u64, hasher: &mut Sha1) -> AppResult<()
 }
 
 /// 解析 `Content-Range: bytes <start>-<end>/<total>` 的起点。
-fn content_range_start(response: &reqwest::Response) -> Option<u64> {
+pub(crate) fn content_range_start(response: &reqwest::Response) -> Option<u64> {
     let value = response
         .headers()
         .get(reqwest::header::CONTENT_RANGE)?
@@ -489,7 +529,7 @@ fn part_path(path: &Path) -> PathBuf {
     path.with_file_name(name)
 }
 
-fn to_hex(bytes: &[u8]) -> String {
+pub(crate) fn to_hex(bytes: &[u8]) -> String {
     use std::fmt::Write;
     bytes.iter().fold(String::with_capacity(40), |mut s, b| {
         let _ = write!(s, "{b:02x}");
@@ -497,7 +537,7 @@ fn to_hex(bytes: &[u8]) -> String {
     })
 }
 
-fn io_error(path: &Path, err: &std::io::Error) -> AppError {
+pub(crate) fn io_error(path: &Path, err: &std::io::Error) -> AppError {
     AppError::new(ErrorCode::CommonIo)
         .with_param("path", path.display())
         .with_detail(err.to_string())
