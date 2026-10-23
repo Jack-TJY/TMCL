@@ -61,6 +61,15 @@ impl AppState {
         self.data.as_ref().map_err(Clone::clone)
     }
 
+    /// 下载设置变化后重建下载引擎；已在运行的任务继续使用旧引擎直到结束。
+    pub fn reload_downloader(&self, download: &DownloadConfig) {
+        let next = build_downloader(download);
+        *self
+            .downloader
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = next;
+    }
+
     /// 在共享数据库连接上执行 `f`。
     ///
     /// 首次调用时打开 `tmcl.db`，并让实例索引与磁盘对账、清理过期回收站

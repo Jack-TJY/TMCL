@@ -36,7 +36,7 @@ watchEffect(() => {
 
 // 材质的开关与明暗跟随设置变化。
 watch(
-  () => [settings.settings.window_material, settings.isDark, settings.materialKind],
+  () => [settings.settings.appearance.window_material, settings.isDark, settings.materialKind],
   () => void settings.syncMaterial(),
   { immediate: true },
 );

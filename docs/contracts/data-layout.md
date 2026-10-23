@@ -46,6 +46,13 @@
   "schema": 2,
   "language": "zh-CN",
   "theme": "system",
+  "appearance": {
+    "accent": null,
+    "window_material": true
+  },
+  "memory": {
+    "max_mb": 4096
+  },
   "download": {
     "max_concurrency": 16
   }
@@ -57,6 +64,9 @@
 | `schema` | 整数 | `2` | 结构版本，写入时总是当前版本 |
 | `language` | 字符串 | `"zh-CN"` | 界面语言，BCP 47 标签 |
 | `theme` | `"system"` \| `"light"` \| `"dark"` | `"system"` | 界面主题 |
+| `appearance.accent` | 字符串 \| `null` | `null` | 强调色 `#RRGGBB`；`null` 跟随系统强调色（取不到时用 `#0067C0`） |
+| `appearance.window_material` | 布尔 | `true` | 平台支持时使用窗口材质（Win11 Mica、macOS vibrancy），否则纯色背景 |
+| `memory.max_mb` | 正整数 | `4096` | 新建实例的默认最大内存（MiB），512–32768 |
 | `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
 
 读写规则：

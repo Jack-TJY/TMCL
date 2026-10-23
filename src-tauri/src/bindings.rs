@@ -17,7 +17,9 @@ use crate::commands::instance::{
     InstanceCreateArgs, InstanceDuplicateArgs, InstanceExportArgs, InstanceGameEntries,
     InstanceIdArgs, InstanceImportArgs, InstanceList, InstanceRenameArgs, InstanceSaveArgs,
 };
-use crate::commands::settings::{SettingsLanguage, SettingsSetLanguageArgs};
+use crate::commands::settings::{
+    SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
+};
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
 use crate::events::TaskStarted;
 
@@ -55,7 +57,9 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     InstanceSaveArgs::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
+    SettingsSetArgs::export_all(&cfg)?;
     SettingsSetLanguageArgs::export_all(&cfg)?;
+    SettingsSnapshot::export_all(&cfg)?;
     // task
     TaskCancelArgs::export_all(&cfg)?;
     TaskCancelResult::export_all(&cfg)?;
