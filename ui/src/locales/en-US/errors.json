@@ -3,6 +3,7 @@
   "APPEARANCE_IMAGE_UNSUPPORTED": "Only PNG, JPG and WebP images up to {max_mb} MB are supported",
   "AUTH_ACCOUNT_NOT_FOUND": "Account not found, please refresh the account list",
   "AUTH_AUTHLIB_SERVER_INVALID": "{url} is not a skin site that supports external sign-in",
+  "AUTH_NO_ACCOUNT": "No account available, please add one on the Accounts page",
   "AUTH_OFFLINE_INVALID_NAME": "Username must be 3–16 letters, digits or underscores",
   "AUTH_SECRET_STORE": "Cannot access the system keychain, sign-in data was not saved",
   "AUTH_YGGDRASIL_INVALID_CREDENTIALS": "Wrong email or password, or too many attempts. Please try again later",

@@ -25,6 +25,8 @@ pub enum ErrorCode {
     AuthAccountNotFound,
     /// 地址不是有效的 Yggdrasil 皮肤站（无法解析或元数据缺少 `meta`、`skinDomains`）。
     AuthAuthlibServerInvalid,
+    /// 没有可用于启动的账号（账号列表为空或未选默认账号）。
+    AuthNoAccount,
     /// 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$`。
     AuthOfflineInvalidName,
     /// 无法读写系统密钥库（Windows 凭据管理器、macOS 钥匙串、Linux Secret Service）。
@@ -113,6 +115,7 @@ impl ErrorCode {
             Self::AppearanceImageUnsupported => "APPEARANCE_IMAGE_UNSUPPORTED",
             Self::AuthAccountNotFound => "AUTH_ACCOUNT_NOT_FOUND",
             Self::AuthAuthlibServerInvalid => "AUTH_AUTHLIB_SERVER_INVALID",
+            Self::AuthNoAccount => "AUTH_NO_ACCOUNT",
             Self::AuthOfflineInvalidName => "AUTH_OFFLINE_INVALID_NAME",
             Self::AuthSecretStore => "AUTH_SECRET_STORE",
             Self::AuthYggdrasilInvalidCredentials => "AUTH_YGGDRASIL_INVALID_CREDENTIALS",
@@ -239,6 +242,7 @@ mod tests {
             ErrorCode::AppearanceImageUnsupported,
             ErrorCode::AuthAccountNotFound,
             ErrorCode::AuthAuthlibServerInvalid,
+            ErrorCode::AuthNoAccount,
             ErrorCode::AuthOfflineInvalidName,
             ErrorCode::AuthSecretStore,
             ErrorCode::AuthYggdrasilInvalidCredentials,

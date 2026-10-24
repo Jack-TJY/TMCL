@@ -1,0 +1,37 @@
+{
+  "hint": "启动游戏时使用标为“当前”的账号",
+  "current": "当前",
+  "use": "使用此账号",
+  "switched": "已切换到 {name}",
+  "cancel": "取消",
+  "retry": "重试",
+  "loadFailed": "无法读取账号列表",
+  "empty": "还没有账号",
+  "kind": {
+    "microsoft": "微软正版",
+    "offline": "离线 · 仅限本地测试",
+    "authlib": "外置登录",
+    "authlibAt": "外置登录 · {server}"
+  },
+  "add": {
+    "action": "添加账号",
+    "offline": "离线账号"
+  },
+  "offline": {
+    "title": "添加离线账号",
+    "notice": "离线账号仅限本地测试：无法进入开启正版验证的服务器，也没有正版皮肤。请支持正版游戏。",
+    "name": "玩家名",
+    "nameHint": "3–16 个字母、数字或下划线",
+    "placeholder": "例如 Steve",
+    "confirm": "添加",
+    "added": "已添加离线账号 {name}"
+  },
+  "remove": {
+    "action": "删除账号",
+    "title": "删除账号 {name}？",
+    "offline": "删除后可以随时用同样的玩家名重新添加。",
+    "online": "删除后会同时清除本机保存的登录凭据，再次使用需要重新登录。",
+    "confirm": "删除",
+    "done": "已删除 {name}"
+  }
+}

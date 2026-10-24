@@ -1,9 +1,7 @@
 // 游戏会话（PLAN.md M1-13）：每个实例最近一次启动的状态与日志，供实例页、日志窗口和
-// 首页“开始游戏”组件（M1-18）共用。启动经任务中心（种类 `launch`），账号暂由
-// api/__mocks__/account.ts 提供离线账号（M1-08 完成后替换）。
+// 首页“开始游戏”组件（M1-18）共用。启动经任务中心（种类 `launch`），使用账号页选定的当前账号。
 import { defineStore } from "pinia";
 import { computed, ref, watch } from "vue";
-import { mockLaunchAccount } from "../../api/__mocks__/account";
 import { toAppError } from "../../api/invoke";
 import {
   LAUNCH_TASK_KIND,
@@ -16,6 +14,7 @@ import type { AppError } from "../../bindings/AppError";
 import type { GameExited } from "../../bindings/GameExited";
 import type { GameLog } from "../../bindings/GameLog";
 import type { TaskId } from "../../bindings/TaskId";
+import { useAccountsStore } from "../../stores/accounts";
 import { useTasksStore } from "../../stores/tasks";
 
 /** 每个会话保留的日志行数上限，超出时丢弃最早的行。 */
@@ -65,6 +64,7 @@ export const useGameSessions = defineStore("gameSessions", () => {
   let crashHandler: ((session: GameSession) => void) | null = null;
   let subscribed: Promise<unknown> | null = null;
   const tasks = useTasksStore();
+  const accounts = useAccountsStore();
 
   const active = computed(() => Object.values(sessions.value).filter((s) => isActive(s)));
 
@@ -115,6 +115,8 @@ export const useGameSessions = defineStore("gameSessions", () => {
   async function launch(target: LaunchTarget): Promise<void> {
     await subscribe();
     if (isActive(sessions.value[target.id])) return;
+    // 没有可用账号时直接抛出 AUTH_NO_ACCOUNT，不留下失败的会话。
+    const account = await accounts.launchAccount();
     sessions.value[target.id] = {
       instanceId: target.id,
       name: target.name,
@@ -129,7 +131,7 @@ export const useGameSessions = defineStore("gameSessions", () => {
       const taskId = await tasks.start({
         kind: LAUNCH_TASK_KIND,
         label: target.name,
-        start: () => launchStart({ instance_id: target.id, account: mockLaunchAccount() }),
+        start: () => launchStart({ instance_id: target.id, account }),
       });
       await waitForTask(taskId);
       const session = sessions.value[target.id];

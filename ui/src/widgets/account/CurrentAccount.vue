@@ -1,26 +1,36 @@
 <script setup lang="ts">
-// 当前账号：显示启动游戏时使用的账号。账号管理（M1-08）完成前只有离线账号（仅限本地测试）。
+// 当前账号：显示启动游戏时使用的账号，与账号页共用账号 store。
 import { ChevronRight20Regular } from "@vicons/fluent";
 import { NButton, NIcon, NTag, NTooltip } from "naive-ui";
+import { computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { mockLaunchAccount } from "../../api/__mocks__/account";
+import { useAccountsStore } from "../../stores/accounts";
 import type { WidgetProps } from "../types";
 
 defineProps<WidgetProps>();
 const { t } = useI18n();
 const router = useRouter();
-const account = mockLaunchAccount();
+const store = useAccountsStore();
+const account = computed(() => store.current);
+
+// 读取失败时显示“没有账号”，到账号页可重试。
+onMounted(() => store.ensureLoaded().catch(() => undefined));
 </script>
 
 <template>
   <div class="account">
-    <div class="avatar" aria-hidden="true">{{ account.name.slice(0, 1).toUpperCase() }}</div>
-    <div class="info">
+    <div class="avatar" :class="{ empty: !account }" aria-hidden="true">
+      {{ account ? account.name.slice(0, 1).toUpperCase() : "?" }}
+    </div>
+    <div v-if="account" class="info">
       <div class="name">{{ account.name }}</div>
-      <NTag size="small" :bordered="false" type="warning">
-        {{ t("widget-account.offline") }}
+      <NTag size="small" :bordered="false" :type="account.kind === 'offline' ? 'warning' : 'info'">
+        {{ t(`accounts.kind.${account.kind}`) }}
       </NTag>
+    </div>
+    <div v-else class="info">
+      <div class="none">{{ t("widget-account.none") }}</div>
     </div>
     <NTooltip>
       <template #trigger>
@@ -60,6 +70,15 @@ const account = mockLaunchAccount();
   color: #fff;
   font-size: 18px;
   font-weight: 600;
+}
+
+.avatar.empty {
+  background: var(--tmcl-subtle);
+  color: var(--tmcl-text-secondary);
+}
+
+.none {
+  color: var(--tmcl-text-secondary);
 }
 
 .info {
