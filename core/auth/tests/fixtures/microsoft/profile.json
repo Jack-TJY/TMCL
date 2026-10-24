@@ -1,0 +1,15 @@
+{
+  "id": "0b6f4c2a9d3e4f8a8b1c2d3e4f5a6b7c",
+  "name": "Steve",
+  "skins": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "state": "ACTIVE",
+      "url": "http://textures.minecraft.net/texture/test",
+      "textureKey": "test",
+      "variant": "CLASSIC"
+    }
+  ],
+  "capes": [],
+  "profileActions": {}
+}

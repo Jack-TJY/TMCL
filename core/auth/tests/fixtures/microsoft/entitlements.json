@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "name": "product_minecraft",
+      "signature": "test-signature"
+    },
+    {
+      "name": "game_minecraft",
+      "signature": "test-signature"
+    }
+  ],
+  "signature": "test-signature",
+  "keyId": "1"
+}

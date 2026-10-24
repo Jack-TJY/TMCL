@@ -1,0 +1,9 @@
+{
+  "error": "expired_token",
+  "error_description": "AADSTS70020: The provided value for the input parameter 'device_code' is not valid. This device code has expired. Trace ID: 00000000-0000-0000-0000-000000000000",
+  "error_codes": [
+    70020
+  ],
+  "trace_id": "00000000-0000-0000-0000-000000000000",
+  "correlation_id": "00000000-0000-0000-0000-000000000000"
+}

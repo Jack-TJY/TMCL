@@ -4,18 +4,17 @@
 //! 只发送用户主动输入的账号密码；令牌与密码不写入日志或错误详情。
 
 use std::fmt;
-use std::time::Duration;
 
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
-use tmcl_net::{HttpClient, USER_AGENT};
+use tmcl_net::HttpClient;
+
+use crate::http;
 
 /// API 地址指示（ALI）响应头。
 const ALI_HEADER: &str = "x-authlib-injector-api-location";
-/// 单个 POST 请求的总时限。
-const POST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// 皮肤站信息：规整后的 API 地址、名称与原始元数据。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -134,33 +133,7 @@ async fn post(
     body: &Value,
     ctx: &TaskCtx,
 ) -> AppResult<(u16, Vec<u8>)> {
-    let request = async {
-        let response = client.post(url).json(body).send().await?;
-        let status = response.status().as_u16();
-        Ok::<_, reqwest::Error>((status, response.bytes().await?.to_vec()))
-    };
-    let result = tokio::select! {
-        biased;
-        _ = ctx.cancel.cancelled() => return Err(AppError::cancelled()),
-        r = tokio::time::timeout(POST_TIMEOUT, request) => r,
-    };
-    match result {
-        Ok(Ok(value)) => Ok(value),
-        Ok(Err(err)) => {
-            let code = if err.is_timeout() {
-                ErrorCode::NetTimeout
-            } else if err.is_connect() {
-                ErrorCode::NetConnect
-            } else {
-                ErrorCode::NetRequest
-            };
-            // reqwest 的错误信息不含请求体，可以作为详情。
-            Err(AppError::new(code)
-                .with_param("url", url)
-                .with_detail(err.without_url().to_string()))
-        }
-        Err(_) => Err(AppError::new(ErrorCode::NetTimeout).with_param("url", url)),
-    }
+    http::send(client.post(url).json(body), url, ctx).await
 }
 
 /// 发送 POST 的客户端，与 [`HttpClient`] 使用相同的 `User-Agent`。
@@ -172,12 +145,9 @@ pub struct Yggdrasil {
 impl Yggdrasil {
     /// 创建客户端。
     pub fn new() -> AppResult<Self> {
-        let client = reqwest::Client::builder()
-            .user_agent(USER_AGENT)
-            .connect_timeout(Duration::from_secs(15))
-            .build()
-            .map_err(|e| AppError::new(ErrorCode::NetRequest).with_detail(e.to_string()))?;
-        Ok(Self { client })
+        Ok(Self {
+            client: http::client()?,
+        })
     }
 
     /// 用账号密码登录。角色有多个且皮肤站没有选定时使用第一个。
@@ -238,7 +208,7 @@ impl Yggdrasil {
         match status {
             200..=299 => Ok(true),
             401 | 403 => Ok(false),
-            _ => Err(http_status(&url, status)),
+            _ => Err(http::http_status(&url, status)),
         }
     }
 
@@ -290,20 +260,10 @@ impl Yggdrasil {
     }
 }
 
-fn http_status(url: &str, status: u16) -> AppError {
-    AppError::new(ErrorCode::NetHttpStatus)
-        .with_param("url", url)
-        .with_param("status", status)
-}
-
 /// 解析响应：2xx 返回 JSON；401/403 的 `ForbiddenOperationException` 映射为 `forbidden`。
 fn parse_response(url: &str, status: u16, bytes: &[u8], forbidden: ErrorCode) -> AppResult<Value> {
     if (200..300).contains(&status) {
-        return serde_json::from_slice(bytes).map_err(|e| {
-            AppError::new(ErrorCode::CommonJson)
-                .with_param("url", url)
-                .with_detail(e.to_string())
-        });
+        return http::json(url, bytes);
     }
     let error = serde_json::from_slice::<Value>(bytes)
         .ok()
@@ -313,7 +273,7 @@ fn parse_response(url: &str, status: u16, bytes: &[u8], forbidden: ErrorCode) ->
         let detail = error.unwrap_or_else(|| format!("HTTP {status}"));
         return Err(AppError::new(forbidden).with_detail(detail));
     }
-    Err(http_status(url, status))
+    Err(http::http_status(url, status))
 }
 
 enum Bound {

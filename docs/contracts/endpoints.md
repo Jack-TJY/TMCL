@@ -34,3 +34,14 @@
 | authlib-injector 发布索引 | `https://authlib-injector.yushi.moe/artifact/latest.json` | 返回 `version`、`download_url`、`checksums.sha256`；jar 下载后按 SHA-256 校验，存到 `cache/authlib-injector/` | 2026-10-24 国内直连与海外代理均下载并校验成功 |
 | authlib-injector 镜像 | `https://bmclapi2.bangbang93.com/mirrors/authlib-injector/artifact/latest.json` | 官方索引失败时使用，结构相同 | 未单独实测 |
 | Yggdrasil 皮肤站 | 用户输入 | 先 GET 用户输入的地址，按响应头 `X-Authlib-Injector-API-Location` 找到 API 根；登录、校验、刷新分别 POST `<api>/authserver/{authenticate,validate,refresh}` | 2026-10-24 LittleSkin 元数据（`littleskin.cn` 经 ALI 指向 `/api/yggdrasil`）实测；登录需维护者用测试账号复测 |
+
+## auth（M0-10）
+
+| 用途 | 地址 | 说明 | 核实 |
+| --- | --- | --- | --- |
+| 微软设备码 | `https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode` | 表单 POST `client_id`、`scope=XboxLive.signin offline_access`，返回 `user_code`、`device_code`、`verification_uri`、`expires_in`、`interval` | 2026-10-22、2026-10-24 真实账号实测 200 |
+| 微软令牌 | `https://login.microsoftonline.com/consumers/oauth2/v2.0/token` | 表单 POST。设备码轮询 `grant_type=urn:ietf:params:oauth:grant-type:device_code`，按 `interval` 等待，`authorization_pending` 继续、`slow_down` 间隔加 5 秒；续期 `grant_type=refresh_token`，`invalid_grant` 需重新登录 | 同上 |
+| Xbox Live 用户认证 | `https://user.auth.xboxlive.com/user/authenticate` | JSON POST，`RpsTicket` 为 `d=<微软访问令牌>`，返回 `Token` 与 `DisplayClaims.xui[0].uhs` | 同上 |
+| XSTS 授权 | `https://xsts.auth.xboxlive.com/xsts/authorize` | JSON POST，`RelyingParty` 为 `rp://api.minecraftservices.com/`；401 响应的 `XErr` 2148916233（没有 Xbox 档案）、2148916238（未成年账号）单独映射 | 同上 |
+| Minecraft 登录 | `https://api.minecraftservices.com/authentication/login_with_xbox` | JSON POST `identityToken: "XBL3.0 x=<uhs>;<XSTS 令牌>"`，返回 `access_token`、`expires_in`；Azure 应用未获 Mojang 批准时返回 403 | 2026-10-24 审核通过后实测 200 |
+| 权益与档案 | `https://api.minecraftservices.com/entitlements/mcstore`、`https://api.minecraftservices.com/minecraft/profile` | `Authorization: Bearer <Minecraft 访问令牌>`；档案 404 表示没有档案，此时权益为空视为未购买。Xbox Game Pass 账号权益可能为空但有档案 | 2026-10-24 实测 200 |

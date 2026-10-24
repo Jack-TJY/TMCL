@@ -24,6 +24,7 @@ publish = false
 dotenvy = "0.15"
 embed-resource = "3.0"
 flate2 = "1.1"
+form_urlencoded = "1.2"
 keyring = "4.2"
 md-5 = "0.11"
 regex = "1.13"

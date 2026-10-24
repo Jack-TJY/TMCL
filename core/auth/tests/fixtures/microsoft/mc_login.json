@@ -1,0 +1,8 @@
+{
+  "username": "00000000-0000-0000-0000-000000000000",
+  "roles": [],
+  "metadata": {},
+  "access_token": "test-mc-access-token",
+  "expires_in": 86400,
+  "token_type": "Bearer"
+}
