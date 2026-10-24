@@ -8,7 +8,7 @@ pub mod models;
 
 pub use client::{API_BASE, ModrinthClient, SearchQuery, USER_AGENT, VersionFilter};
 pub use models::{
-    Dependency, DependencyType, GalleryImage, License, Project, ProjectDependencies, ProjectType,
-    SearchHit, SearchIndex, SearchResponse, SideSupport, Version, VersionFile, VersionFileHashes,
-    VersionType,
+    Dependency, DependencyType, GalleryImage, HashAlgorithm, License, Project, ProjectDependencies,
+    ProjectType, SearchHit, SearchIndex, SearchResponse, SideSupport, Version, VersionFile,
+    VersionFileHashes, VersionType,
 };

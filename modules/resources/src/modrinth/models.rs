@@ -370,6 +370,27 @@ pub struct VersionFileHashes {
     pub sha512: String,
 }
 
+/// 按文件哈希查询时使用的算法。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HashAlgorithm {
+    /// SHA1（与下载引擎的校验一致）。
+    #[default]
+    Sha1,
+    /// SHA512。
+    Sha512,
+}
+
+impl HashAlgorithm {
+    /// 参数 `algorithm` 的取值。
+    pub fn as_api_str(self) -> &'static str {
+        match self {
+            Self::Sha1 => "sha1",
+            Self::Sha512 => "sha512",
+        }
+    }
+}
+
 /// 依赖关系的类型。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

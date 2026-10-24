@@ -1,5 +1,6 @@
 //! Modrinth API 客户端：`User-Agent`、速率限制、重试、取消与错误码映射。
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -10,7 +11,7 @@ use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::{HttpClient, RetryPolicy};
 
 use super::models::{
-    Project, ProjectDependencies, ProjectType, SearchIndex, SearchResponse, Version,
+    HashAlgorithm, Project, ProjectDependencies, ProjectType, SearchIndex, SearchResponse, Version,
 };
 
 /// Modrinth API v2 的地址。
@@ -128,6 +129,62 @@ impl ModrinthClient {
         self.get_json(url, ctx).await
     }
 
+    /// 按文件哈希查找所属版本（`GET /version_file/{hash}`），不是 Modrinth 上的文件时返回 `None`。
+    pub async fn version_from_hash(
+        &self,
+        hash: &str,
+        algorithm: HashAlgorithm,
+        ctx: &TaskCtx,
+    ) -> AppResult<Option<Version>> {
+        let url = self.url(
+            &["version_file", hash],
+            &[("algorithm", algorithm.as_api_str().to_owned())],
+        )?;
+        self.get_optional(url, ctx).await
+    }
+
+    /// 批量按文件哈希查找所属版本（`POST /version_files`），返回“哈希 → 版本”，
+    /// 找不到的哈希不出现在结果中。用于识别已安装的资源。
+    pub async fn versions_from_hashes(
+        &self,
+        hashes: &[String],
+        algorithm: HashAlgorithm,
+        ctx: &TaskCtx,
+    ) -> AppResult<HashMap<String, Version>> {
+        if hashes.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let body = serde_json::json!({
+            "hashes": hashes,
+            "algorithm": algorithm.as_api_str(),
+        });
+        self.post_json(&["version_files"], &body, ctx).await
+    }
+
+    /// 批量检查更新（`POST /version_files/update`）：对每个文件哈希，返回其项目中符合
+    /// `filter` 的最新版本。结果版本与原文件相同即为已是最新；找不到的哈希不出现在结果中。
+    ///
+    /// Modrinth 的这个接口不支持 `featured` 过滤，会被忽略。
+    pub async fn latest_versions_from_hashes(
+        &self,
+        hashes: &[String],
+        algorithm: HashAlgorithm,
+        filter: &VersionFilter,
+        ctx: &TaskCtx,
+    ) -> AppResult<HashMap<String, Version>> {
+        if hashes.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let body = serde_json::json!({
+            "hashes": hashes,
+            "algorithm": algorithm.as_api_str(),
+            "loaders": filter.loaders,
+            "game_versions": filter.game_versions,
+        });
+        self.post_json(&["version_files", "update"], &body, ctx)
+            .await
+    }
+
     /// 拼出 `<base>/<segments...>?<query>`，路径段会被百分号编码。
     fn url(&self, segments: &[&str], query: &[(&str, String)]) -> AppResult<Url> {
         let mut url = Url::parse(&self.base).map_err(|e| {
@@ -148,6 +205,20 @@ impl ModrinthClient {
     async fn get_json<T: DeserializeOwned>(&self, url: Url, ctx: &TaskCtx) -> AppResult<T> {
         match self.get_optional(url.clone(), ctx).await? {
             Some(value) => Ok(value),
+            None => Err(status_error(url.as_str(), StatusCode::NOT_FOUND)),
+        }
+    }
+
+    async fn post_json<T: DeserializeOwned>(
+        &self,
+        segments: &[&str],
+        body: &serde_json::Value,
+        ctx: &TaskCtx,
+    ) -> AppResult<T> {
+        let url = self.url(segments, &[])?;
+        let body = body.to_string().into_bytes();
+        match self.request(Method::POST, &url, Some(&body), ctx).await? {
+            Some(bytes) => parse_json(&bytes, url.as_str()),
             None => Err(status_error(url.as_str(), StatusCode::NOT_FOUND)),
         }
     }

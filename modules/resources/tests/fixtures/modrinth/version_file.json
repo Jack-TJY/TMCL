@@ -1,0 +1,38 @@
+{
+ "game_versions": [
+  "1.20.1"
+ ],
+ "loaders": [
+  "fabric",
+  "quilt"
+ ],
+ "environment": "client_only",
+ "id": "OkwCNtFH",
+ "project_id": "AANobbMI",
+ "author_id": "TEZXhE2U",
+ "featured": false,
+ "name": "Sodium 0.5.1",
+ "version_number": "mc1.20.1-0.5.1",
+ "changelog": "This release contains some new performance improvements (especially for integrated GPUs) and some fixes for issues intro…",
+ "changelog_url": null,
+ "date_published": "2023-08-13T22:42:56.565090Z",
+ "downloads": 189944,
+ "version_type": "release",
+ "status": "listed",
+ "requested_status": null,
+ "files": [
+  {
+   "id": "pBKabnRH",
+   "hashes": {
+    "sha1": "64908970887e85b6aa9fe4eaa690ddcb84c3369c",
+    "sha512": "79ad40dca32a8065ed5e36021de964946da98fd3d8992a9dec1983c2ea0b6db5bd008df6b80f39bc8ed79f3026181d24ba5152e56a790db81212d96312ebd4f3"
+   },
+   "url": "https://cdn.modrinth.com/data/AANobbMI/versions/OkwCNtFH/sodium-fabric-mc1.20.1-0.5.1.jar",
+   "filename": "sodium-fabric-mc1.20.1-0.5.1.jar",
+   "primary": true,
+   "size": 835059,
+   "file_type": null
+  }
+ ],
+ "dependencies": []
+}
