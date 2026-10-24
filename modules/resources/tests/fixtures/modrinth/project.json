@@ -1,0 +1,76 @@
+{
+ "client_side": "required",
+ "server_side": "unsupported",
+ "game_versions": [
+  "26.3-rc-1",
+  "26.3-rc-2",
+  "26.3"
+ ],
+ "environment": [
+  "client_only"
+ ],
+ "id": "AANobbMI",
+ "slug": "sodium",
+ "project_type": "mod",
+ "team": "4reLOAKe",
+ "organization": "LjcZDkRW",
+ "title": "Sodium",
+ "description": "A high-performance rendering engine replacement for Minecraft, which greatly improves frame rates and reduces micro-stutter.",
+ "body": "**This mod is the result of thousands of hours of development, and is made possible thanks to players like you.** If you…",
+ "body_url": null,
+ "published": "2021-01-03T00:53:34.185936Z",
+ "updated": "2026-10-15T17:51:44.107526Z",
+ "approved": "2021-01-03T00:53:34.185936Z",
+ "queued": null,
+ "status": "approved",
+ "requested_status": null,
+ "moderator_message": null,
+ "license": {
+  "id": "LicenseRef-Polyform-Shield-1.0.0",
+  "name": "",
+  "url": "https://github.com/CaffeineMC/sodium/blob/dev/LICENSE.md"
+ },
+ "downloads": 252970754,
+ "followers": 42091,
+ "categories": [
+  "optimization"
+ ],
+ "additional_categories": [],
+ "loaders": [
+  "fabric",
+  "neoforge",
+  "quilt"
+ ],
+ "versions": [
+  "NM9w06Kr",
+  "SS023RVV",
+  "g6ju16VJ"
+ ],
+ "icon_url": "https://cdn.modrinth.com/data/AANobbMI/295862f4724dc3f78df3447ad6072b2dcd3ef0c9_96.webp",
+ "raw_icon_url": "https://cdn.modrinth.com/data/AANobbMI/icon.png",
+ "issues_url": "https://github.com/CaffeineMC/sodium/issues",
+ "source_url": "https://github.com/CaffeineMC/sodium",
+ "wiki_url": "https://github.com/CaffeineMC/sodium/wiki",
+ "discord_url": "https://caffeinemc.net/discord",
+ "donation_urls": [
+  {
+   "id": "ko-fi",
+   "platform": "Ko-fi",
+   "url": "https://caffeinemc.net/donate"
+  }
+ ],
+ "gallery": [
+  {
+   "url": "https://cdn.modrinth.com/data/AANobbMI/images/d84313e6f57dc9e7896961dbd2dfc2689d482758_350.webp",
+   "raw_url": "https://cdn.modrinth.com/data/AANobbMI/images/d84313e6f57dc9e7896961dbd2dfc2689d482758.webp",
+   "featured": false,
+   "title": "Underwater Lighting Improvements",
+   "description": "Sodium fixes many graphical issues with smooth lighting while underwater.",
+   "created": "2023-06-25T21:35:39.891789Z",
+   "ordering": 0
+  }
+ ],
+ "color": 8703084,
+ "thread_id": "AANobbMI",
+ "monetization_status": "monetized"
+}

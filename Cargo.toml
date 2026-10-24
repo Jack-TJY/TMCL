@@ -9,6 +9,7 @@ members = [
     "core/launch",
     "core/loader",
     "core/net",
+    "modules/resources",
     "src-tauri",
 ]
 
