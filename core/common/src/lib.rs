@@ -13,7 +13,7 @@ pub use config::{Config, LoadedConfig};
 pub use db::Db;
 pub use error::{AppError, AppResult, ErrorCode};
 pub use log::{LogGuard, LogOptions, init_logging, redact};
-pub use paths::{DataPaths, write_atomic};
+pub use paths::{DataPaths, LinuxEnv, write_atomic};
 pub use task::{
     NoopSink, ProgressSink, ProgressUpdate, TaskCtx, TaskFinished, TaskId, TaskProgress, TaskState,
     ThrottledSink, VecSink,
