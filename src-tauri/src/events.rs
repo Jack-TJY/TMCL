@@ -25,7 +25,22 @@ pub const TASK_FINISHED: &str = "task:finished";
 pub const GAME_LOG: &str = "game:log";
 /// 游戏进程退出，负载 [`GameExited`]，每次启动恰好一次。
 pub const GAME_EXITED: &str = "game:exited";
-// `auth:device-code`（M0-10）由对应步骤在此追加。
+/// 微软登录拿到设备码，负载 [`DeviceCode`]，每次 `auth_ms_begin` 一次。
+pub const AUTH_DEVICE_CODE: &str = "auth:device-code";
+
+/// `auth:device-code` 的负载：界面显示代码并引导用户打开验证页。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DeviceCode {
+    /// 对应的 `auth_ms_begin` 任务。
+    pub task_id: TaskId,
+    /// 用户在验证页输入的代码。
+    pub user_code: String,
+    /// 验证页地址。
+    pub verification_uri: String,
+    /// 有效期，单位秒。
+    #[ts(type = "number")]
+    pub expires_in: u64,
+}
 
 /// 游戏输出的来源。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]

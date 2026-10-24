@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex as StdMutex, RwLock};
 
-use tmcl_auth::{KeyringStore, SecretStore};
+use tmcl_auth::{KeyringStore, MsClient, SecretStore};
 use tmcl_common::config::DownloadConfig;
 use tmcl_common::{AppResult, Config, DataPaths, Db};
 use tmcl_game::InstallOptions;
@@ -37,6 +37,8 @@ pub struct AppState {
     db: StdMutex<Option<Db>>,
     /// 账号令牌存储：系统密钥库；测试中换成内存实现。
     pub secrets: Arc<dyn SecretStore>,
+    /// 微软登录客户端；构建时没有 Client ID 时为 `AUTH_MS_DISABLED`。测试中指向本地服务器。
+    pub ms: AppResult<MsClient>,
 }
 
 impl AppState {
@@ -68,6 +70,7 @@ impl AppState {
             releases_url: crate::commands::app::RELEASES_URL.to_owned(),
             db: StdMutex::new(None),
             secrets: Arc::new(KeyringStore),
+            ms: MsClient::from_build(),
         }
     }
 

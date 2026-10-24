@@ -1,5 +1,4 @@
-// `auth_*` 命令封装（PLAN.md M1-08、M1-14）。微软登录（M0-10）完成前由 `__mocks__/account.ts`
-// 提供设备码流程的替身，只在没有后端的浏览器调试中可用。
+// `auth_*` 命令封装（PLAN.md M0-10、M1-08、M1-14）。
 import type { Account } from "../bindings/Account";
 import type { AccountList } from "../bindings/AccountList";
 import type { AppError } from "../bindings/AppError";
@@ -8,21 +7,20 @@ import type { AuthAddOfflineArgs } from "../bindings/AuthAddOfflineArgs";
 import type { AuthAuthlibServerArgs } from "../bindings/AuthAuthlibServerArgs";
 import type { AuthIdArgs } from "../bindings/AuthIdArgs";
 import type { AuthlibServer } from "../bindings/AuthlibServer";
+import type { DeviceCode as DeviceCodeEvent } from "../bindings/DeviceCode";
 import type { LaunchAccountArgs } from "../bindings/LaunchAccountArgs";
-import { mockMsLoginStart } from "./__mocks__/account";
+import type { TaskFinished } from "../bindings/TaskFinished";
+import type { TaskStarted } from "../bindings/TaskStarted";
 import { appInfo } from "./app";
-import { invoke } from "./invoke";
+import { onDeviceCode, onTaskFinished } from "./events";
+import { invoke, toAppError } from "./invoke";
+import { taskCancel } from "./task";
 
 export type { Account, AccountList, AuthlibServer };
 export type { AccountKind } from "../bindings/AccountKind";
 
-/** 微软设备码，即 `auth:device-code` 事件的负载（PLAN.md 第 3.3 节）。 */
-export interface DeviceCode {
-  user_code: string;
-  verification_uri: string;
-  /** 设备码有效期，单位秒。 */
-  expires_in: number;
-}
+/** 微软设备码：`auth:device-code` 事件的负载去掉任务 ID。 */
+export type DeviceCode = Omit<DeviceCodeEvent, "task_id">;
 
 /** 一次进行中的微软登录。 */
 export interface MsLogin {
@@ -34,15 +32,9 @@ export interface MsLogin {
   cancel(): void;
 }
 
-/**
- * Minecraft 服务尚未批准本启动器的应用（`login_with_xbox` 返回 403），由 M0-10 新增；
- * 在其进入 `ErrorCode` 之前以字符串比较识别。
- */
-export const AUTH_MC_APP_NOT_APPROVED = "AUTH_MC_APP_NOT_APPROVED";
-
-/** 判断错误是否为“应用尚未获批”。 */
+/** 判断错误是否为“Minecraft 服务拒绝本启动器的应用”（`login_with_xbox` 返回 403）。 */
 export function isAppNotApproved(error: AppError): boolean {
-  return (error.code as string) === AUTH_MC_APP_NOT_APPROVED;
+  return error.code === "AUTH_MC_APP_NOT_APPROVED";
 }
 
 /** 离线账号用户名规则，与后端一致。 */
@@ -78,35 +70,94 @@ export function accountAddAuthlib(args: AuthAddAuthlibArgs): Promise<Account> {
   return invoke<Account>("auth_add_authlib", { args });
 }
 
-/** 微软登录的可用状态：可用、构建时没有 Client ID、功能尚未完成（M0-10）。 */
-export type MsLoginStatus = "enabled" | "no_client_id" | "pending";
+/** 微软登录的可用状态：可用、构建时没有 Client ID。 */
+export type MsLoginStatus = "enabled" | "no_client_id";
 
-/** 微软登录是否可用。没有后端（浏览器调试）时可用，以便走通设备码弹窗的替身流程。 */
+/** 微软登录是否可用，即构建时是否注入了 Client ID；读不到应用信息时视为不可用。 */
 export async function msLoginStatus(): Promise<MsLoginStatus> {
-  let enabled: boolean;
   try {
-    enabled = (await appInfo()).ms_login_enabled;
+    return (await appInfo()).ms_login_enabled ? "enabled" : "no_client_id";
   } catch {
-    return import.meta.env.DEV ? "enabled" : "pending";
+    return "no_client_id";
   }
-  // `auth_ms_begin` 由 M0-10 提供，在此之前真实环境中不开放。
-  return enabled ? "pending" : "no_client_id";
 }
 
+const CANCELLED: AppError = { code: "COMMON_CANCELLED", params: {}, detail: null };
+
 /**
- * 开始微软设备码登录（M0-10 前为替身）。真实实现：先订阅 `auth:device-code`，再调用
- * `auth_ms_begin` 拿到任务 ID，任务成功后重新读取账号列表，取消即 `task_cancel`。
+ * 开始微软设备码登录：先订阅 `auth:device-code` 与 `task:finished`，再调用 `auth_ms_begin`
+ * 拿到任务 ID（任务 ID 返回前收到的事件先缓存）；任务成功后账号已是默认账号，
+ * 重新读取账号列表取得它。取消即 `task_cancel`。
  */
 export function msLoginStart(): MsLogin {
-  return mockMsLoginStart();
+  let taskId: string | null = null;
+  let cancelled = false;
+  let settleCode!: { resolve: (code: DeviceCode) => void; reject: (error: AppError) => void };
+  const deviceCode = new Promise<DeviceCode>((resolve, reject) => {
+    settleCode = { resolve, reject };
+  });
+  // 只关心结果的调用方不必处理设备码的拒绝。
+  deviceCode.catch(() => undefined);
+
+  const result = new Promise<Account>((resolve, reject) => {
+    const early: Array<() => void> = [];
+    const unlisten: Array<() => void> = [];
+    const fail = (error: AppError) => {
+      unlisten.forEach((stop) => stop());
+      settleCode.reject(error);
+      reject(error);
+    };
+    const handleCode = (event: DeviceCodeEvent) => {
+      if (taskId === null) return early.push(() => handleCode(event));
+      if (event.task_id !== taskId) return;
+      settleCode.resolve({
+        user_code: event.user_code,
+        verification_uri: event.verification_uri,
+        expires_in: event.expires_in,
+      });
+    };
+    const handleFinished = (finished: TaskFinished) => {
+      if (taskId === null) return early.push(() => handleFinished(finished));
+      if (finished.task_id !== taskId) return;
+      if (finished.state !== "succeeded") {
+        fail(finished.state === "cancelled" ? CANCELLED : (finished.error ?? CANCELLED));
+        return;
+      }
+      unlisten.forEach((stop) => stop());
+      accountList().then((list) => {
+        const account = list.accounts.find((a) => a.id === list.default_id);
+        if (account) resolve(account);
+        else reject(toAppError("signed-in account missing from the list"));
+      }, reject);
+    };
+
+    Promise.all([onDeviceCode(handleCode), onTaskFinished(handleFinished)])
+      .then((stops) => {
+        unlisten.push(...stops);
+        if (cancelled) throw CANCELLED;
+        return invoke<TaskStarted>("auth_ms_begin");
+      })
+      .then((started) => {
+        taskId = started.task_id;
+        if (cancelled) void taskCancel({ task_id: taskId });
+        early.splice(0).forEach((replay) => replay());
+      })
+      .catch((err) => fail(toAppError(err)));
+  });
+
+  return {
+    deviceCode,
+    result,
+    cancel() {
+      cancelled = true;
+      if (taskId !== null) void taskCancel({ task_id: taskId });
+    },
+  };
 }
 
-/**
- * 在系统浏览器中打开设备码验证页。界面层不直接访问网络（AGENTS.md §4），
- * M0-10 应提供打开网址的命令（或由 `auth_ms_begin` 自动打开）后替换这里的 `window.open`。
- */
-export function openVerificationPage(uri: string) {
-  window.open(uri, "_blank", "noopener");
+/** 在系统浏览器中打开设备码验证页（只接受微软域名下的 https 地址）。 */
+export function openVerificationPage(uri: string): Promise<void> {
+  return invoke<void>("auth_ms_open_verification", { args: { uri } });
 }
 
 /** 启动参数中的账号：按 ID 启动，外置登录账号的令牌刷新与 authlib-injector 由后端处理。 */

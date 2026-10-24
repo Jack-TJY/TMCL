@@ -115,7 +115,10 @@ async function copy() {
 }
 
 function openBrowser() {
-  if (code.value) openVerificationPage(code.value.verification_uri);
+  if (!code.value) return;
+  openVerificationPage(code.value.verification_uri).catch((err) =>
+    message.error(formatError(toAppError(err))),
+  );
 }
 </script>
 
