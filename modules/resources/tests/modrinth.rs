@@ -9,14 +9,23 @@ use support::{MockServer, Response};
 use tmcl_common::{ErrorCode, TaskCtx};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient, RetryPolicy};
 use tmcl_resources::modrinth::{
-    DependencyType, ModrinthClient, ProjectType, SearchIndex, SearchQuery, USER_AGENT,
-    VersionFilter,
+    DependencyType, HashAlgorithm, ModrinthClient, ProjectType, SearchIndex, SearchQuery,
+    USER_AGENT, VersionFilter,
 };
 
 const SEARCH: &[u8] = include_bytes!("fixtures/modrinth/search.json");
 const PROJECT: &[u8] = include_bytes!("fixtures/modrinth/project.json");
 const PROJECT_VERSIONS: &[u8] = include_bytes!("fixtures/modrinth/project_versions.json");
 const DEPENDENCIES: &[u8] = include_bytes!("fixtures/modrinth/dependencies.json");
+const VERSION_FILE: &[u8] = include_bytes!("fixtures/modrinth/version_file.json");
+const VERSION_FILES: &[u8] = include_bytes!("fixtures/modrinth/version_files.json");
+const VERSION_FILES_UPDATE: &[u8] = include_bytes!("fixtures/modrinth/version_files_update.json");
+
+/// Sodium mc1.20.1-0.5.1（旧版本）的 SHA1。
+const OLD_SODIUM: &str = "64908970887e85b6aa9fe4eaa690ddcb84c3369c";
+/// Iris 1.7.6+1.20.1 的 SHA1。
+const IRIS: &str = "880c0b9ce38bb4997645793407c1801df83f4233";
+const UNKNOWN: &str = "0000000000000000000000000000000000000000";
 
 fn client(server: &MockServer) -> ModrinthClient {
     ModrinthClient::with_base(&HttpClient::new().unwrap(), &server.url("/v2"))
@@ -221,7 +230,109 @@ async fn invalid_json_and_missing_list_are_errors() {
     assert_eq!(err.params.get("status").map(String::as_str), Some("404"));
 }
 
-/// 联网：搜索 Sodium，取 Fabric 1.20.1 的最新版本并下载、校验主文件。
+#[tokio::test]
+async fn version_from_hash_returns_none_for_unknown_files() {
+    let server = MockServer::start(|req, _| match req.path() {
+        p if p.ends_with(OLD_SODIUM) => Response::json(VERSION_FILE),
+        _ => Response::status(404),
+    })
+    .await;
+    let client = client(&server);
+    let version = client
+        .version_from_hash(OLD_SODIUM, HashAlgorithm::Sha1, &ctx())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(version.version_number, "mc1.20.1-0.5.1");
+    let request = &server.requests()[0];
+    assert_eq!(request.path(), format!("/v2/version_file/{OLD_SODIUM}"));
+    assert_eq!(
+        request.query(),
+        vec![("algorithm".to_owned(), "sha1".to_owned())]
+    );
+
+    let missing = client
+        .version_from_hash(UNKNOWN, HashAlgorithm::Sha1, &ctx())
+        .await
+        .unwrap();
+    assert!(missing.is_none());
+}
+
+#[tokio::test]
+async fn versions_from_hashes_posts_hashes() {
+    let server = MockServer::start(|_, _| Response::json(VERSION_FILES)).await;
+    let hashes = vec![OLD_SODIUM.to_owned(), IRIS.to_owned(), UNKNOWN.to_owned()];
+    let found = client(&server)
+        .versions_from_hashes(&hashes, HashAlgorithm::Sha1, &ctx())
+        .await
+        .unwrap();
+    assert_eq!(found.len(), 2);
+    assert_eq!(found[OLD_SODIUM].project_id, "AANobbMI");
+    let iris = &found[IRIS];
+    assert_eq!(iris.project_id, "YL57xq9U");
+    assert!(
+        iris.required_dependencies()
+            .any(|d| d.project_id.as_deref() == Some("AANobbMI"))
+    );
+
+    let request = &server.requests()[0];
+    assert_eq!(request.method, "POST");
+    assert_eq!(request.path(), "/v2/version_files");
+    assert_eq!(request.header("content-type"), Some("application/json"));
+    let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+    assert_eq!(
+        body,
+        serde_json::json!({ "hashes": hashes, "algorithm": "sha1" })
+    );
+}
+
+#[tokio::test]
+async fn latest_versions_from_hashes_finds_updates() {
+    let server = MockServer::start(|_, _| Response::json(VERSION_FILES_UPDATE)).await;
+    let hashes = vec![OLD_SODIUM.to_owned(), UNKNOWN.to_owned()];
+    let filter = VersionFilter::for_instance("1.20.1", "fabric");
+    let latest = client(&server)
+        .latest_versions_from_hashes(&hashes, HashAlgorithm::Sha1, &filter, &ctx())
+        .await
+        .unwrap();
+    assert_eq!(latest.len(), 1);
+    let newest = &latest[OLD_SODIUM];
+    assert_eq!(newest.version_number, "mc1.20.1-0.5.13-fabric");
+    assert_ne!(newest.primary_file().unwrap().hashes.sha1, OLD_SODIUM);
+
+    let request = &server.requests()[0];
+    assert_eq!(request.path(), "/v2/version_files/update");
+    let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+    assert_eq!(
+        body,
+        serde_json::json!({
+            "hashes": hashes,
+            "algorithm": "sha1",
+            "loaders": ["fabric"],
+            "game_versions": ["1.20.1"],
+        })
+    );
+}
+
+#[tokio::test]
+async fn empty_hash_lists_send_nothing() {
+    let server = MockServer::start(|_, _| Response::status(500)).await;
+    let client = client(&server);
+    let filter = VersionFilter::default();
+    let found = client
+        .versions_from_hashes(&[], HashAlgorithm::Sha1, &ctx())
+        .await
+        .unwrap();
+    assert!(found.is_empty());
+    let latest = client
+        .latest_versions_from_hashes(&[], HashAlgorithm::Sha512, &filter, &ctx())
+        .await
+        .unwrap();
+    assert!(latest.is_empty());
+    assert!(server.requests().is_empty());
+}
+
+/// 联网：搜索 Sodium，取 Fabric 1.20.1 的最新版本并下载、校验主文件，再按哈希反查与检查更新。
 /// 运行：`cargo test -p tmcl-resources --test modrinth -- --ignored`
 #[tokio::test]
 #[ignore = "需要联网"]
@@ -257,6 +368,24 @@ async fn online_search_and_download() {
             .await
             .unwrap()
     );
+
+    let sha1 = tmcl_net::sha1_file(&item.path).await.unwrap();
+    let found = client
+        .version_from_hash(&sha1, HashAlgorithm::Sha1, &ctx)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.id, versions[0].id);
+    let latest = client
+        .latest_versions_from_hashes(
+            &[OLD_SODIUM.to_owned()],
+            HashAlgorithm::Sha1,
+            &VersionFilter::for_instance("1.20.1", "fabric"),
+            &ctx,
+        )
+        .await
+        .unwrap();
+    assert_eq!(latest[OLD_SODIUM].id, versions[0].id);
 
     let deps = client.project_dependencies("iris", &ctx).await.unwrap();
     assert!(deps.projects.iter().any(|p| p.slug == "sodium"));

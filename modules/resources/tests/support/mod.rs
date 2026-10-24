@@ -1,7 +1,7 @@
 //! 测试用的最小 HTTP 服务器：由闭包决定响应（状态码、响应头、响应体），记录每个请求。
 //!
 //! `tmcl_net::testing::TestServer` 只支持按路径返回固定内容，这里还需要自定义响应头
-//! （`X-Ratelimit-*`）和按请求次数变化的响应。
+//! （`X-Ratelimit-*`）、POST 请求体和按请求次数变化的响应。
 
 use std::sync::{Arc, Mutex};
 
@@ -16,6 +16,7 @@ pub struct Request {
     pub target: String,
     /// 小写的响应头名与值。
     pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
 }
 
 impl Request {
@@ -143,6 +144,7 @@ async fn serve(mut socket: TcpStream, handler: &Handler, recorded: &Mutex<Vec<Re
         method,
         target,
         headers,
+        body,
     };
     let index = {
         let mut recorded = recorded.lock().unwrap();
