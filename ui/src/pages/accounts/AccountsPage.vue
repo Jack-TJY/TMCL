@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 账号页（PLAN.md M1-14）：账号列表、切换启动用的账号、删除；添加微软正版（设备码）、
 // 离线（仅限本地测试）与外置登录账号。默认引导正版登录（AGENTS.md §15）。
-// 账号数据暂由 api/__mocks__/account.ts 提供，M1-08 完成后换成真实命令。
 import { Add20Regular, ChevronDown16Regular } from "@vicons/fluent";
 import {
   NAlert,
@@ -16,7 +15,7 @@ import {
 } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { msLoginEnabled, type Account } from "../../api/account";
+import { msLoginStatus, type Account, type MsLoginStatus } from "../../api/account";
 import { toAppError } from "../../api/invoke";
 import type { AppError } from "../../bindings/AppError";
 import { formatError } from "../../i18n";
@@ -36,8 +35,9 @@ const store = useAccountsStore();
 const loading = ref(false);
 const error = ref<AppError | null>(null);
 const adding = ref<AddKind | null>(null);
-/** 构建时未注入 Client ID 时禁用微软登录。 */
-const msEnabled = ref(true);
+/** 构建时未注入 Client ID 或功能尚未完成时禁用微软登录。 */
+const msStatus = ref<MsLoginStatus>("enabled");
+const msEnabled = computed(() => msStatus.value === "enabled");
 
 async function load() {
   loading.value = true;
@@ -53,7 +53,7 @@ async function load() {
 
 onMounted(async () => {
   void load();
-  msEnabled.value = await msLoginEnabled();
+  msStatus.value = await msLoginStatus();
 });
 
 const addOptions = computed<DropdownOption[]>(() => [
@@ -117,7 +117,7 @@ function confirmRemove(account: Account) {
       class="ms-disabled"
       :title="t('accounts.msDisabled.title')"
     >
-      {{ t("accounts.msDisabled.reason") }}
+      {{ t(`accounts.msDisabled.${msStatus}`) }}
     </NAlert>
 
     <NAlert v-if="error" type="error" class="load-error" :title="t('accounts.loadFailed')">

@@ -1,62 +1,50 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockAccountReset } from "./__mocks__/account";
+
+const tauriInvoke = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/core", () => ({ invoke: tauriInvoke }));
+
 import {
   accountAddAuthlib,
-  accountList,
   authlibServerInfo,
   isAppNotApproved,
   msLoginStart,
+  msLoginStatus,
 } from "./account";
 
-describe("account api (mock)", () => {
-  beforeEach(() => mockAccountReset());
+describe("account api", () => {
+  beforeEach(() => tauriInvoke.mockReset());
   afterEach(() => vi.useRealTimers());
 
-  it("delivers a device code, then adds the Microsoft account as default", async () => {
+  it("calls the auth_* commands with args", async () => {
+    tauriInvoke.mockResolvedValue({ api_url: "https://a.test/api", name: "A" });
+    await authlibServerInfo({ api_url: "a.test" });
+    expect(tauriInvoke).toHaveBeenLastCalledWith("auth_authlib_server", {
+      args: { api_url: "a.test" },
+    });
+    const args = { api_url: "https://a.test/api", username: "u", password: "test-password" };
+    await accountAddAuthlib(args);
+    expect(tauriInvoke).toHaveBeenLastCalledWith("auth_add_authlib", { args });
+  });
+
+  it("keeps Microsoft sign-in closed until M0-10", async () => {
+    tauriInvoke.mockResolvedValueOnce({ ms_login_enabled: true });
+    expect(await msLoginStatus()).toBe("pending");
+    tauriInvoke.mockResolvedValueOnce({ ms_login_enabled: false });
+    expect(await msLoginStatus()).toBe("no_client_id");
+  });
+
+  it("mock Microsoft sign-in delivers a code and can be cancelled", async () => {
     vi.useFakeTimers();
     const login = msLoginStart();
     await vi.advanceTimersByTimeAsync(1000);
-    const code = await login.deviceCode;
-    expect(code.expires_in).toBeGreaterThan(0);
-    expect(code.verification_uri).toMatch(/^https:\/\//);
-    await vi.advanceTimersByTimeAsync(10_000);
-    const account = await login.result;
-    expect(account.kind).toBe("microsoft");
-    expect((await accountList()).default_id).toBe(account.id);
-  });
-
-  it("rejects with COMMON_CANCELLED when cancelled", async () => {
-    vi.useFakeTimers();
-    const login = msLoginStart();
+    expect((await login.deviceCode).expires_in).toBeGreaterThan(0);
     login.cancel();
     await expect(login.result).rejects.toMatchObject({ code: "COMMON_CANCELLED" });
-    expect((await accountList()).accounts.some((a) => a.kind === "microsoft")).toBe(false);
   });
 
   it("recognizes AUTH_MC_APP_NOT_APPROVED", () => {
     const code = "AUTH_MC_APP_NOT_APPROVED" as never;
     expect(isAppNotApproved({ code, params: {}, detail: null })).toBe(true);
     expect(isAppNotApproved({ code: "NET_TIMEOUT", params: {}, detail: null })).toBe(false);
-  });
-
-  it("normalizes the skin site address and logs in", async () => {
-    const server = await authlibServerInfo({ api_url: " littleskin.cn/api/yggdrasil/ " });
-    expect(server).toEqual({
-      api_url: "https://littleskin.cn/api/yggdrasil",
-      name: "littleskin.cn",
-    });
-    const account = await accountAddAuthlib({
-      api_url: server.api_url,
-      username: "steve@example.com",
-      password: "test-password",
-    });
-    expect(account).toMatchObject({ kind: "authlib", name: "steve", server });
-    expect((await accountList()).default_id).toBe(account.id);
-  });
-
-  it("rejects an invalid skin site address", async () => {
-    await expect(authlibServerInfo({ api_url: "http://" })).rejects.toMatchObject({
-      code: "NET_REQUEST",
-    });
   });
 });

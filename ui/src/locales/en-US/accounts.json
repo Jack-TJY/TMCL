@@ -38,7 +38,8 @@
   },
   "msDisabled": {
     "title": "Microsoft sign-in unavailable",
-    "reason": "This build was made without the Client ID that Microsoft sign-in needs (common for self-built copies). External and offline accounts still work."
+    "no_client_id": "This build was made without the Client ID that Microsoft sign-in needs (common for self-built copies). External and offline accounts still work.",
+    "pending": "Microsoft sign-in is waiting for Mojang's approval and will be enabled in a later version. You can use an external or offline account for now."
   },
   "microsoft": {
     "title": "Sign in with Microsoft",
