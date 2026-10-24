@@ -4181,9 +4181,14 @@ dependencies = [
 name = "tmcl-resources"
 version = "0.1.0"
 dependencies = [
+ "reqwest",
  "serde",
  "serde_json",
+ "tempfile",
+ "tmcl-common",
  "tmcl-net",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
