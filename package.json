@@ -9,6 +9,7 @@
     "typecheck": "pnpm --dir ui typecheck",
     "tauri": "tauri",
     "gen:bindings": "node scripts/gen-bindings.mjs",
+    "gen:licenses": "node scripts/gen-licenses.mjs",
     "i18n:check": "node scripts/i18n-check.mjs",
     "lint": "pnpm --dir ui lint",
     "format": "pnpm --dir ui format && cargo fmt --all",

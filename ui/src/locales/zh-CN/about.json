@@ -1,0 +1,21 @@
+{
+  "title": "关于",
+  "open": "关于与开源许可",
+  "version": "版本 {version} · {os}/{arch}",
+  "versionUnknown": "版本信息不可用",
+  "disclaimer": "TMCL 是非官方启动器，与 Mojang Studios、Microsoft 无关。",
+  "license": "TMCL 是自由软件，以 GNU 通用公共许可证第 3 版（GPL-3.0）发布：你可以按该许可证的条款使用、修改和再分发它。本程序不提供任何担保。",
+  "close": "关闭",
+  "source": {
+    "cargo": "Rust",
+    "npm": "前端"
+  },
+  "thirdParty": {
+    "title": "第三方许可证",
+    "description": "TMCL 使用了以下开源软件，点击可查看许可证原文。",
+    "search": "按名称或许可证搜索",
+    "count": "共 {count} 个",
+    "noMatch": "没有匹配的软件包",
+    "noText": "该软件包未附带许可证原文，请以上面的许可证表达式和项目地址为准。"
+  }
+}

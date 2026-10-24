@@ -16,6 +16,7 @@ import {
 import { NButton, NColorPicker, NInputNumber, NSelect, NSlider, NTag, useMessage } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 import { mockJavaList, type DownloadSource, type JavaInstall } from "../../api/__mocks__/settings";
 import { appInfo } from "../../api/app";
 import { toAppError } from "../../api/invoke";
@@ -49,6 +50,7 @@ const MEMORY_MAX_MB = 32768;
 const { t, locale } = useI18n();
 const message = useMessage();
 const store = useSettingsStore();
+const router = useRouter();
 
 const info = ref<AppInfo | null>(null);
 const javas = ref<JavaInstall[]>([]);
@@ -262,7 +264,9 @@ function setConcurrency(value: number | null) {
             ? t('settings.about.version', { version: info.version, os: info.os, arch: info.arch })
             : t('settings.about.versionUnknown')
         "
-      />
+      >
+        <NButton @click="router.push({ name: 'about' })">{{ t("about.open") }}</NButton>
+      </SettingRow>
       <div class="about-text">
         <p>{{ t("settings.about.disclaimer") }}</p>
         <p>{{ t("settings.about.license") }}</p>

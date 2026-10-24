@@ -1,0 +1,21 @@
+{
+  "title": "About",
+  "open": "About and open-source licenses",
+  "version": "Version {version} · {os}/{arch}",
+  "versionUnknown": "Version information unavailable",
+  "disclaimer": "TMCL is an unofficial launcher and is not affiliated with Mojang Studios or Microsoft.",
+  "license": "TMCL is free software released under the GNU General Public License version 3 (GPL-3.0): you may use, modify and redistribute it under the terms of that license. It comes with no warranty.",
+  "close": "Close",
+  "source": {
+    "cargo": "Rust",
+    "npm": "Frontend"
+  },
+  "thirdParty": {
+    "title": "Third-party licenses",
+    "description": "TMCL uses the following open-source software. Click an entry to read its license.",
+    "search": "Search by name or license",
+    "count": "{count} packages",
+    "noMatch": "No matching packages",
+    "noText": "This package does not ship a license file; refer to the license expression and project link above."
+  }
+}
