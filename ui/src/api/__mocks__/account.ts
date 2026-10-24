@@ -6,7 +6,7 @@ const STORAGE_KEY = "tmcl.mock.offlineName";
 const DEFAULT_NAME = "Player";
 
 /** 启动用的离线账号：用户名取自 localStorage（便于调试时修改），默认 `Player`。 */
-export function mockLaunchAccount(): LaunchAccountArgs {
+export function mockLaunchAccount(): Extract<LaunchAccountArgs, { kind: "offline" }> {
   let name = DEFAULT_NAME;
   try {
     name = localStorage.getItem(STORAGE_KEY) || DEFAULT_NAME;

@@ -2,6 +2,7 @@
 
 pub mod app;
 pub mod appearance;
+pub mod auth;
 pub mod game;
 pub mod instance;
 pub mod launch;
