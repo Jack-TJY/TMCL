@@ -1,0 +1,37 @@
+{
+  "hint": "Games are launched with the account marked “Current”",
+  "current": "Current",
+  "use": "Use this account",
+  "switched": "Switched to {name}",
+  "cancel": "Cancel",
+  "retry": "Retry",
+  "loadFailed": "Couldn't load accounts",
+  "empty": "No accounts yet",
+  "kind": {
+    "microsoft": "Microsoft",
+    "offline": "Offline · local testing only",
+    "authlib": "External",
+    "authlibAt": "External · {server}"
+  },
+  "add": {
+    "action": "Add account",
+    "offline": "Offline account"
+  },
+  "offline": {
+    "title": "Add offline account",
+    "notice": "Offline accounts are for local testing only: they can't join servers that verify accounts and have no official skin. Please support the official game.",
+    "name": "Player name",
+    "nameHint": "3–16 letters, digits or underscores",
+    "placeholder": "e.g. Steve",
+    "confirm": "Add",
+    "added": "Added offline account {name}"
+  },
+  "remove": {
+    "action": "Remove account",
+    "title": "Remove account {name}?",
+    "offline": "You can add it again with the same player name at any time.",
+    "online": "The sign-in credentials saved on this computer are cleared too; you'll need to sign in again to use it.",
+    "confirm": "Remove",
+    "done": "Removed {name}"
+  }
+}

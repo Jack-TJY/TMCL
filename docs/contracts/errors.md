@@ -13,6 +13,7 @@
 | `APPEARANCE_IMAGE_UNSUPPORTED` | app | 背景图片不是 png/jpg/webp，或超过大小上限 | `max_mb` | 只支持不超过 {max_mb} MB 的 PNG、JPG、WebP 图片 | Only PNG, JPG and WebP images up to {max_mb} MB are supported |
 | `AUTH_ACCOUNT_NOT_FOUND` | auth | 找不到该账号（已被删除或 ID 无效） | `id` | 找不到该账号，请刷新账号列表 | Account not found, please refresh the account list |
 | `AUTH_AUTHLIB_SERVER_INVALID` | auth | 地址不是有效的 Yggdrasil 皮肤站（无法解析或元数据缺少 `meta`、`skinDomains`） | `url` | {url} 不是支持外置登录的皮肤站 | {url} is not a skin site that supports external sign-in |
+| `AUTH_NO_ACCOUNT` | auth | 没有可用于启动的账号（账号列表为空或未选默认账号） | — | 还没有可用的账号，请先在“账号”页添加 | No account available, please add one on the Accounts page |
 | `AUTH_OFFLINE_INVALID_NAME` | auth | 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$` | `name` | 用户名只能包含 3–16 个字母、数字或下划线 | Username must be 3–16 letters, digits or underscores |
 | `AUTH_SECRET_STORE` | auth | 无法读写系统密钥库（Windows 凭据管理器、macOS 钥匙串、Linux Secret Service） | — | 无法访问系统密钥库，登录信息没有保存 | Cannot access the system keychain, sign-in data was not saved |
 | `AUTH_YGGDRASIL_INVALID_CREDENTIALS` | auth | 皮肤站拒绝登录（账号或密码错误，或登录过于频繁） | — | 账号或密码错误，或登录太频繁，请稍后再试 | Wrong email or password, or too many attempts. Please try again later |
