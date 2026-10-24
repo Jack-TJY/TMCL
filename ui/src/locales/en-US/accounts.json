@@ -15,7 +15,9 @@
   },
   "add": {
     "action": "Add account",
-    "offline": "Offline account"
+    "offline": "Offline account",
+    "microsoft": "Microsoft account",
+    "authlib": "External (skin site)"
   },
   "offline": {
     "title": "Add offline account",
@@ -33,5 +35,42 @@
     "online": "The sign-in credentials saved on this computer are cleared too; you'll need to sign in again to use it.",
     "confirm": "Remove",
     "done": "Removed {name}"
+  },
+  "msDisabled": {
+    "title": "Microsoft sign-in unavailable",
+    "reason": "This build was made without the Client ID that Microsoft sign-in needs (common for self-built copies). External and offline accounts still work."
+  },
+  "microsoft": {
+    "title": "Sign in with Microsoft",
+    "requesting": "Getting a sign-in code…",
+    "step1": "1. Open this page in a browser:",
+    "step2": "2. Enter the code below and sign in with the Microsoft account that owns the game:",
+    "copy": "Copy code",
+    "copied": "Sign-in code copied",
+    "copyFailed": "Couldn't copy, please select the code and copy it manually",
+    "openBrowser": "Open browser",
+    "waiting": "Waiting for you to finish signing in… (code expires in {time})",
+    "expired": "The sign-in code expired. Please get a new one.",
+    "failed": "Sign-in failed",
+    "done": "Signed in as {name}",
+    "notApproved": {
+      "title": "Microsoft sign-in is temporarily unavailable",
+      "reason": "Your Microsoft account was verified, but Minecraft services haven't approved this launcher to read game profiles yet (every new launcher must apply to Mojang, and this error appears while the review is pending). Nothing is wrong with your account.",
+      "meanwhile": "Once approved, sign-in will work without an update. Until then you can use an external account or an offline account (local testing only)."
+    }
+  },
+  "authlib": {
+    "title": "External sign-in",
+    "stepServer": "Skin site",
+    "stepLogin": "Sign in",
+    "server": "Skin site address",
+    "serverHint": "The skin site home page or its Yggdrasil API address",
+    "serverPlaceholder": "e.g. littleskin.cn",
+    "next": "Next",
+    "back": "Back",
+    "username": "Email or username",
+    "password": "Password",
+    "login": "Sign in",
+    "added": "Added {server} account {name}"
   }
 }

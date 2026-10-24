@@ -2,7 +2,17 @@
 // 只为让界面可用，不是持久化方案（真实实现中令牌存系统密钥库，元数据存 SQLite）。
 // M1-08 提供 `account_*` 命令后，`ui/src/api/account.ts` 改为调用命令，并删除本文件。
 import type { AppError } from "../../bindings/AppError";
-import type { Account, AccountAddOfflineArgs, AccountIdArgs, AccountList } from "../account";
+import type {
+  Account,
+  AccountAddAuthlibArgs,
+  AccountAddOfflineArgs,
+  AccountIdArgs,
+  AccountList,
+  AuthlibServer,
+  AuthlibServerArgs,
+  DeviceCode,
+  MsLogin,
+} from "../account";
 
 const STORAGE_KEY = "tmcl.mock.accounts";
 /** M1-07 的替身账号用过的 key：存在时作为首个离线账号的用户名。 */
@@ -101,6 +111,82 @@ export async function mockAccountAddOffline({ name }: AccountAddOfflineArgs): Pr
   // 真实实现的 UUID 由用户名决定（M1-08），同名离线账号只会有一个。
   const same = read().accounts.find((a) => a.kind === "offline" && a.name === name);
   return mockAccountPut({ kind: "offline", name, uuid: same?.uuid ?? newId(), server: null });
+}
+
+/**
+ * 微软登录替身的结果，由 localStorage 的 `tmcl.mock.msOutcome` 控制：
+ * 缺省为成功；`not_approved` 模拟目前 `login_with_xbox` 返回 403 的情况。
+ */
+const MS_OUTCOME_KEY = "tmcl.mock.msOutcome";
+/** 拿到设备码、以及“用户在浏览器中完成登录”所需的模拟时间。 */
+const MS_CODE_DELAY_MS = 600;
+const MS_LOGIN_DELAY_MS = 8000;
+
+export function mockMsLoginStart(): MsLogin {
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  let rejectResult: (error: AppError) => void = () => undefined;
+  const deviceCode = new Promise<DeviceCode>((resolve) => {
+    timers.push(
+      setTimeout(
+        () =>
+          resolve({
+            user_code: "TMCL-MOCK",
+            verification_uri: "https://www.microsoft.com/link",
+            expires_in: 900,
+          }),
+        MS_CODE_DELAY_MS,
+      ),
+    );
+  });
+  const result = new Promise<Account>((resolve, reject) => {
+    rejectResult = reject;
+    timers.push(
+      setTimeout(() => {
+        if (storage()?.getItem(MS_OUTCOME_KEY) === "not_approved") {
+          reject(fail("AUTH_MC_APP_NOT_APPROVED" as AppError["code"]));
+          return;
+        }
+        resolve(
+          mockAccountPut({ kind: "microsoft", name: "MockPlayer", uuid: "mock-ms", server: null }),
+        );
+      }, MS_CODE_DELAY_MS + MS_LOGIN_DELAY_MS),
+    );
+  });
+  return {
+    deviceCode,
+    result,
+    cancel() {
+      timers.forEach(clearTimeout);
+      rejectResult(fail("COMMON_CANCELLED"));
+    },
+  };
+}
+
+export async function mockAuthlibServerInfo({
+  api_url,
+}: AuthlibServerArgs): Promise<AuthlibServer> {
+  const input = api_url.trim();
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(input) ? input : `https://${input}`);
+  } catch {
+    throw fail("NET_REQUEST", { url: input });
+  }
+  return { api_url: url.href.replace(/\/$/, ""), name: url.hostname };
+}
+
+export async function mockAccountAddAuthlib({
+  api_url,
+  username,
+}: AccountAddAuthlibArgs): Promise<Account> {
+  const server = await mockAuthlibServerInfo({ api_url });
+  // 皮肤站的角色名不一定等于登录名；替身取邮箱 @ 之前的部分。
+  const name =
+    username
+      .split("@")[0]
+      .replace(/[^A-Za-z0-9_]/g, "_")
+      .slice(0, 16) || "Player";
+  return mockAccountPut({ kind: "authlib", name, uuid: `${server.api_url}#${username}`, server });
 }
 
 /** 仅供单元测试：清空内存副本。 */
