@@ -19,3 +19,10 @@
 | 用途 | 地址 | 说明 | 核实 |
 | --- | --- | --- | --- |
 | 本项目发布版本 | `https://api.github.com/repos/Jack-TJY/TMCL/releases?per_page=20` | `app_releases` 使用，主页“更新日志”组件展示。未认证接口限每 IP 每小时 60 次，结果在本地缓存 1 小时；只读取 `tag_name`、`name`、`published_at`、`prerelease`、`draft`、`html_url` | 2026-10-24 实测 200（当前没有发布版本，返回 `[]`） |
+
+## resources（M2-01）
+
+| 用途 | 地址 | 说明 | 核实 |
+| --- | --- | --- | --- |
+| Modrinth API v2 | `https://api.modrinth.com/v2` | 搜索 `/search`、项目 `/project/{id}`、`/projects`、版本 `/project/{id}/version`、`/version/{id}`、`/versions`、依赖 `/project/{id}/dependencies`、按哈希查询 `/version_file/{hash}`、`POST /version_files`、`POST /version_files/update`。`User-Agent` 必须为 `Jack-TJY/TMCL/<版本>`；速率限制 300 次/分钟，读 `X-Ratelimit-Limit/Remaining/Reset`，429 时等待后重试 | 2026-10-24 实测 200，响应头含 `X-Ratelimit-Limit: 300` |
+| Modrinth 文件 CDN | `https://cdn.modrinth.com/data/<project_id>/versions/<version_id>/<filename>` | 由版本的 `files[].url` 给出，不在代码中拼接；按 `hashes.sha1` 与 `size` 校验 | 2026-10-24 下载 Sodium mc1.20.1-0.5.13-fabric 并校验 SHA1 成功 |
