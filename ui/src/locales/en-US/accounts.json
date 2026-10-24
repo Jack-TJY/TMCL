@@ -38,8 +38,7 @@
   },
   "msDisabled": {
     "title": "Microsoft sign-in unavailable",
-    "no_client_id": "This build was made without the Client ID that Microsoft sign-in needs (common for self-built copies). External and offline accounts still work.",
-    "pending": "Microsoft sign-in is waiting for Mojang's approval and will be enabled in a later version. You can use an external or offline account for now."
+    "no_client_id": "This build was made without the Client ID that Microsoft sign-in needs (common for self-built copies). External and offline accounts still work."
   },
   "microsoft": {
     "title": "Sign in with Microsoft",
@@ -55,9 +54,9 @@
     "failed": "Sign-in failed",
     "done": "Signed in as {name}",
     "notApproved": {
-      "title": "Microsoft sign-in is temporarily unavailable",
-      "reason": "Your Microsoft account was verified, but Minecraft services haven't approved this launcher to read game profiles yet (every new launcher must apply to Mojang, and this error appears while the review is pending). Nothing is wrong with your account.",
-      "meanwhile": "Once approved, sign-in will work without an update. Until then you can use an external account or an offline account (local testing only)."
+      "title": "Minecraft services refused the sign-in",
+      "reason": "Your Microsoft account was verified, but Minecraft services refused this launcher's sign-in request (the service may be having trouble, or the launcher's authorization has a problem). Nothing is wrong with your account.",
+      "meanwhile": "Try again later, and report it on the project page if it keeps happening. Until then you can use an external account or an offline account (local testing only)."
     }
   },
   "authlib": {

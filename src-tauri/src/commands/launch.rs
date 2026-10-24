@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Runtime, State};
 use tmcl_auth::accounts::{self, Account, AccountKind};
 use tmcl_auth::yggdrasil::Yggdrasil;
-use tmcl_auth::{OfflineAccount, SecretStore, authlib};
+use tmcl_auth::{MsClient, OfflineAccount, SecretStore, authlib, store};
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, TaskCtx};
 use tmcl_game::InstallOptions;
 use tmcl_instance::{InstanceConfig, InstanceStore};
@@ -53,6 +53,7 @@ pub enum LaunchAccountArgs {
 enum ResolvedAccount {
     Ready(LaunchAccount),
     Authlib(Account),
+    Microsoft(Account),
 }
 
 /// `launch_start` 的参数。
@@ -178,6 +179,7 @@ pub async fn launch_start<R: Runtime>(
         state.with_db(|paths, db| InstanceStore::new(paths, db).get(&args.instance_id))?;
     let account = state.with_db(|_, db| launch_account(db, &args.account))?;
     let secrets = state.secrets.clone();
+    let ms = state.ms.clone();
     let downloader = state.downloader()?;
     let install = state.game.clone();
     let games = state.games.clone();
@@ -187,7 +189,7 @@ pub async fn launch_start<R: Runtime>(
         let id = instance.id.clone();
         let result = async {
             let (instance, account) =
-                with_account(&paths, secrets.as_ref(), instance, account, &ctx).await?;
+                with_account(&paths, secrets.as_ref(), &ms, instance, account, &ctx).await?;
             start(
                 handle,
                 &paths,
@@ -245,24 +247,37 @@ fn launch_account(db: &tmcl_common::Db, args: &LaunchAccountArgs) -> AppResult<R
             match account.kind {
                 AccountKind::Offline => offline(&account.name).map(ResolvedAccount::Ready),
                 AccountKind::Authlib => Ok(ResolvedAccount::Authlib(account)),
-                // 微软登录由 M0-10 实现，在此之前不会有微软账号。
-                AccountKind::Microsoft => Err(AppError::new(ErrorCode::CommonInternal)
-                    .with_detail("microsoft accounts are not supported yet (M0-10)")),
+                AccountKind::Microsoft => Ok(ResolvedAccount::Microsoft(account)),
             }
         }
     }
 }
 
-/// 外置登录账号：刷新令牌、下载 authlib-injector，并把 `-javaagent` 等参数放到实例 JVM 参数最前。
+/// 微软账号：令牌快过期时续期。外置登录账号：刷新令牌、下载 authlib-injector，
+/// 并把 `-javaagent` 等参数放到实例 JVM 参数最前。
 async fn with_account(
     paths: &DataPaths,
     secrets: &dyn SecretStore,
+    ms: &AppResult<MsClient>,
     mut instance: InstanceConfig,
     account: ResolvedAccount,
     ctx: &TaskCtx,
 ) -> AppResult<(InstanceConfig, LaunchAccount)> {
     let account = match account {
         ResolvedAccount::Ready(account) => return Ok((instance, account)),
+        ResolvedAccount::Microsoft(account) => {
+            let ms = ms.as_ref().map_err(Clone::clone)?;
+            let session = store::prepare_launch(secrets, ms, &account, ctx).await?;
+            return Ok((
+                instance,
+                LaunchAccount {
+                    name: session.profile.name,
+                    uuid: session.profile.id,
+                    access_token: session.access_token,
+                    user_type: "msa".to_owned(),
+                },
+            ));
+        }
         ResolvedAccount::Authlib(account) => account,
     };
     let http = HttpClient::new()?;

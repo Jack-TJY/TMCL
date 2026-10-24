@@ -34,6 +34,8 @@
 | `auth_add_offline` | `AuthAddOfflineArgs { name }` | `Account` | 添加离线账号（仅限本地测试）并设为默认；UUID 与原版离线 UUID 一致，同名账号已存在时返回该账号；用户名不合法返回 `AUTH_OFFLINE_INVALID_NAME` |
 | `auth_authlib_server` | `AuthAuthlibServerArgs { api_url }` | `AuthlibServer { api_url, name }` | 读取皮肤站名称，并按 `X-Authlib-Injector-API-Location` 规整 API 地址（输入缺少协议时补 `https://`）；不是皮肤站返回 `AUTH_AUTHLIB_SERVER_INVALID` |
 | `auth_list` | 无 | `AccountList { accounts: Account { id, kind, name, uuid, server? }[], default_id? }` | 按添加顺序列出账号；`kind` 为 `microsoft` \| `offline` \| `authlib`；`default_id` 为启动时使用的账号，列表为空时为 `null` |
+| `auth_ms_begin` | 无 | `TaskStarted` | 任务种类 `auth_ms`：微软设备码登录。拿到设备码后推送 `auth:device-code`，按设备码给出的间隔轮询，用户完成登录后依次换取 Xbox Live、XSTS 与 Minecraft 令牌并读取档案；令牌存系统密钥库，账号新增或更新并设为默认，任务成功（前端随后重新读取 `auth_list`）。取消任务即放弃登录。构建时没有 Client ID 时命令直接返回 `AUTH_MS_DISABLED`；任务错误：`AUTH_MS_DECLINED`、`AUTH_MS_CODE_EXPIRED`、`AUTH_XSTS_NO_XBOX_ACCOUNT`、`AUTH_XSTS_CHILD_ACCOUNT`、`AUTH_XSTS_DENIED`、`AUTH_MC_APP_NOT_APPROVED`、`AUTH_MC_NOT_OWNED`、`AUTH_MC_NO_PROFILE`、`AUTH_SECRET_STORE`、`NET_*` |
+| `auth_ms_open_verification` | `AuthMsOpenArgs { uri }` | 无 | 在系统浏览器中打开 `auth:device-code` 给出的验证页；只接受 `microsoft.com`、`live.com` 及其子域名下的 https 地址，否则返回 `COMMON_INTERNAL`（`params.uri`） |
 | `auth_remove` | `AuthIdArgs { id }` | 无 | 删除账号及其密钥库中的令牌；删除默认账号后默认改为列表第一个；不存在返回 `AUTH_ACCOUNT_NOT_FOUND` |
 | `auth_set_default` | `AuthIdArgs { id }` | 无 | 设为启动时使用的账号；不存在返回 `AUTH_ACCOUNT_NOT_FOUND` |
 | `game_install` | `GameInstallArgs { version_id }` | `TaskStarted` | 任务种类 `game_install`：下载并校验该版本的版本 JSON、资源索引、依赖库与资源文件，阶段依次为 `version_json`、`asset_index`、`libraries`、`assets`；`version_id` 为空、超过 64 字符或含 `/`、`\`、`:`、`..` 时直接返回 `COMMON_INTERNAL`；版本不存在时任务以 `GAME_VERSION_NOT_FOUND` 失败 |
@@ -52,7 +54,7 @@
 | `instance_save` | `InstanceSaveArgs { config: InstanceConfig }` | `InstanceConfig` | 保存修改后的完整配置（实例须已存在），返回规整后的配置（名称去掉首尾空白） |
 | `launch_kill` | `LaunchInstanceArgs { instance_id }` | `LaunchKillResult { killed }` | 强制结束该实例的游戏进程，进程退出后照常推送 `game:exited`（`crashed` 为 `false`）；未在运行或仍在启动前准备中时 `killed` 为 `false`，不报错 |
 | `launch_running` | 无 | `LaunchRunning { games: RunningGame { instance_id, pid }[] }` | 运行中的游戏（按实例 ID 排序），不含仍在准备中的实例；供界面重新打开后恢复状态 |
-| `launch_start` | `LaunchStartArgs { instance_id, account: { kind: "offline", name } }` | `TaskStarted` | 任务种类 `launch`：校验并补全游戏文件（阶段 `verify`，需要时 `version_json`…`assets`）、选择或下载 Java、解压 natives，创建游戏进程后任务成功并记录 `last_played_at`；之后推送 `game:log` / `game:exited`。实例不存在返回 `INSTANCE_NOT_FOUND`，用户名不合法返回 `AUTH_OFFLINE_INVALID_NAME`，该实例已在启动或运行返回 `LAUNCH_ALREADY_RUNNING`。`account` 为离线账号 `{ kind: "offline", name }`（仅限本地测试），或已保存的账号 `{ kind: "account", id }`（M1-08，不存在返回 `AUTH_ACCOUNT_NOT_FOUND`）；外置登录账号在任务中先校验或刷新令牌（失效且无法刷新时以 `AUTH_YGGDRASIL_SESSION_EXPIRED` 失败），再下载并校验 authlib-injector，加上 `-javaagent` 与 `prefetched` 参数 |
+| `launch_start` | `LaunchStartArgs { instance_id, account: { kind: "offline", name } }` | `TaskStarted` | 任务种类 `launch`：校验并补全游戏文件（阶段 `verify`，需要时 `version_json`…`assets`）、选择或下载 Java、解压 natives，创建游戏进程后任务成功并记录 `last_played_at`；之后推送 `game:log` / `game:exited`。实例不存在返回 `INSTANCE_NOT_FOUND`，用户名不合法返回 `AUTH_OFFLINE_INVALID_NAME`，该实例已在启动或运行返回 `LAUNCH_ALREADY_RUNNING`。`account` 为离线账号 `{ kind: "offline", name }`（仅限本地测试），或已保存的账号 `{ kind: "account", id }`（M1-08，不存在返回 `AUTH_ACCOUNT_NOT_FOUND`）；外置登录账号在任务中先校验或刷新令牌（失效且无法刷新时以 `AUTH_YGGDRASIL_SESSION_EXPIRED` 失败），再下载并校验 authlib-injector，加上 `-javaagent` 与 `prefetched` 参数；微软账号（M0-10）的 Minecraft 令牌剩余不足 10 分钟时先用刷新令牌续期并写回密钥库（刷新令牌失效时以 `AUTH_MS_SESSION_EXPIRED` 失败），以 `--userType msa` 启动 |
 | `layout_get` | 无 | `LayoutSnapshot { widgets: WidgetPlacement[] \| null, skipped, backup }` | 读取 `<data_root>/ui/layout.json`，格式见 [widgets.md](widgets.md)：从未保存过时 `widgets` 为 `null`；字段缺失、越界或 `uid` 重复的组件被跳过并计入 `skipped`；整个文件无法使用（不是 JSON、`schema` 不是 1、结构不对）时改名为 `layout.json.corrupt-<unix 毫秒>` 备份，`widgets` 为 `null`、`backup` 给出备份路径 |
 | `layout_save` | `LayoutSaveArgs { widgets: WidgetPlacement[] }` | 无 | 整体替换保存的布局（原子写入）；任一组件不合法（`uid` 或 `type` 格式不对、`w`/`h` 为 0、`x + w > 12`、`y + h > 256`）、`uid` 重复或超过 64 个组件时返回 `COMMON_INTERNAL`，文件不变 |
 | `loader_install` | `LoaderInstallArgs { instance_id, kind, version }` | `TaskStarted` | 任务种类 `loader_install`：在实例上安装或更换加载器，必要时先补全原版（阶段 `version_json`…`assets`，随后 `loader_profile` 或 `loader_installer`、`loader_libraries`、`loader_processors`）；Forge / NeoForge 的处理步骤使用实例的 Java 设置。安装成功后才把实例的 `loader` 改为 `{ kind, version }`，失败或取消时实例不变。实例不存在返回 `INSTANCE_NOT_FOUND`；版本号为空、超过 64 字符或含 `/`、`\`、`:`、`?`、`#`、`..` 时返回 `COMMON_INTERNAL`；加载器版本不存在时任务以 `LOADER_VERSION_NOT_FOUND` 失败。改回原版用 `instance_save` 把 `loader` 置为 `null` |
@@ -73,7 +75,7 @@
 | `task:finished` | `TaskFinished { task_id, state, error? }` | 每个任务恰好一次；`state` 为 `succeeded` \| `failed` \| `cancelled`，仅 `failed` 带 `error` |
 | `game:log` | `GameLog { instance_id, pid, stream, lines }` | `stream` 为 `stdout` \| `stderr`；同一来源的连续行最多每 100 ms 批量推送一次，访问令牌已替换为 `***` |
 | `game:exited` | `GameExited { instance_id, pid, exit_code, crashed }` | 每次成功启动恰好一次；`exit_code` 可能为 `null`；`crashed` 为未被强制结束且（退出码非 0 或日志出现崩溃特征） |
-| `auth:device-code` | `DeviceCode { user_code, verification_uri, expires_in }` | M0-10 定义类型并追加 |
+| `auth:device-code` | `DeviceCode { task_id, user_code, verification_uri, expires_in }` | 每次 `auth_ms_begin` 一次；`task_id` 为该登录任务，`expires_in` 单位秒 |
 
 - 事件向所有窗口广播；发送失败只记日志。
 - 首条进度可能早于命令返回，前端须**先订阅再调用命令**，并按 `task_id`（或 `kind`）过滤。

@@ -1,18 +1,24 @@
-//! `auth_*` 命令：账号列表、默认账号、删除，添加离线与外置登录账号（PLAN.md M1-08）。
-//! 微软登录（`auth_ms_begin`）由 M0-10 追加。
+//! `auth_*` 命令：账号列表、默认账号、删除，添加离线与外置登录账号（PLAN.md M1-08），
+//! 微软设备码登录（M0-10）。
 
 use std::fmt;
+use std::path::Path;
 
 use serde::Deserialize;
-use tauri::State;
+use tauri::{AppHandle, Manager, Runtime, State};
 use tmcl_auth::accounts::{self, Account, AccountList, AuthlibServer};
-use tmcl_auth::authlib;
 use tmcl_auth::yggdrasil::{Yggdrasil, resolve_server};
-use tmcl_common::{AppError, TaskCtx};
+use tmcl_auth::{authlib, store};
+use tmcl_common::{AppError, ErrorCode, TaskCtx};
 use tmcl_net::HttpClient;
 use ts_rs::TS;
 
+use crate::commands::settings::open_in_file_manager;
+use crate::events::{AUTH_DEVICE_CODE, DeviceCode, TaskStarted, emit, spawn_task};
 use crate::state::AppState;
+
+/// 微软登录任务的种类。
+pub const AUTH_MS_KIND: &str = "auth_ms";
 
 /// 以账号 ID 为参数的命令参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
@@ -54,6 +60,13 @@ impl fmt::Debug for AuthAddAuthlibArgs {
             .field("password", &"***")
             .finish()
     }
+}
+
+/// `auth_ms_open_verification` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct AuthMsOpenArgs {
+    /// `auth:device-code` 给出的验证页地址。
+    pub uri: String,
 }
 
 /// 账号列表与默认账号。
@@ -122,4 +135,92 @@ pub async fn auth_add_authlib(
             },
         )
     })
+}
+
+/// 开始微软设备码登录（任务种类 `auth_ms`）：拿到设备码后推送 `auth:device-code`，
+/// 用户在浏览器中完成登录后走完 Xbox 与 Minecraft 登录，令牌存入系统密钥库，账号设为默认。
+/// 取消任务即放弃登录。构建时没有 Client ID 返回 `AUTH_MS_DISABLED`。
+#[tauri::command]
+pub async fn auth_ms_begin<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<TaskStarted, AppError> {
+    let ms = state.ms.clone()?;
+    let handle = app.clone();
+    Ok(spawn_task(&app, AUTH_MS_KIND, move |ctx| async move {
+        let task_id = ctx.id;
+        let session = store::login(
+            &ms,
+            |code| {
+                emit(
+                    &handle,
+                    AUTH_DEVICE_CODE,
+                    &DeviceCode {
+                        task_id,
+                        user_code: code.user_code.clone(),
+                        verification_uri: code.verification_uri.clone(),
+                        expires_in: code.expires_in,
+                    },
+                );
+            },
+            &ctx,
+        )
+        .await?;
+        let state = handle.state::<AppState>();
+        let secrets = state.secrets.clone();
+        let account = state.with_db(|_, db| store::save_session(db, secrets.as_ref(), &session))?;
+        tracing::info!(account = %account.id, "microsoft account signed in");
+        Ok(account)
+    }))
+}
+
+/// 在系统浏览器中打开设备码验证页。只接受微软域名下的 https 地址，
+/// 其他地址返回 `COMMON_INTERNAL`（`params.uri`）。
+#[tauri::command]
+pub async fn auth_ms_open_verification(args: AuthMsOpenArgs) -> Result<(), AppError> {
+    if !is_microsoft_page(&args.uri) {
+        return Err(AppError::new(ErrorCode::CommonInternal).with_param("uri", &args.uri));
+    }
+    open_in_file_manager(Path::new(&args.uri))
+}
+
+/// `https://<microsoft.com 或 live.com 的子域名>/<路径>`，且不含会被 shell 解释的字符。
+fn is_microsoft_page(uri: &str) -> bool {
+    let Some(rest) = uri.strip_prefix("https://") else {
+        return false;
+    };
+    let host = rest.split('/').next().unwrap_or_default();
+    let trusted = ["microsoft.com", "live.com"]
+        .iter()
+        .any(|d| host == *d || host.ends_with(&format!(".{d}")));
+    let safe = uri
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b"-._~/:?=%".contains(&b));
+    trusted && safe
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_microsoft_pages_are_opened() {
+        for ok in [
+            "https://www.microsoft.com/link",
+            "https://microsoft.com/devicelogin",
+            "https://login.live.com/oauth20_remoteconnect.srf",
+        ] {
+            assert!(is_microsoft_page(ok), "{ok}");
+        }
+        for bad in [
+            "http://www.microsoft.com/link",
+            "https://evilmicrosoft.com/link",
+            "https://microsoft.com.evil.test/",
+            "https://www.microsoft.com/link&calc",
+            "file:///C:/Windows",
+            "https://www.microsoft.com/\"x\"",
+        ] {
+            assert!(!is_microsoft_page(bad), "{bad}");
+        }
+    }
 }

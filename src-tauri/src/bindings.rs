@@ -15,7 +15,7 @@ use ts_rs::{Config, ExportError, TS};
 use crate::commands::app::{AppDemoTaskArgs, AppInfo, ReleaseList};
 use crate::commands::appearance::{AppearanceImageArgs, AppearanceImportArgs, AppearanceImported};
 use crate::commands::auth::{
-    AuthAddAuthlibArgs, AuthAddOfflineArgs, AuthAuthlibServerArgs, AuthIdArgs,
+    AuthAddAuthlibArgs, AuthAddOfflineArgs, AuthAuthlibServerArgs, AuthIdArgs, AuthMsOpenArgs,
 };
 use crate::commands::game::{GameInstallArgs, GameVersionList};
 use crate::commands::instance::{
@@ -31,7 +31,7 @@ use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
-use crate::events::{GameExited, GameLog, TaskStarted};
+use crate::events::{DeviceCode, GameExited, GameLog, TaskStarted};
 
 /// 置为 `1` 时测试改为写入生成物。
 const UPDATE_ENV: &str = "TMCL_UPDATE_BINDINGS";
@@ -49,6 +49,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     TaskFinished::export_all(&cfg)?;
     TaskProgress::export_all(&cfg)?;
     TaskStarted::export_all(&cfg)?;
+    DeviceCode::export_all(&cfg)?;
     GameExited::export_all(&cfg)?;
     GameLog::export_all(&cfg)?;
     // app
@@ -65,6 +66,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     AuthAddOfflineArgs::export_all(&cfg)?;
     AuthAuthlibServerArgs::export_all(&cfg)?;
     AuthIdArgs::export_all(&cfg)?;
+    AuthMsOpenArgs::export_all(&cfg)?;
     // game
     GameInstallArgs::export_all(&cfg)?;
     GameVersionList::export_all(&cfg)?;

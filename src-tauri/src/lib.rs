@@ -29,6 +29,8 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::auth::auth_add_offline,
         commands::auth::auth_authlib_server,
         commands::auth::auth_list,
+        commands::auth::auth_ms_begin,
+        commands::auth::auth_ms_open_verification,
         commands::auth::auth_remove,
         commands::auth::auth_set_default,
         // game
@@ -620,6 +622,95 @@ mod tests {
             serde_json::from_value(invoke(&webview, "auth_authlib_server", body).unwrap_err())
                 .unwrap();
         assert_eq!(err.code, ErrorCode::AuthAuthlibServerInvalid);
+    }
+
+    /// 本地服务器模拟整条微软登录链路（TestServer 不区分请求方法）。
+    fn ms_server() -> TestServer {
+        let profile = r#"{"id":"0b6f4c2a9d3e4f8a8b1c2d3e4f5a6b7c","name":"Steve"}"#;
+        let xbl = r#"{"Token":"test-xbl","DisplayClaims":{"xui":[{"uhs":"0"}]}}"#;
+        let routes: [(&str, &str); 7] = [
+            (
+                "/oauth/devicecode",
+                r#"{"user_code":"TMCLTEST","device_code":"test-device","verification_uri":"https://www.microsoft.com/link","expires_in":900,"interval":0}"#,
+            ),
+            (
+                "/oauth/token",
+                r#"{"access_token":"test-ms","refresh_token":"test-refresh"}"#,
+            ),
+            ("/xbl/user/authenticate", xbl),
+            ("/xsts/xsts/authorize", xbl),
+            (
+                "/mc/authentication/login_with_xbox",
+                r#"{"access_token":"test-mc","expires_in":86400}"#,
+            ),
+            (
+                "/mc/entitlements/mcstore",
+                r#"{"items":[{"name":"game_minecraft"}]}"#,
+            ),
+            ("/mc/minecraft/profile", profile),
+        ];
+        tauri::async_runtime::block_on(TestServer::start(
+            routes.map(|(path, body)| (path, body.as_bytes().to_vec())),
+        ))
+    }
+
+    #[test]
+    fn auth_ms_login_over_ipc() {
+        let server = ms_server();
+        let dir = tempfile::tempdir().unwrap();
+        let (mut state, secrets) = state_with_memory_secrets(dir.path());
+        let endpoints = tmcl_auth::Endpoints::with_bases(
+            &server.url("/oauth"),
+            &server.url("/xbl"),
+            &server.url("/xsts"),
+            &server.url("/mc"),
+        );
+        state.ms = tmcl_auth::MsClient::new("00000000-0000-0000-0000-000000000000", endpoints);
+        let (app, webview) = mock_app_with(state);
+        let finished_rx = finished_events(&app);
+        let (code_tx, code_rx) = mpsc::channel();
+        app.listen(crate::events::AUTH_DEVICE_CODE, move |event| {
+            let _ = code_tx.send(serde_json::from_str::<Value>(event.payload()).unwrap());
+        });
+
+        let started = invoke(&webview, "auth_ms_begin", json!({})).unwrap();
+        let code = code_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(
+            code,
+            json!({ "task_id": started["task_id"], "user_code": "TMCLTEST",
+                "verification_uri": "https://www.microsoft.com/link", "expires_in": 900 })
+        );
+        let finished = finished_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+
+        let list = invoke(&webview, "auth_list", json!({})).unwrap();
+        let account = &list["accounts"][0];
+        assert_eq!(account["kind"], "microsoft");
+        assert_eq!(account["name"], "Steve");
+        assert_eq!(account["uuid"], "0b6f4c2a-9d3e-4f8a-8b1c-2d3e4f5a6b7c");
+        assert_eq!(list["default_id"], account["id"]);
+        let id = account["id"].as_str().unwrap();
+        let stored = tmcl_auth::accounts::secret(secrets.as_ref(), id)
+            .unwrap()
+            .unwrap();
+        assert!(stored.contains("test-mc") && stored.contains("test-refresh"));
+    }
+
+    #[test]
+    fn auth_ms_disabled_and_page_check() {
+        let mut state = AppState::new();
+        state.ms = Err(AppError::new(ErrorCode::AuthMsDisabled));
+        let (_app, webview) = mock_app_with(state);
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "auth_ms_begin", json!({})).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::AuthMsDisabled);
+        let body = json!({ "args": { "uri": "https://evil.test/link" } });
+        let err: AppError = serde_json::from_value(
+            invoke(&webview, "auth_ms_open_verification", body).unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(err.code, ErrorCode::CommonInternal);
     }
 
     #[test]
