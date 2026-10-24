@@ -3,9 +3,11 @@
 //! 核心层 crate，不依赖 `tauri`，见 `docs/PLAN.md` 第 2 节。
 
 pub mod accounts;
+pub mod authlib;
 pub mod config;
 pub mod offline;
 pub mod secrets;
+pub mod yggdrasil;
 
 pub use accounts::{Account, AccountKind, AccountList, AuthlibServer, NewAccount};
 pub use config::{ms_client_id, ms_login_enabled};

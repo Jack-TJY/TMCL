@@ -10,11 +10,21 @@ publish.workspace = true
 [dependencies]
 keyring = { workspace = true }
 md-5 = { workspace = true }
+reqwest = { workspace = true }
 rusqlite = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
 tmcl-common = { path = "../common" }
+tmcl-net = { path = "../net" }
+tokio = { workspace = true }
+tracing = { workspace = true }
 ts-rs = { workspace = true }
 uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["net"] }
 
 [build-dependencies]
 dotenvy = { workspace = true }

@@ -23,10 +23,18 @@ pub enum ErrorCode {
     AppearanceImageUnsupported,
     /// 找不到该账号（已被删除或 ID 无效）。
     AuthAccountNotFound,
+    /// 地址不是有效的 Yggdrasil 皮肤站（无法解析或元数据缺少 `meta`、`skinDomains`）。
+    AuthAuthlibServerInvalid,
     /// 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$`。
     AuthOfflineInvalidName,
     /// 无法读写系统密钥库（Windows 凭据管理器、macOS 钥匙串、Linux Secret Service）。
     AuthSecretStore,
+    /// 皮肤站拒绝登录（账号或密码错误，或登录过于频繁）。
+    AuthYggdrasilInvalidCredentials,
+    /// 皮肤站账号下没有角色。
+    AuthYggdrasilNoProfile,
+    /// 外置登录的令牌已失效且无法刷新，需要重新输入密码。
+    AuthYggdrasilSessionExpired,
     /// 任务被用户或上层取消。
     CommonCancelled,
     /// 配置文件的 `schema` 高于当前程序支持的版本。
@@ -104,8 +112,12 @@ impl ErrorCode {
             Self::AppearanceImageMissing => "APPEARANCE_IMAGE_MISSING",
             Self::AppearanceImageUnsupported => "APPEARANCE_IMAGE_UNSUPPORTED",
             Self::AuthAccountNotFound => "AUTH_ACCOUNT_NOT_FOUND",
+            Self::AuthAuthlibServerInvalid => "AUTH_AUTHLIB_SERVER_INVALID",
             Self::AuthOfflineInvalidName => "AUTH_OFFLINE_INVALID_NAME",
             Self::AuthSecretStore => "AUTH_SECRET_STORE",
+            Self::AuthYggdrasilInvalidCredentials => "AUTH_YGGDRASIL_INVALID_CREDENTIALS",
+            Self::AuthYggdrasilNoProfile => "AUTH_YGGDRASIL_NO_PROFILE",
+            Self::AuthYggdrasilSessionExpired => "AUTH_YGGDRASIL_SESSION_EXPIRED",
             Self::CommonCancelled => "COMMON_CANCELLED",
             Self::CommonConfigSchemaUnsupported => "COMMON_CONFIG_SCHEMA_UNSUPPORTED",
             Self::CommonDataDirUnavailable => "COMMON_DATA_DIR_UNAVAILABLE",
@@ -226,8 +238,12 @@ mod tests {
             ErrorCode::AppearanceImageMissing,
             ErrorCode::AppearanceImageUnsupported,
             ErrorCode::AuthAccountNotFound,
+            ErrorCode::AuthAuthlibServerInvalid,
             ErrorCode::AuthOfflineInvalidName,
             ErrorCode::AuthSecretStore,
+            ErrorCode::AuthYggdrasilInvalidCredentials,
+            ErrorCode::AuthYggdrasilNoProfile,
+            ErrorCode::AuthYggdrasilSessionExpired,
             ErrorCode::CommonCancelled,
             ErrorCode::CommonConfigSchemaUnsupported,
             ErrorCode::CommonDataDirUnavailable,
