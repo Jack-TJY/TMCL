@@ -1,0 +1,15 @@
+[package]
+name = "tmcl-resources"
+description = "TMCL module: Modrinth / CurseForge 客户端、资源浏览、整合包。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+tmcl-net = { path = "../../core/net" }
+
+[dev-dependencies]
+serde_json = { workspace = true }

@@ -1,0 +1,65 @@
+{
+ "projects": [
+  {
+   "client_side": "required",
+   "server_side": "unsupported",
+   "game_versions": [
+    "1.20",
+    "1.20.1",
+    "1.20.2"
+   ],
+   "environment": [
+    "client_only"
+   ],
+   "id": "VOYxIjFI",
+   "slug": "canvas",
+   "project_type": "mod",
+   "team": "Mwq1YIsQ",
+   "organization": null,
+   "title": "Canvas Renderer",
+   "description": "Open source shaders for players and content creators",
+   "body": "#### Introduction\nCanvas enhances Minecraft world rendering with benefits for both player and content makers.\n\nCanvas is…",
+   "body_url": null,
+   "published": "2021-08-16T03:23:23.795563Z",
+   "updated": "2024-01-21T17:50:39.379270Z",
+   "approved": "2021-08-16T03:23:23.795563Z",
+   "queued": null,
+   "status": "approved",
+   "requested_status": null,
+   "moderator_message": null,
+   "license": {
+    "id": "LGPL-3.0-only",
+    "name": "GNU Lesser General Public License v3.0 only",
+    "url": null
+   },
+   "downloads": 66892,
+   "followers": 191,
+   "categories": [
+    "library",
+    "utility"
+   ],
+   "additional_categories": [],
+   "loaders": [
+    "fabric",
+    "quilt"
+   ],
+   "versions": [
+    "CzNKpSG7",
+    "8ksLqpiW",
+    "Xgag74T1"
+   ],
+   "icon_url": "https://cdn.modrinth.com/data/VOYxIjFI/6b2600c2673867207b38594a8b1e88989b284792_96.webp",
+   "raw_icon_url": "https://cdn.modrinth.com/data/VOYxIjFI/icon.jpg",
+   "issues_url": "https://github.com/vram-guild/canvas/issues",
+   "source_url": "https://github.com/vram-guild/canvas",
+   "wiki_url": null,
+   "discord_url": "https://discord.gg/7NaqR2e",
+   "donation_urls": [],
+   "gallery": [],
+   "color": 4015663,
+   "thread_id": "VOYxIjFI",
+   "monetization_status": "monetized"
+  }
+ ],
+ "versions": []
+}
