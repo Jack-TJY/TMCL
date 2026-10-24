@@ -14,7 +14,7 @@
 | 界面风格 | Windows 11 式简约圆润风格；主界面由用户可拖拽、可增删的组件组成；背景可自定义并调节透明度，默认提供亮色与暗色两套背景（透明度可调）。组件库用 Naive UI（主题覆盖实现 Win11 风格），拖拽布局用 grid-layout-plus，窗口材质用 Tauri 的 Mica / Acrylic 效果 |
 | 下载镜像 | 未定。M1-02 先实测多个镜像，再由维护者选默认源 |
 | 团队 | 个人开发（维护者：JIANYU TANG），可调度多个 AI Agent 并行开发 |
-| 微软登录 | Azure Client ID 存于 `.env.local` 的 `TMCL_MS_CLIENT_ID`，构建时注入。2026-10-22 实测 MS / Xbox / XSTS 三步通过，`login_with_xbox` 返回 403，等待 Mojang 的 API 使用审核 |
+| 微软登录 | Azure Client ID 存于 `.env.local` 的 `TMCL_MS_CLIENT_ID`，构建时注入。Mojang 的 API 使用审核已通过：2026-10-24 用真实账号实测整条链路（MS → Xbox → XSTS → `login_with_xbox` → 所有权 → 档案）全部返回 200 |
 | P2P 中继服务器 | 挂起，暂不决定。先只做直连 + 可插拔中继接口 |
 | SakuraFrp 合作 | 需调研条款后再决定（见 M2-13） |
 | 工期 | 每周投入时间未定，本计划只给规模估算（S ≈ 0.5 天，M ≈ 2 天，L ≈ 5 天），不写日期 |
@@ -259,7 +259,7 @@ pub struct TaskCtx {
 - **流程**：`login.microsoftonline.com/consumers/oauth2/v2.0/devicecode`（scope `XboxLive.signin offline_access`）→ 轮询 token → `user.auth.xboxlive.com/user/authenticate` → `xsts.auth.xboxlive.com/xsts/authorize`（RelyingParty `rp://api.minecraftservices.com/`）→ `api.minecraftservices.com/authentication/login_with_xbox` → `/entitlements/mcstore` → `/minecraft/profile`。XSTS 错误 2148916233、2148916238 分别映射为 `AUTH_XSTS_NO_XBOX_ACCOUNT`、`AUTH_XSTS_CHILD_ACCOUNT`；`login_with_xbox` 的 403 映射为 `AUTH_MC_APP_NOT_APPROVED`。
 - **输出**：`MicrosoftAccount { id, name, uuid }`，令牌写入 keyring；`refresh()` 用刷新令牌续期。
 - **验收**：前三步在真实账号上通过（已于 2026-10-22 验证过一次，需用新代码复测）；`login_with_xbox` 在审核通过前返回 `AUTH_MC_APP_NOT_APPROVED` 并在界面给出说明；审核通过后整条链路拿到档案；日志中无令牌。所有 HTTP 交互有基于录制响应的离线测试。
-- **依赖**：M0-05、M0-08 · **规模**：M · **外部阻塞**：Mojang 审核（维护者跟进）
+- **依赖**：M0-05、M0-08 · **规模**：M · **外部阻塞**：无（Mojang 审核已于 2026-10-24 通过）
 
 ### 门槛 G1：正版账号能启动游戏
 - 检查人：维护者。条件：用 M0-10 的正版账号运行 M0-09 示例进入主菜单，并能进入单人世界。
@@ -567,7 +567,7 @@ M1 可以拆成四条并行泳道（详见第 10 节）：**下载**（M1-01→0
 
 | 事项 | 影响步骤 | 状态 |
 | --- | --- | --- |
-| Mojang Minecraft API 使用审核（Azure 应用） | M0-10、G1、G2 | 等待中（2026-10-22 起） |
+| Mojang Minecraft API 使用审核（Azure 应用） | M0-10、G1、G2 | 已通过（2026-10-24 实测） |
 | CurseForge API Key 申请 | M2-02 | 未开始 |
 | SakuraFrp 条款核对 / 合作沟通 | M2-13、M2-14 | 待调研 |
 | P2P 中继服务器部署与费用 | M2-12 | 挂起 |
