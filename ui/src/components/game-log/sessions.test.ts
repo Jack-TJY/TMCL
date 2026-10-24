@@ -26,6 +26,11 @@ describe("game sessions", () => {
     tauriInvoke.mockReset();
     tauriInvoke.mockImplementation(async (cmd: string) => {
       if (cmd === "task_list") return { tasks: [] };
+      if (cmd === "auth_list")
+        return {
+          accounts: [{ id: "a1", kind: "offline", name: "Player", uuid: "u", server: null }],
+          default_id: "a1",
+        };
       if (cmd === "launch_start") return { task_id: "t1" };
       if (cmd === "launch_kill") return { killed: true };
       return {};
@@ -38,7 +43,7 @@ describe("game sessions", () => {
     await vi.waitFor(() => expect(listeners.has("task:finished")).toBe(true));
     await vi.waitFor(() =>
       expect(tauriInvoke).toHaveBeenCalledWith("launch_start", {
-        args: { instance_id: "i1", account: { kind: "offline", name: "Player" } },
+        args: { instance_id: "i1", account: { kind: "account", id: "a1" } },
       }),
     );
     expect(games.sessions.i1.status).toBe("starting");

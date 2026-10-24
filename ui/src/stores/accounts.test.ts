@@ -1,71 +1,90 @@
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it } from "vitest";
-import { mockAccountPut, mockAccountReset } from "../api/__mocks__/account";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const tauriInvoke = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/core", () => ({ invoke: tauriInvoke }));
+
+import type { Account } from "../bindings/Account";
 import { useAccountsStore } from "./accounts";
+
+/** 内存中的最小后端：只模拟 `auth_*` 命令的列表与默认账号语义。 */
+function fakeBackend(initial: Account[]) {
+  let accounts = [...initial];
+  let defaultId: string | null = accounts[0]?.id ?? null;
+  tauriInvoke.mockImplementation(
+    async (cmd: string, payload?: { args: Record<string, string> }) => {
+      const args = payload?.args ?? {};
+      switch (cmd) {
+        case "auth_list":
+          return { accounts, default_id: defaultId };
+        case "auth_set_default":
+          defaultId = args.id;
+          return null;
+        case "auth_remove":
+          accounts = accounts.filter((a) => a.id !== args.id);
+          if (defaultId === args.id) defaultId = accounts[0]?.id ?? null;
+          return null;
+        case "auth_add_offline": {
+          if (!/^[A-Za-z0-9_]{3,16}$/.test(args.name))
+            throw { code: "AUTH_OFFLINE_INVALID_NAME", params: { name: args.name }, detail: null };
+          const account: Account = {
+            id: `id-${args.name}`,
+            kind: "offline",
+            name: args.name,
+            uuid: "u",
+            server: null,
+          };
+          accounts.push(account);
+          defaultId = account.id;
+          return account;
+        }
+        default:
+          throw new Error(`unexpected ${cmd}`);
+      }
+    },
+  );
+}
+
+const player: Account = { id: "p", kind: "offline", name: "Player", uuid: "u", server: null };
+const alex: Account = { id: "x", kind: "authlib", name: "Alex", uuid: "u2", server: null };
 
 describe("accounts store", () => {
   beforeEach(() => {
-    mockAccountReset();
+    tauriInvoke.mockReset();
     setActivePinia(createPinia());
   });
 
-  it("starts with the offline Player account as default", async () => {
+  it("loads the list and launches by account id", async () => {
+    fakeBackend([player, alex]);
     const store = useAccountsStore();
     await store.load();
-    expect(store.accounts).toHaveLength(1);
-    expect(store.current).toMatchObject({ kind: "offline", name: "Player" });
-    expect(await store.launchAccount()).toEqual({ kind: "offline", name: "Player" });
+    expect(store.current).toEqual(player);
+    expect(await store.launchAccount()).toEqual({ kind: "account", id: "p" });
   });
 
-  it("makes a newly added offline account the default", async () => {
+  it("refreshes after adding, switching and removing", async () => {
+    fakeBackend([player]);
     const store = useAccountsStore();
     const steve = await store.addOffline("Steve");
     expect(store.defaultId).toBe(steve.id);
-    expect(store.accounts.map((a) => a.name)).toEqual(["Player", "Steve"]);
+    await store.setDefault("p");
+    expect(store.current?.name).toBe("Player");
+    await store.remove("p");
+    expect(store.current?.name).toBe("Steve");
+    expect(tauriInvoke).toHaveBeenCalledWith("auth_remove", { args: { id: "p" } });
   });
 
-  it("keeps one account per offline name", async () => {
+  it("passes backend errors through", async () => {
+    fakeBackend([]);
     const store = useAccountsStore();
-    const first = await store.addOffline("Steve");
-    await store.setDefault(store.accounts[0].id);
-    const again = await store.addOffline("Steve");
-    expect(again.id).toBe(first.id);
-    expect(store.accounts).toHaveLength(2);
-    expect(store.defaultId).toBe(first.id);
-  });
-
-  it("rejects invalid offline names", async () => {
-    const store = useAccountsStore();
-    await expect(store.addOffline("ab")).rejects.toMatchObject({
-      code: "AUTH_OFFLINE_INVALID_NAME",
-      params: { name: "ab" },
-    });
-    await expect(store.addOffline("bad name")).rejects.toMatchObject({
+    await expect(store.addOffline("a b")).rejects.toMatchObject({
       code: "AUTH_OFFLINE_INVALID_NAME",
     });
   });
 
-  it("falls back to the first account when the default is removed", async () => {
+  it("throws AUTH_NO_ACCOUNT when there is no account", async () => {
+    fakeBackend([]);
     const store = useAccountsStore();
-    await store.load();
-    const player = store.accounts[0];
-    const steve = await store.addOffline("Steve");
-    await store.remove(steve.id);
-    expect(store.defaultId).toBe(player.id);
-  });
-
-  it("throws AUTH_NO_ACCOUNT when every account is removed", async () => {
-    const store = useAccountsStore();
-    await store.load();
-    await store.remove(store.accounts[0].id);
-    expect(store.current).toBeNull();
     await expect(store.launchAccount()).rejects.toMatchObject({ code: "AUTH_NO_ACCOUNT" });
-  });
-
-  it("launches online accounts under their player name until M1-08", async () => {
-    const store = useAccountsStore();
-    mockAccountPut({ kind: "microsoft", name: "Alex", uuid: "u-1", server: null });
-    await store.load();
-    expect(await store.launchAccount()).toEqual({ kind: "offline", name: "Alex" });
   });
 });
