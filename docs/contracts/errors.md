@@ -12,8 +12,12 @@
 | `APPEARANCE_IMAGE_MISSING` | app | 背景图片已被删除或无法读取 | `image` | 背景图片 {image} 不存在，已改用默认背景 | Background image {image} not found, using the default background |
 | `APPEARANCE_IMAGE_UNSUPPORTED` | app | 背景图片不是 png/jpg/webp，或超过大小上限 | `max_mb` | 只支持不超过 {max_mb} MB 的 PNG、JPG、WebP 图片 | Only PNG, JPG and WebP images up to {max_mb} MB are supported |
 | `AUTH_ACCOUNT_NOT_FOUND` | auth | 找不到该账号（已被删除或 ID 无效） | `id` | 找不到该账号，请刷新账号列表 | Account not found, please refresh the account list |
+| `AUTH_AUTHLIB_SERVER_INVALID` | auth | 地址不是有效的 Yggdrasil 皮肤站（无法解析或元数据缺少 `meta`、`skinDomains`） | `url` | {url} 不是支持外置登录的皮肤站 | {url} is not a skin site that supports external sign-in |
 | `AUTH_OFFLINE_INVALID_NAME` | auth | 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$` | `name` | 用户名只能包含 3–16 个字母、数字或下划线 | Username must be 3–16 letters, digits or underscores |
 | `AUTH_SECRET_STORE` | auth | 无法读写系统密钥库（Windows 凭据管理器、macOS 钥匙串、Linux Secret Service） | — | 无法访问系统密钥库，登录信息没有保存 | Cannot access the system keychain, sign-in data was not saved |
+| `AUTH_YGGDRASIL_INVALID_CREDENTIALS` | auth | 皮肤站拒绝登录（账号或密码错误，或登录过于频繁） | — | 账号或密码错误，或登录太频繁，请稍后再试 | Wrong email or password, or too many attempts. Please try again later |
+| `AUTH_YGGDRASIL_NO_PROFILE` | auth | 皮肤站账号下没有角色 | — | 这个账号还没有角色，请先在皮肤站创建角色 | This account has no player profile yet. Create one on the skin site first |
+| `AUTH_YGGDRASIL_SESSION_EXPIRED` | auth | 外置登录的令牌已失效且无法刷新，需要重新输入密码 | `name` | {name} 的登录已过期，请在“账号”页重新登录 | Sign-in for {name} has expired, please sign in again on the Accounts page |
 | `COMMON_CANCELLED` | common | 任务被用户或上层取消 | — | 操作已取消 | The operation was cancelled |
 | `COMMON_CONFIG_SCHEMA_UNSUPPORTED` | common | `config.json` 的 `schema` 为 0 或高于当前程序支持的版本 | `schema`、`supported` | 配置文件版本 {schema} 不受支持（当前支持 {supported}） | Config file version {schema} is not supported (supported: {supported}) |
 | `COMMON_DATA_DIR_UNAVAILABLE` | common | 无法确定或创建数据目录 | `path`（可选） | 无法访问数据目录 {path} | Cannot access data directory {path} |

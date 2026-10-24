@@ -26,3 +26,11 @@
 | --- | --- | --- | --- |
 | Modrinth API v2 | `https://api.modrinth.com/v2` | 搜索 `/search`、项目 `/project/{id}`、`/projects`、版本 `/project/{id}/version`、`/version/{id}`、`/versions`、依赖 `/project/{id}/dependencies`、按哈希查询 `/version_file/{hash}`、`POST /version_files`、`POST /version_files/update`。`User-Agent` 必须为 `Jack-TJY/TMCL/<版本>`；速率限制 300 次/分钟，读 `X-Ratelimit-Limit/Remaining/Reset`，429 时等待后重试 | 2026-10-24 实测 200，响应头含 `X-Ratelimit-Limit: 300` |
 | Modrinth 文件 CDN | `https://cdn.modrinth.com/data/<project_id>/versions/<version_id>/<filename>` | 由版本的 `files[].url` 给出，不在代码中拼接；按 `hashes.sha1` 与 `size` 校验 | 2026-10-24 下载 Sodium mc1.20.1-0.5.13-fabric 并校验 SHA1 成功 |
+
+## auth（M1-08）
+
+| 用途 | 地址 | 说明 | 核实 |
+| --- | --- | --- | --- |
+| authlib-injector 发布索引 | `https://authlib-injector.yushi.moe/artifact/latest.json` | 返回 `version`、`download_url`、`checksums.sha256`；jar 下载后按 SHA-256 校验，存到 `cache/authlib-injector/` | 2026-10-24 国内直连与海外代理均下载并校验成功 |
+| authlib-injector 镜像 | `https://bmclapi2.bangbang93.com/mirrors/authlib-injector/artifact/latest.json` | 官方索引失败时使用，结构相同 | 未单独实测 |
+| Yggdrasil 皮肤站 | 用户输入 | 先 GET 用户输入的地址，按响应头 `X-Authlib-Injector-API-Location` 找到 API 根；登录、校验、刷新分别 POST `<api>/authserver/{authenticate,validate,refresh}` | 2026-10-24 LittleSkin 元数据（`littleskin.cn` 经 ALI 指向 `/api/yggdrasil`）实测；登录需维护者用测试账号复测 |
