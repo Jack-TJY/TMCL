@@ -2,6 +2,7 @@
 // 页面尚未实现时使用 PlaceholderPage，对应步骤把 component 换成自己的页面即可。
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from "vue-router";
 import PlaceholderPage from "./layouts/PlaceholderPage.vue";
+import AboutPage from "./pages/about/AboutPage.vue";
 import DownloadPage from "./pages/download/DownloadPage.vue";
 import HomePage from "./pages/home/HomePage.vue";
 import InstancesPage from "./pages/instances/InstancesPage.vue";
@@ -16,6 +17,12 @@ declare module "vue-router" {
 
 const routes: RouteRecordRaw[] = [
   { path: "/", redirect: "/home" },
+  {
+    path: "/about",
+    name: "about",
+    component: AboutPage,
+    meta: { titleKey: "about.title" },
+  },
   {
     path: "/accounts",
     name: "accounts",

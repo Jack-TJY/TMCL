@@ -2,3 +2,5 @@ dist/
 coverage/
 # ts-rs 生成物，禁止手改
 src/bindings/
+# scripts/gen-licenses.mjs 生成物
+src/pages/about/third-party-licenses.json
