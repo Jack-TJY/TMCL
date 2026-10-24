@@ -20,6 +20,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // app
         commands::app::app_demo_task,
         commands::app::app_info,
+        commands::app::app_releases,
         // appearance
         commands::appearance::appearance_import_background,
         commands::appearance::appearance_read_background,

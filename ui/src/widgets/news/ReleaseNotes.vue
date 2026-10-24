@@ -1,23 +1,36 @@
 <script setup lang="ts">
-// 更新日志：只读本项目的 Releases。读取命令完成前由 api/__mocks__/releases.ts 提供（返回空列表）。
-import { NTag } from "naive-ui";
+// 更新日志：只读本项目的 Releases（app_releases，后端缓存 1 小时）。
+import { NButton, NTag } from "naive-ui";
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { mockReleaseList, type ReleaseNote } from "../../api/__mocks__/releases";
+import { appReleases } from "../../api/app";
+import type { ReleaseNote } from "../../bindings/ReleaseNote";
 import type { WidgetProps } from "../types";
 
 defineProps<WidgetProps>();
 const { t, d } = useI18n();
 
 const releases = ref<ReleaseNote[] | null>(null);
+const failed = ref(false);
 
-onMounted(async () => {
-  releases.value = await mockReleaseList().catch(() => []);
-});
+async function load() {
+  failed.value = false;
+  try {
+    releases.value = await appReleases();
+  } catch {
+    failed.value = true;
+  }
+}
+
+onMounted(load);
 </script>
 
 <template>
-  <p v-if="releases?.length === 0" class="empty">{{ t("widget-news.empty") }}</p>
+  <div v-if="failed" class="empty">
+    <span>{{ t("widget-news.error") }}</span>
+    <NButton size="small" text type="primary" @click="load">{{ t("widget-news.retry") }}</NButton>
+  </div>
+  <p v-else-if="releases?.length === 0" class="empty">{{ t("widget-news.empty") }}</p>
   <ul v-else-if="releases" class="releases">
     <li v-for="release in releases" :key="release.tag" class="release">
       <span class="name">{{ release.name || release.tag }}</span>
@@ -34,6 +47,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   height: 100%;
   margin: 0;
   color: var(--tmcl-text-secondary);

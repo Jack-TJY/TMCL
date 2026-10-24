@@ -13,3 +13,9 @@
 组件与主版本的对应：8 → `jre-legacy`，16 → `java-runtime-alpha`，17 → `java-runtime-gamma`，21 → `java-runtime-delta`，25 → `java-runtime-epsilon`。版本 JSON 带 `javaVersion.component` 时优先用它。
 
 截至核实日，官方索引在 `mac-os-arm64` 与 `windows-arm64` 上没有 `jre-legacy`（Java 8），这两种平台的 Java 8 会走 Adoptium。
+
+## app（M1-16）
+
+| 用途 | 地址 | 说明 | 核实 |
+| --- | --- | --- | --- |
+| 本项目发布版本 | `https://api.github.com/repos/Jack-TJY/TMCL/releases?per_page=20` | `app_releases` 使用，主页“更新日志”组件展示。未认证接口限每 IP 每小时 60 次，结果在本地缓存 1 小时；只读取 `tag_name`、`name`、`published_at`、`prerelease`、`draft`、`html_url` | 2026-10-24 实测 200（当前没有发布版本，返回 `[]`） |

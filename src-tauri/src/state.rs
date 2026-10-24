@@ -30,6 +30,8 @@ pub struct AppState {
     pub game: InstallOptions,
     /// 加载器元数据与 maven 仓库地址；测试中指向本地服务器。
     pub loader: Endpoints,
+    /// 本项目 GitHub Releases 的 API 地址；测试中指向本地服务器。
+    pub releases_url: String,
     /// 共享的数据库连接，首次使用时打开。长耗时任务另开连接，避免长时间占用。
     db: StdMutex<Option<Db>>,
 }
@@ -60,6 +62,7 @@ impl AppState {
             downloader: RwLock::new(build_downloader(&download)),
             game: InstallOptions::default(),
             loader: Endpoints::default(),
+            releases_url: crate::commands::app::RELEASES_URL.to_owned(),
             db: StdMutex::new(None),
         }
     }
