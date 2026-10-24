@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 账号页（PLAN.md M1-14）：账号列表、切换启动用的账号、删除；添加离线账号。
+// 账号页（PLAN.md M1-14）：账号列表、切换启动用的账号、删除；添加微软正版（设备码）、
+// 离线（仅限本地测试）与外置登录账号。默认引导正版登录（AGENTS.md §15）。
 // 账号数据暂由 api/__mocks__/account.ts 提供，M1-08 完成后换成真实命令。
 import { Add20Regular, ChevronDown16Regular } from "@vicons/fluent";
 import {
@@ -15,15 +16,17 @@ import {
 } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import type { Account } from "../../api/account";
+import { msLoginEnabled, type Account } from "../../api/account";
 import { toAppError } from "../../api/invoke";
 import type { AppError } from "../../bindings/AppError";
 import { formatError } from "../../i18n";
+import DeviceCodeDialog from "../../components/device-code-dialog/DeviceCodeDialog.vue";
 import { useAccountsStore } from "../../stores/accounts";
 import AccountCard from "./AccountCard.vue";
+import AuthlibDialog from "./AuthlibDialog.vue";
 import OfflineDialog from "./OfflineDialog.vue";
 
-type AddKind = "offline";
+type AddKind = "microsoft" | "offline" | "authlib";
 
 const { t } = useI18n();
 const message = useMessage();
@@ -33,6 +36,8 @@ const store = useAccountsStore();
 const loading = ref(false);
 const error = ref<AppError | null>(null);
 const adding = ref<AddKind | null>(null);
+/** 构建时未注入 Client ID 时禁用微软登录。 */
+const msEnabled = ref(true);
 
 async function load() {
   loading.value = true;
@@ -46,9 +51,14 @@ async function load() {
   }
 }
 
-onMounted(load);
+onMounted(async () => {
+  void load();
+  msEnabled.value = await msLoginEnabled();
+});
 
 const addOptions = computed<DropdownOption[]>(() => [
+  { key: "microsoft", label: t("accounts.add.microsoft"), disabled: !msEnabled.value },
+  { key: "authlib", label: t("accounts.add.authlib") },
   { key: "offline", label: t("accounts.add.offline") },
 ]);
 
@@ -101,6 +111,15 @@ function confirmRemove(account: Account) {
       </NDropdown>
     </div>
 
+    <NAlert
+      v-if="!msEnabled"
+      type="info"
+      class="ms-disabled"
+      :title="t('accounts.msDisabled.title')"
+    >
+      {{ t("accounts.msDisabled.reason") }}
+    </NAlert>
+
     <NAlert v-if="error" type="error" class="load-error" :title="t('accounts.loadFailed')">
       <div class="load-error-body">
         <span>{{ formatError(error) }}</span>
@@ -115,9 +134,22 @@ function confirmRemove(account: Account) {
         :description="t('accounts.empty')"
       >
         <template #extra>
-          <NButton size="small" @click="adding = 'offline'">{{
-            t("accounts.add.offline")
-          }}</NButton>
+          <div class="empty-actions">
+            <NButton
+              size="small"
+              type="primary"
+              :disabled="!msEnabled"
+              @click="adding = 'microsoft'"
+            >
+              {{ t("accounts.add.microsoft") }}
+            </NButton>
+            <NButton size="small" @click="adding = 'authlib'">
+              {{ t("accounts.add.authlib") }}
+            </NButton>
+            <NButton size="small" @click="adding = 'offline'">
+              {{ t("accounts.add.offline") }}
+            </NButton>
+          </div>
         </template>
       </NEmpty>
       <div class="cards">
@@ -132,6 +164,8 @@ function confirmRemove(account: Account) {
       </div>
     </NSpin>
 
+    <DeviceCodeDialog :show="adding === 'microsoft'" @close="adding = null" @done="load" />
+    <AuthlibDialog :show="adding === 'authlib'" @close="adding = null" />
     <OfflineDialog :show="adding === 'offline'" @close="adding = null" />
   </div>
 </template>
@@ -164,6 +198,7 @@ function confirmRemove(account: Account) {
   margin-left: 4px;
 }
 
+.ms-disabled,
 .load-error {
   margin-bottom: 12px;
 }
@@ -183,6 +218,11 @@ function confirmRemove(account: Account) {
 
 .empty {
   padding: 48px 0;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .cards {
