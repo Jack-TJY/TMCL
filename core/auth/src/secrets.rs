@@ -3,6 +3,7 @@
 //! 键名 `tmcl:account:<account-id>`，值由各账号类型自行序列化（通常是 JSON）。
 
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Mutex;
 
 use tmcl_common::{AppError, AppResult, ErrorCode};
@@ -16,7 +17,7 @@ pub fn secret_key(account_id: &str) -> String {
 }
 
 /// 令牌存储。生产环境用 [`KeyringStore`]，测试用 [`MemorySecretStore`]。
-pub trait SecretStore: Send + Sync {
+pub trait SecretStore: Send + Sync + fmt::Debug {
     /// 读取；不存在时返回 `None`。
     fn get(&self, key: &str) -> AppResult<Option<String>>;
     /// 写入（覆盖）。

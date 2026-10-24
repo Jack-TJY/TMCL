@@ -55,7 +55,7 @@ pub async fn login(
     let session = ygg
         .authenticate(&server.api_url, request.username, request.password, ctx)
         .await?;
-    save(
+    save_session(
         db,
         secrets,
         &session,
@@ -66,7 +66,8 @@ pub async fn login(
     )
 }
 
-fn save(
+/// 保存登录得到的会话：令牌写入密钥库，账号新增或更新并设为默认。
+pub fn save_session(
     db: &Db,
     secrets: &dyn SecretStore,
     session: &Session,

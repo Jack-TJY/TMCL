@@ -7,4 +7,8 @@ export type LaunchAccountArgs = { "kind": "offline",
 /**
  * 玩家名。
  */
-name: string, };
+name: string, } | { "kind": "account", 
+/**
+ * 账号 ID。
+ */
+id: string, };

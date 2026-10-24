@@ -24,6 +24,13 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // appearance
         commands::appearance::appearance_import_background,
         commands::appearance::appearance_read_background,
+        // auth
+        commands::auth::auth_add_authlib,
+        commands::auth::auth_add_offline,
+        commands::auth::auth_authlib_server,
+        commands::auth::auth_list,
+        commands::auth::auth_remove,
+        commands::auth::auth_set_default,
         // game
         commands::game::game_install,
         commands::game::game_version_list,
@@ -83,12 +90,15 @@ mod tests {
     use std::time::Duration;
 
     use serde_json::{Value, json};
+    use std::sync::Arc;
     use tauri::test::{
         INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets,
     };
     use tauri::webview::InvokeRequest;
     use tauri::{Listener, Manager};
     use tmcl_common::{AppError, DataPaths, ErrorCode, TaskFinished, TaskProgress, TaskState};
+
+    use tmcl_auth::MemorySecretStore;
     use tmcl_net::testing::TestServer;
 
     use super::*;
@@ -522,6 +532,108 @@ mod tests {
         let err: AppError = serde_json::from_value(bad.unwrap_err()).unwrap();
         assert_eq!(err.code, ErrorCode::CommonInternal);
         assert_eq!(err.params["max_mb"], "false");
+    }
+
+    fn state_with_memory_secrets(dir: &std::path::Path) -> (AppState, Arc<MemorySecretStore>) {
+        let secrets = Arc::new(MemorySecretStore::default());
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir)));
+        state.secrets = secrets.clone();
+        (state, secrets)
+    }
+
+    #[test]
+    fn auth_accounts_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let (state, secrets) = state_with_memory_secrets(dir.path());
+        let (_app, webview) = mock_app_with(state);
+
+        let list = invoke(&webview, "auth_list", json!({})).unwrap();
+        assert_eq!(list, json!({ "accounts": [], "default_id": null }));
+
+        let dev = invoke(
+            &webview,
+            "auth_add_offline",
+            json!({ "args": { "name": "Dev" } }),
+        )
+        .unwrap();
+        assert_eq!(dev["kind"], "offline");
+        assert_eq!(dev["uuid"], "380df991-f603-344c-a090-369bad2a924a");
+        assert_eq!(dev["server"], Value::Null);
+        let notch = invoke(
+            &webview,
+            "auth_add_offline",
+            json!({ "args": { "name": "Notch" } }),
+        )
+        .unwrap();
+
+        let list = invoke(&webview, "auth_list", json!({})).unwrap();
+        assert_eq!(list["accounts"].as_array().unwrap().len(), 2);
+        assert_eq!(list["default_id"], notch["id"]);
+
+        invoke(
+            &webview,
+            "auth_set_default",
+            json!({ "args": { "id": dev["id"] } }),
+        )
+        .unwrap();
+        let list = invoke(&webview, "auth_list", json!({})).unwrap();
+        assert_eq!(list["default_id"], dev["id"]);
+
+        invoke(
+            &webview,
+            "auth_remove",
+            json!({ "args": { "id": dev["id"] } }),
+        )
+        .unwrap();
+        let list = invoke(&webview, "auth_list", json!({})).unwrap();
+        assert_eq!(list["default_id"], notch["id"]);
+
+        for (cmd, args) in [
+            ("auth_set_default", json!({ "id": "missing" })),
+            ("auth_remove", json!({ "id": "missing" })),
+        ] {
+            let err: AppError =
+                serde_json::from_value(invoke(&webview, cmd, json!({ "args": args })).unwrap_err())
+                    .unwrap();
+            assert_eq!(err.code, ErrorCode::AuthAccountNotFound, "{cmd}");
+        }
+        let err: AppError = serde_json::from_value(
+            invoke(
+                &webview,
+                "auth_add_offline",
+                json!({ "args": { "name": "a b" } }),
+            )
+            .unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(err.code, ErrorCode::AuthOfflineInvalidName);
+        assert!(secrets.keys().is_empty());
+    }
+
+    #[test]
+    fn auth_authlib_server_rejects_non_skin_site() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let server = rt.block_on(TestServer::start([("/", b"<html></html>".to_vec())]));
+        let (_app, webview) = mock_app();
+        let body = json!({ "args": { "api_url": server.url("/") } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "auth_authlib_server", body).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::AuthAuthlibServerInvalid);
+    }
+
+    #[test]
+    fn launch_with_unknown_account_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let (state, _) = state_with_memory_secrets(dir.path());
+        let (_app, webview) = mock_app_with(state);
+        let body = json!({ "args": { "name": "x", "game_version": "1.20.1" } });
+        let id = invoke(&webview, "instance_create", body).unwrap()["id"].clone();
+        let body = json!({ "args": { "instance_id": id,
+            "account": { "kind": "account", "id": "missing" } } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "launch_start", body).unwrap_err()).unwrap();
+        assert_eq!(err.code, ErrorCode::AuthAccountNotFound);
     }
 
     #[test]

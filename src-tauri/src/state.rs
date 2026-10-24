@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, Mutex as StdMutex, RwLock};
 
+use tmcl_auth::{KeyringStore, SecretStore};
 use tmcl_common::config::DownloadConfig;
 use tmcl_common::{AppResult, Config, DataPaths, Db};
 use tmcl_game::InstallOptions;
@@ -34,6 +35,8 @@ pub struct AppState {
     pub releases_url: String,
     /// 共享的数据库连接，首次使用时打开。长耗时任务另开连接，避免长时间占用。
     db: StdMutex<Option<Db>>,
+    /// 账号令牌存储：系统密钥库；测试中换成内存实现。
+    pub secrets: Arc<dyn SecretStore>,
 }
 
 impl AppState {
@@ -64,6 +67,7 @@ impl AppState {
             loader: Endpoints::default(),
             releases_url: crate::commands::app::RELEASES_URL.to_owned(),
             db: StdMutex::new(None),
+            secrets: Arc::new(KeyringStore),
         }
     }
 

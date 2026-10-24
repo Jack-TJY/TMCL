@@ -10,13 +10,15 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Runtime, State};
-use tmcl_auth::OfflineAccount;
+use tmcl_auth::accounts::{self, Account, AccountKind};
+use tmcl_auth::yggdrasil::Yggdrasil;
+use tmcl_auth::{OfflineAccount, SecretStore, authlib};
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, TaskCtx};
 use tmcl_game::InstallOptions;
 use tmcl_instance::{InstanceConfig, InstanceStore};
 use tmcl_java::RuntimeInstaller;
 use tmcl_launch::{KillHandle, LaunchAccount, LaunchEnv, LogStream, prepare, spawn};
-use tmcl_net::Downloader;
+use tmcl_net::{Downloader, HttpClient};
 use ts_rs::TS;
 
 use crate::events::{
@@ -39,6 +41,18 @@ pub enum LaunchAccountArgs {
         /// 玩家名。
         name: String,
     },
+    /// 已保存的账号（`auth_list` 中的 ID）。不存在时返回 `AUTH_ACCOUNT_NOT_FOUND`；
+    /// 外置登录账号在任务中刷新令牌并加载 authlib-injector。
+    Account {
+        /// 账号 ID。
+        id: String,
+    },
+}
+
+/// 解析后的启动账号：离线账号可直接使用，外置登录账号需在任务中联网准备。
+enum ResolvedAccount {
+    Ready(LaunchAccount),
+    Authlib(Account),
 }
 
 /// `launch_start` 的参数。
@@ -162,7 +176,8 @@ pub async fn launch_start<R: Runtime>(
     let paths = state.data()?.clone();
     let instance =
         state.with_db(|paths, db| InstanceStore::new(paths, db).get(&args.instance_id))?;
-    let account = launch_account(&args.account)?;
+    let account = state.with_db(|_, db| launch_account(db, &args.account))?;
+    let secrets = state.secrets.clone();
     let downloader = state.downloader()?;
     let install = state.game.clone();
     let games = state.games.clone();
@@ -170,16 +185,21 @@ pub async fn launch_start<R: Runtime>(
     let handle = app.clone();
     Ok(spawn_task(&app, LAUNCH_KIND, move |ctx| async move {
         let id = instance.id.clone();
-        let result = start(
-            handle,
-            &paths,
-            &downloader,
-            &install,
-            &games,
-            instance,
-            account,
-            &ctx,
-        )
+        let result = async {
+            let (instance, account) =
+                with_account(&paths, secrets.as_ref(), instance, account, &ctx).await?;
+            start(
+                handle,
+                &paths,
+                &downloader,
+                &install,
+                &games,
+                instance,
+                account,
+                &ctx,
+            )
+            .await
+        }
         .await;
         if result.is_err() {
             games.release(&id);
@@ -207,16 +227,68 @@ pub async fn launch_running(state: State<'_, AppState>) -> Result<LaunchRunning,
     })
 }
 
-fn launch_account(args: &LaunchAccountArgs) -> AppResult<LaunchAccount> {
+fn offline(name: &str) -> AppResult<LaunchAccount> {
+    let account = OfflineAccount::new(name)?;
+    Ok(LaunchAccount::offline(
+        &account.name,
+        &account.uuid.simple().to_string(),
+    ))
+}
+
+fn launch_account(db: &tmcl_common::Db, args: &LaunchAccountArgs) -> AppResult<ResolvedAccount> {
     match args {
-        LaunchAccountArgs::Offline { name } => {
-            let account = OfflineAccount::new(name)?;
-            Ok(LaunchAccount::offline(
-                &account.name,
-                &account.uuid.simple().to_string(),
-            ))
+        LaunchAccountArgs::Offline { name } => offline(name).map(ResolvedAccount::Ready),
+        LaunchAccountArgs::Account { id } => {
+            let account = accounts::get(db, id)?.ok_or_else(|| {
+                AppError::new(ErrorCode::AuthAccountNotFound).with_param("id", id)
+            })?;
+            match account.kind {
+                AccountKind::Offline => offline(&account.name).map(ResolvedAccount::Ready),
+                AccountKind::Authlib => Ok(ResolvedAccount::Authlib(account)),
+                // 微软登录由 M0-10 实现，在此之前不会有微软账号。
+                AccountKind::Microsoft => Err(AppError::new(ErrorCode::CommonInternal)
+                    .with_detail("microsoft accounts are not supported yet (M0-10)")),
+            }
         }
     }
+}
+
+/// 外置登录账号：刷新令牌、下载 authlib-injector，并把 `-javaagent` 等参数放到实例 JVM 参数最前。
+async fn with_account(
+    paths: &DataPaths,
+    secrets: &dyn SecretStore,
+    mut instance: InstanceConfig,
+    account: ResolvedAccount,
+    ctx: &TaskCtx,
+) -> AppResult<(InstanceConfig, LaunchAccount)> {
+    let account = match account {
+        ResolvedAccount::Ready(account) => return Ok((instance, account)),
+        ResolvedAccount::Authlib(account) => account,
+    };
+    let http = HttpClient::new()?;
+    let prepared =
+        authlib::prepare_launch(secrets, &http, &Yggdrasil::new()?, &account, ctx).await?;
+    let jar = authlib::ensure_injector(
+        &http,
+        &paths.cache_dir().join("authlib-injector"),
+        &[authlib::ARTIFACT_URL, authlib::ARTIFACT_MIRROR_URL],
+        ctx,
+    )
+    .await?;
+    let api_url = account.server.map(|s| s.api_url).unwrap_or_default();
+    let mut jvm_args = authlib::jvm_args(&jar, &api_url, &prepared.metadata);
+    jvm_args.append(&mut instance.jvm_args);
+    instance.jvm_args = jvm_args;
+    let profile = prepared.session.profile;
+    Ok((
+        instance,
+        LaunchAccount {
+            name: profile.name,
+            uuid: profile.id,
+            access_token: prepared.session.access_token,
+            user_type: "mojang".to_owned(),
+        },
+    ))
 }
 
 #[allow(clippy::too_many_arguments)]

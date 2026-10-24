@@ -8,11 +8,15 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use tmcl_auth::AccountList;
 use tmcl_common::{AppError, TaskFinished, TaskProgress};
 use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo, ReleaseList};
 use crate::commands::appearance::{AppearanceImageArgs, AppearanceImportArgs, AppearanceImported};
+use crate::commands::auth::{
+    AuthAddAuthlibArgs, AuthAddOfflineArgs, AuthAuthlibServerArgs, AuthIdArgs,
+};
 use crate::commands::game::{GameInstallArgs, GameVersionList};
 use crate::commands::instance::{
     InstanceCreateArgs, InstanceDuplicateArgs, InstanceExportArgs, InstanceGameEntries,
@@ -55,6 +59,12 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     AppearanceImageArgs::export_all(&cfg)?;
     AppearanceImportArgs::export_all(&cfg)?;
     AppearanceImported::export_all(&cfg)?;
+    // auth（Account、AuthlibServer 随 AccountList 一并导出）
+    AccountList::export_all(&cfg)?;
+    AuthAddAuthlibArgs::export_all(&cfg)?;
+    AuthAddOfflineArgs::export_all(&cfg)?;
+    AuthAuthlibServerArgs::export_all(&cfg)?;
+    AuthIdArgs::export_all(&cfg)?;
     // game
     GameInstallArgs::export_all(&cfg)?;
     GameVersionList::export_all(&cfg)?;
