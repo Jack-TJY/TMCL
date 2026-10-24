@@ -26,6 +26,7 @@
 | 命令 | 参数 | 返回 | 说明 |
 | --- | --- | --- | --- |
 | `app_info` | 无 | `AppInfo { version, os, arch, ms_login_enabled }` | 版本号、平台与功能开关 |
+| `app_releases` | 无 | `ReleaseList { releases: ReleaseNote { tag, name, published_at, prerelease, url }[] }` | 本项目 GitHub Releases 中最近的至多 10 个版本（不含草稿），按发布时间从新到旧；1 小时内使用 SQLite `kv` 表中的缓存（键 `app.releases`），获取失败时退回旧缓存，没有缓存则返回 `NET_*` 或 `COMMON_JSON` |
 | `appearance_import_background` | `AppearanceImportArgs { path }` | `AppearanceImported { image }` | 把用户选中的图片复制到 `ui/backgrounds/`，文件名为 `bg-<unix 毫秒>.<png\|jpg\|webp>`（按文件头识别格式）；不是 png/jpg/webp 或超过 32 MB 返回 `APPEARANCE_IMAGE_UNSUPPORTED`；同时删除除新图片与 `config.json` 当前所用图片外的旧背景图。不修改 `config.json`，由前端随后经 `settings_set` 写入 `appearance.background.image` |
 | `appearance_read_background` | `AppearanceImageArgs { image }` | 二进制（前端为 `ArrayBuffer`） | 读取背景图片内容；文件不存在或文件名不是启动器生成的格式时返回 `APPEARANCE_IMAGE_MISSING` |
 | `app_demo_task` | `AppDemoTaskArgs { steps, step_ms, fail_at? }` | `TaskStarted` | 演示任务：`steps` 1–100、`step_ms` ≤ 5000，越界返回 `COMMON_INTERNAL`；走到 `fail_at` 步时以 `failed` 结束 |

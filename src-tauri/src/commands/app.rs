@@ -1,13 +1,14 @@
-//! `app_*` 命令：应用信息与演示任务。
+//! `app_*` 命令：应用信息、本项目的发布版本与演示任务。
 
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Runtime, State};
 use tmcl_common::{AppError, AppResult, ErrorCode, ProgressUpdate, TaskCtx};
 use ts_rs::TS;
 
 use crate::events::{TaskStarted, spawn_task};
+use crate::state::AppState;
 
 /// `app_info` 的返回值。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -35,6 +36,36 @@ pub struct AppDemoTaskArgs {
     pub fail_at: Option<u32>,
 }
 
+/// 本项目的一个发布版本（GitHub Release）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct ReleaseNote {
+    /// 标签，例如 `v0.1.0-alpha.1`。
+    pub tag: String,
+    /// 标题；发布时没填写则为空字符串。
+    pub name: String,
+    /// 发布时间（RFC 3339）。
+    pub published_at: String,
+    /// 是否为预发布。
+    pub prerelease: bool,
+    /// 发布页地址。
+    pub url: String,
+}
+
+/// `app_releases` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct ReleaseList {
+    /// 最近的发布版本，新的在前，最多 [`RELEASES_LIMIT`] 个。
+    pub releases: Vec<ReleaseNote>,
+}
+
+/// 本项目 GitHub Releases 的 API 地址（`docs/contracts/endpoints.md`）。
+pub const RELEASES_URL: &str = "https://api.github.com/repos/Jack-TJY/TMCL/releases?per_page=20";
+/// `app_releases` 最多返回的版本数。
+pub const RELEASES_LIMIT: usize = 10;
+/// 缓存在这个时长内直接使用。GitHub 未认证接口限每小时 60 次，主页每次打开都会读取。
+const RELEASES_MAX_AGE: Duration = Duration::from_secs(60 * 60);
+const RELEASES_CACHE_KEY: &str = "app.releases";
+
 /// 演示任务的种类名，写入 `TaskProgress::kind`。
 pub const DEMO_TASK_KIND: &str = "app_demo";
 
@@ -47,6 +78,114 @@ pub async fn app_info() -> Result<AppInfo, AppError> {
         arch: std::env::consts::ARCH.to_owned(),
         ms_login_enabled: tmcl_auth::ms_login_enabled(),
     })
+}
+
+/// 本项目最近的发布版本，供主页“更新日志”组件使用。
+///
+/// 1 小时内使用 SQLite 中的缓存；获取失败时退回旧缓存，没有缓存则返回获取时的错误
+/// （网络错误为 `NET_*`，响应不是预期的 JSON 为 `COMMON_JSON`）。草稿不会出现在结果中。
+#[tauri::command]
+pub async fn app_releases(state: State<'_, AppState>) -> Result<ReleaseList, AppError> {
+    load_releases(&state).await
+}
+
+/// 写入 kv 表的缓存内容。
+#[derive(Debug, Serialize, Deserialize)]
+struct CachedReleases {
+    /// 获取时间（unix 秒）。
+    fetched_at: u64,
+    releases: Vec<ReleaseNote>,
+}
+
+/// GitHub `GET /repos/{owner}/{repo}/releases` 响应中用到的字段。
+#[derive(Debug, Deserialize)]
+struct GithubRelease {
+    tag_name: String,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    published_at: Option<String>,
+    #[serde(default)]
+    prerelease: bool,
+    #[serde(default)]
+    draft: bool,
+    html_url: String,
+}
+
+async fn load_releases(state: &AppState) -> AppResult<ReleaseList> {
+    let now = unix_now();
+    let cached = state
+        .with_db(|_, db| db.kv_get(RELEASES_CACHE_KEY))
+        .inspect_err(|e| tracing::warn!(error = %e, "读取发布版本缓存失败"))
+        .ok()
+        .flatten()
+        .and_then(|body| serde_json::from_str::<CachedReleases>(&body).ok());
+    if let Some(cached) = &cached
+        && now.saturating_sub(cached.fetched_at) < RELEASES_MAX_AGE.as_secs()
+    {
+        return Ok(ReleaseList {
+            releases: cached.releases.clone(),
+        });
+    }
+    match fetch_releases(state).await {
+        Ok(releases) => {
+            let body = serde_json::to_string(&CachedReleases {
+                fetched_at: now,
+                releases: releases.clone(),
+            })?;
+            if let Err(e) = state.with_db(|_, db| db.kv_set(RELEASES_CACHE_KEY, &body)) {
+                tracing::warn!(error = %e, "写入发布版本缓存失败");
+            }
+            Ok(ReleaseList { releases })
+        }
+        Err(e) => match cached {
+            Some(cached) => {
+                tracing::warn!(error = %e, "获取发布版本失败，使用旧缓存");
+                Ok(ReleaseList {
+                    releases: cached.releases,
+                })
+            }
+            None => Err(e),
+        },
+    }
+}
+
+async fn fetch_releases(state: &AppState) -> AppResult<Vec<ReleaseNote>> {
+    let ctx = TaskCtx::noop("app_releases");
+    let bytes = state
+        .downloader()?
+        .get_bytes(&state.releases_url, &ctx)
+        .await?;
+    parse_releases(&bytes).map_err(|e| e.with_param("url", &state.releases_url))
+}
+
+/// 解析 GitHub Releases 响应：去掉草稿与没有发布时间的条目，按发布时间从新到旧取前
+/// [`RELEASES_LIMIT`] 个。
+fn parse_releases(bytes: &[u8]) -> AppResult<Vec<ReleaseNote>> {
+    let raw: Vec<GithubRelease> = serde_json::from_slice(bytes)?;
+    let mut releases: Vec<ReleaseNote> = raw
+        .into_iter()
+        .filter(|r| !r.draft)
+        .filter_map(|r| {
+            Some(ReleaseNote {
+                published_at: r.published_at?,
+                name: r.name.unwrap_or_default(),
+                tag: r.tag_name,
+                prerelease: r.prerelease,
+                url: r.html_url,
+            })
+        })
+        .collect();
+    // GitHub 的发布时间都是 `Z` 结尾的 UTC 时间，按字符串比较即按时间比较。
+    releases.sort_by(|a, b| b.published_at.cmp(&a.published_at));
+    releases.truncate(RELEASES_LIMIT);
+    Ok(releases)
+}
+
+fn unix_now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
 }
 
 /// 启动一个模拟进度的演示任务，立即返回任务 ID。
@@ -94,9 +233,115 @@ async fn run_demo(ctx: TaskCtx, args: AppDemoTaskArgs) -> AppResult<()> {
 mod tests {
     use std::sync::Arc;
 
-    use tmcl_common::VecSink;
+    use tmcl_common::{DataPaths, VecSink};
+    use tmcl_net::testing::{Fault, TestServer};
 
     use super::*;
+
+    const RELEASES: &str = r#"[
+        {"tag_name": "v0.1.0-alpha.1", "name": "Alpha 1", "draft": false, "prerelease": true,
+         "published_at": "2026-11-01T08:00:00Z",
+         "html_url": "https://github.com/Jack-TJY/TMCL/releases/tag/v0.1.0-alpha.1"},
+        {"tag_name": "v0.2.0", "name": null, "draft": false, "prerelease": false,
+         "published_at": "2026-12-01T08:00:00Z",
+         "html_url": "https://github.com/Jack-TJY/TMCL/releases/tag/v0.2.0"},
+        {"tag_name": "v0.3.0", "name": "draft", "draft": true, "prerelease": false,
+         "published_at": null,
+         "html_url": "https://github.com/Jack-TJY/TMCL/releases/tag/untagged-1"}
+    ]"#;
+
+    fn start_server() -> TestServer {
+        tauri::async_runtime::block_on(TestServer::start([(
+            "/releases",
+            RELEASES.as_bytes().to_vec(),
+        )]))
+    }
+
+    /// 指向本地服务器的状态；返回的 `TempDir` 需要活到测试结束。
+    fn releases_state(server: &TestServer) -> (AppState, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir.path())));
+        state.releases_url = server.url("/releases");
+        (state, dir)
+    }
+
+    #[test]
+    fn parses_and_sorts_releases() {
+        let releases = parse_releases(RELEASES.as_bytes()).unwrap();
+        let tags: Vec<&str> = releases.iter().map(|r| r.tag.as_str()).collect();
+        assert_eq!(tags, ["v0.2.0", "v0.1.0-alpha.1"]);
+        assert_eq!(releases[0].name, "");
+        assert!(releases[1].prerelease);
+        assert_eq!(
+            releases[1].url,
+            "https://github.com/Jack-TJY/TMCL/releases/tag/v0.1.0-alpha.1"
+        );
+    }
+
+    #[test]
+    fn keeps_at_most_limit_releases() {
+        let many: Vec<String> = (1..=15)
+            .map(|i| {
+                format!(
+                    r#"{{"tag_name": "v0.{i}.0", "published_at": "2026-01-{i:02}T00:00:00Z", "html_url": "u"}}"#
+                )
+            })
+            .collect();
+        let body = format!("[{}]", many.join(","));
+        let releases = parse_releases(body.as_bytes()).unwrap();
+        assert_eq!(releases.len(), RELEASES_LIMIT);
+        assert_eq!(releases[0].tag, "v0.15.0");
+    }
+
+    #[test]
+    fn rejects_unexpected_json() {
+        let err = parse_releases(br#"{"message": "Not Found"}"#).unwrap_err();
+        assert_eq!(err.code, ErrorCode::CommonJson);
+    }
+
+    #[test]
+    fn releases_are_cached() {
+        let server = start_server();
+        let (state, _dir) = releases_state(&server);
+        let first = tauri::async_runtime::block_on(load_releases(&state)).unwrap();
+        assert_eq!(first.releases.len(), 2);
+        let again = tauri::async_runtime::block_on(load_releases(&state)).unwrap();
+        assert_eq!(again, first);
+        assert_eq!(server.hits(), 1);
+    }
+
+    #[test]
+    fn stale_cache_is_used_when_fetch_fails() {
+        let server = start_server();
+        let (state, _dir) = releases_state(&server);
+        let stale = CachedReleases {
+            fetched_at: 0,
+            releases: vec![ReleaseNote {
+                tag: "v0.0.1".into(),
+                name: "old".into(),
+                published_at: "2026-01-01T00:00:00Z".into(),
+                prerelease: false,
+                url: "u".into(),
+            }],
+        };
+        let body = serde_json::to_string(&stale).unwrap();
+        state
+            .with_db(|_, db| db.kv_set(RELEASES_CACHE_KEY, &body))
+            .unwrap();
+        server.fail("/releases", [Fault::Status(403)]);
+        let list = tauri::async_runtime::block_on(load_releases(&state)).unwrap();
+        assert_eq!(list.releases, stale.releases);
+    }
+
+    #[test]
+    fn fetch_error_without_cache_is_returned() {
+        let server = start_server();
+        let (state, _dir) = releases_state(&server);
+        server.fail("/releases", [Fault::Status(403)]);
+        let err = tauri::async_runtime::block_on(load_releases(&state)).unwrap_err();
+        assert_eq!(err.code, ErrorCode::NetHttpStatus);
+        assert_eq!(err.params["status"], "403");
+    }
 
     fn args(steps: u32, fail_at: Option<u32>) -> AppDemoTaskArgs {
         AppDemoTaskArgs {
