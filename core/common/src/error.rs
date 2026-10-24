@@ -21,8 +21,12 @@ pub enum ErrorCode {
     AppearanceImageMissing,
     /// 背景图片不是 png/jpg/webp，或超过大小上限。
     AppearanceImageUnsupported,
+    /// 找不到该账号（已被删除或 ID 无效）。
+    AuthAccountNotFound,
     /// 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$`。
     AuthOfflineInvalidName,
+    /// 无法读写系统密钥库（Windows 凭据管理器、macOS 钥匙串、Linux Secret Service）。
+    AuthSecretStore,
     /// 任务被用户或上层取消。
     CommonCancelled,
     /// 配置文件的 `schema` 高于当前程序支持的版本。
@@ -99,7 +103,9 @@ impl ErrorCode {
         match self {
             Self::AppearanceImageMissing => "APPEARANCE_IMAGE_MISSING",
             Self::AppearanceImageUnsupported => "APPEARANCE_IMAGE_UNSUPPORTED",
+            Self::AuthAccountNotFound => "AUTH_ACCOUNT_NOT_FOUND",
             Self::AuthOfflineInvalidName => "AUTH_OFFLINE_INVALID_NAME",
+            Self::AuthSecretStore => "AUTH_SECRET_STORE",
             Self::CommonCancelled => "COMMON_CANCELLED",
             Self::CommonConfigSchemaUnsupported => "COMMON_CONFIG_SCHEMA_UNSUPPORTED",
             Self::CommonDataDirUnavailable => "COMMON_DATA_DIR_UNAVAILABLE",
@@ -219,7 +225,9 @@ mod tests {
         for code in [
             ErrorCode::AppearanceImageMissing,
             ErrorCode::AppearanceImageUnsupported,
+            ErrorCode::AuthAccountNotFound,
             ErrorCode::AuthOfflineInvalidName,
+            ErrorCode::AuthSecretStore,
             ErrorCode::CommonCancelled,
             ErrorCode::CommonConfigSchemaUnsupported,
             ErrorCode::CommonDataDirUnavailable,

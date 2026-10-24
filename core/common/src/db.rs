@@ -39,6 +39,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "0002_instance_index",
         sql: include_str!("../migrations/0002_instance_index.sql"),
     },
+    Migration {
+        version: 3,
+        name: "0003_accounts",
+        sql: include_str!("../migrations/0003_accounts.sql"),
+    },
 ];
 
 /// 已打开并完成迁移的数据库连接。

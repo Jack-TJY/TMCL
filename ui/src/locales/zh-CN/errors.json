@@ -1,7 +1,9 @@
 {
   "APPEARANCE_IMAGE_MISSING": "背景图片 {image} 不存在，已改用默认背景",
   "APPEARANCE_IMAGE_UNSUPPORTED": "只支持不超过 {max_mb} MB 的 PNG、JPG、WebP 图片",
+  "AUTH_ACCOUNT_NOT_FOUND": "找不到该账号，请刷新账号列表",
   "AUTH_OFFLINE_INVALID_NAME": "用户名只能包含 3–16 个字母、数字或下划线",
+  "AUTH_SECRET_STORE": "无法访问系统密钥库，登录信息没有保存",
   "COMMON_CANCELLED": "操作已取消",
   "COMMON_CONFIG_SCHEMA_UNSUPPORTED": "配置文件版本 {schema} 不受支持（当前支持 {supported}）",
   "COMMON_DATA_DIR_UNAVAILABLE": "无法访问数据目录 {path}",

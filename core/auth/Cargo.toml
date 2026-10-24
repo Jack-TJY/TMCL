@@ -8,8 +8,12 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+keyring = { workspace = true }
 md-5 = { workspace = true }
+rusqlite = { workspace = true }
+serde = { workspace = true }
 tmcl-common = { path = "../common" }
+ts-rs = { workspace = true }
 uuid = { workspace = true }
 
 [build-dependencies]
