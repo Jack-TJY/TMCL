@@ -9,6 +9,17 @@ use crate::error::{AppError, AppResult, ErrorCode};
 /// 数据目录相对启动器安装目录的名字。
 pub const DATA_DIR_NAME: &str = "tmcl-data";
 
+/// [`DataPaths::resolve_linux`] 用到的环境变量。
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LinuxEnv {
+    /// `$APPIMAGE`：AppImage 运行时指向 `.AppImage` 文件本身。
+    pub appimage: Option<PathBuf>,
+    /// `$XDG_DATA_HOME`。
+    pub xdg_data_home: Option<PathBuf>,
+    /// `$HOME`。
+    pub home: Option<PathBuf>,
+}
+
 /// 启动器数据目录及其中各固定路径。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataPaths {
@@ -17,11 +28,50 @@ pub struct DataPaths {
 
 impl DataPaths {
     /// 按当前 exe 位置解析数据目录：启动器安装目录下的 `tmcl-data/`。
+    ///
+    /// Linux 上另有两种安装方式，规则见 [`resolve_linux`](Self::resolve_linux)。
     pub fn resolve() -> AppResult<Self> {
         let exe = std::env::current_exe().map_err(|e| {
             AppError::new(ErrorCode::CommonDataDirUnavailable).with_detail(e.to_string())
         })?;
+        if cfg!(target_os = "linux") {
+            let env = LinuxEnv {
+                appimage: std::env::var_os("APPIMAGE").map(PathBuf::from),
+                xdg_data_home: std::env::var_os("XDG_DATA_HOME").map(PathBuf::from),
+                home: std::env::var_os("HOME").map(PathBuf::from),
+            };
+            return Self::resolve_linux(&exe, &env);
+        }
         Self::resolve_from_exe(&exe)
+    }
+
+    /// Linux 版的 [`resolve`](Self::resolve)，环境变量由参数给出，便于测试。
+    ///
+    /// - AppImage 运行时 exe 位于只读的挂载目录，数据放在 `.AppImage` 文件所在目录
+    ///   （`$APPIMAGE` 的父目录）。
+    /// - deb 等系统包把 exe 装到 `/usr/` 下，该目录普通用户不可写，数据放在
+    ///   `$XDG_DATA_HOME/tmcl-data/`，未设置时为 `~/.local/share/tmcl-data/`。
+    /// - 其他情况与 [`resolve_from_exe`](Self::resolve_from_exe) 相同。
+    ///
+    /// 不是绝对路径的环境变量按未设置处理。
+    pub fn resolve_linux(exe: &Path, env: &LinuxEnv) -> AppResult<Self> {
+        let absolute = |p: &Option<PathBuf>| p.clone().filter(|p| p.has_root());
+        if let Some(appimage) = absolute(&env.appimage) {
+            return Self::resolve_from_exe(&appimage);
+        }
+        if exe.starts_with("/usr") {
+            let data_home = absolute(&env.xdg_data_home)
+                .or_else(|| absolute(&env.home).map(|home| home.join(".local/share")))
+                .ok_or_else(|| {
+                    AppError::new(ErrorCode::CommonDataDirUnavailable)
+                        .with_param("path", exe.display())
+                        .with_detail("系统安装但没有 XDG_DATA_HOME 与 HOME")
+                })?;
+            return Ok(Self {
+                root: data_home.join(DATA_DIR_NAME),
+            });
+        }
+        Self::resolve_from_exe(exe)
     }
 
     /// [`resolve`](Self::resolve) 的纯函数版本，便于测试。
@@ -239,6 +289,65 @@ mod tests {
             paths.root(),
             Path::new("/opt/Contents/MacOS").join(DATA_DIR_NAME)
         );
+    }
+
+    #[test]
+    fn appimage_uses_folder_containing_appimage_file() {
+        let env = LinuxEnv {
+            appimage: Some("/home/u/Games/TMCL_0.1.0_amd64.AppImage".into()),
+            home: Some("/home/u".into()),
+            ..LinuxEnv::default()
+        };
+        let exe = Path::new("/tmp/.mount_TMCLab12/usr/bin/tmcl");
+        let paths = DataPaths::resolve_linux(exe, &env).unwrap();
+        assert_eq!(paths.root(), Path::new("/home/u/Games").join(DATA_DIR_NAME));
+    }
+
+    #[test]
+    fn relative_appimage_is_ignored() {
+        let env = LinuxEnv {
+            appimage: Some("TMCL.AppImage".into()),
+            ..LinuxEnv::default()
+        };
+        let paths = DataPaths::resolve_linux(Path::new("/opt/tmcl/tmcl"), &env).unwrap();
+        assert_eq!(paths.root(), Path::new("/opt/tmcl").join(DATA_DIR_NAME));
+    }
+
+    #[test]
+    fn system_install_uses_xdg_data_home() {
+        let exe = Path::new("/usr/bin/tmcl");
+        let env = LinuxEnv {
+            xdg_data_home: Some("/data/xdg".into()),
+            home: Some("/home/u".into()),
+            ..LinuxEnv::default()
+        };
+        let paths = DataPaths::resolve_linux(exe, &env).unwrap();
+        assert_eq!(paths.root(), Path::new("/data/xdg").join(DATA_DIR_NAME));
+
+        let env = LinuxEnv {
+            xdg_data_home: Some("relative".into()),
+            home: Some("/home/u".into()),
+            ..LinuxEnv::default()
+        };
+        let paths = DataPaths::resolve_linux(exe, &env).unwrap();
+        assert_eq!(
+            paths.root(),
+            Path::new("/home/u/.local/share").join(DATA_DIR_NAME)
+        );
+    }
+
+    #[test]
+    fn system_install_without_home_is_error() {
+        let exe = Path::new("/usr/bin/tmcl");
+        let err = DataPaths::resolve_linux(exe, &LinuxEnv::default()).unwrap_err();
+        assert_eq!(err.code, ErrorCode::CommonDataDirUnavailable);
+    }
+
+    #[test]
+    fn portable_linux_exe_keeps_exe_dir() {
+        let exe = Path::new("/opt/tmcl/tmcl");
+        let paths = DataPaths::resolve_linux(exe, &LinuxEnv::default()).unwrap();
+        assert_eq!(paths.root(), Path::new("/opt/tmcl").join(DATA_DIR_NAME));
     }
 
     #[test]

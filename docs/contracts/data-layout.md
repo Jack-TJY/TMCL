@@ -10,7 +10,10 @@
 | --- | --- | --- |
 | Windows / Linux | exe 所在目录 | `<exe 所在目录>/tmcl-data/` |
 | macOS | `TMCL.app` 所在目录（不写进应用包，避免破坏签名） | `<.app 所在目录>/tmcl-data/` |
+| Linux AppImage | `.AppImage` 文件所在目录（运行时挂载目录只读） | `<$APPIMAGE 所在目录>/tmcl-data/` |
+| Linux 系统包（deb 等，exe 位于 `/usr/` 下） | `/usr/bin`，普通用户不可写 | `$XDG_DATA_HOME/tmcl-data/`，未设置时为 `~/.local/share/tmcl-data/` |
 
+- Linux 上由 `DataPaths::resolve_linux()` 按上表判断：`$APPIMAGE` 为绝对路径时视为 AppImage；否则 exe 位于 `/usr/` 下视为系统包；其余按 exe 所在目录。不是绝对路径的环境变量按未设置处理（维护者待确认，M1-16）。
 - 安装目录不可写时，`DataPaths::ensure_dirs()` 返回 `COMMON_DATA_DIR_UNAVAILABLE`。打包配置需保证默认安装到用户可写的位置（例如 NSIS 的 `currentUser` 模式）。
 
 ## 2. 目录结构
