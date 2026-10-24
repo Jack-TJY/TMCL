@@ -1,0 +1,8 @@
+{
+  "user_code": "TMCLTEST",
+  "device_code": "test-device-code",
+  "verification_uri": "https://www.microsoft.com/link",
+  "expires_in": 900,
+  "interval": 1,
+  "message": "To sign in, use a web browser to open the page https://www.microsoft.com/link and enter the code TMCLTEST to authenticate."
+}

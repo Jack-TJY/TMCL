@@ -13,9 +13,19 @@
 | `APPEARANCE_IMAGE_UNSUPPORTED` | app | 背景图片不是 png/jpg/webp，或超过大小上限 | `max_mb` | 只支持不超过 {max_mb} MB 的 PNG、JPG、WebP 图片 | Only PNG, JPG and WebP images up to {max_mb} MB are supported |
 | `AUTH_ACCOUNT_NOT_FOUND` | auth | 找不到该账号（已被删除或 ID 无效） | `id` | 找不到该账号，请刷新账号列表 | Account not found, please refresh the account list |
 | `AUTH_AUTHLIB_SERVER_INVALID` | auth | 地址不是有效的 Yggdrasil 皮肤站（无法解析或元数据缺少 `meta`、`skinDomains`） | `url` | {url} 不是支持外置登录的皮肤站 | {url} is not a skin site that supports external sign-in |
+| `AUTH_MC_APP_NOT_APPROVED` | auth | Minecraft 服务拒绝本启动器的 Azure 应用（`login_with_xbox` 返回 403，应用未获 Mojang 批准或批准被撤销） | — | Minecraft 服务暂未允许本启动器登录，请先使用离线账号或稍后再试 | Minecraft services have not approved this launcher yet. Use an offline account or try again later |
+| `AUTH_MC_NOT_OWNED` | auth | 账号没有购买 Minecraft: Java Edition（权益列表为空且没有玩家档案） | — | 这个微软账号没有购买 Minecraft: Java 版 | This Microsoft account does not own Minecraft: Java Edition |
+| `AUTH_MC_NO_PROFILE` | auth | 账号拥有 Minecraft 但还没有创建玩家档案（`/minecraft/profile` 返回 404） | — | 这个账号还没有设置玩家名，请先在 minecraft.net 创建档案 | This account has no player name yet. Create a profile on minecraft.net first |
+| `AUTH_MS_CODE_EXPIRED` | auth | 设备码在用户完成登录前过期（`expired_token`） | — | 登录代码已过期，请重新开始登录 | The sign-in code has expired, please start again |
+| `AUTH_MS_DECLINED` | auth | 用户在微软登录页拒绝了授权（`authorization_declined`） | — | 你拒绝了授权，登录已取消 | Authorization was declined, sign-in cancelled |
+| `AUTH_MS_DISABLED` | auth | 构建时没有注入 `TMCL_MS_CLIENT_ID`，微软登录不可用 | — | 此版本未启用微软登录 | Microsoft sign-in is not available in this build |
+| `AUTH_MS_SESSION_EXPIRED` | auth | 微软账号的刷新令牌已失效（`invalid_grant`）或密钥库中没有令牌，需要重新登录 | `name` | {name} 的登录已过期，请在“账号”页重新登录微软账号 | Sign-in for {name} has expired, please sign in with Microsoft again on the Accounts page |
 | `AUTH_NO_ACCOUNT` | auth | 没有可用于启动的账号（账号列表为空或未选默认账号） | — | 还没有可用的账号，请先在“账号”页添加 | No account available, please add one on the Accounts page |
 | `AUTH_OFFLINE_INVALID_NAME` | auth | 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$` | `name` | 用户名只能包含 3–16 个字母、数字或下划线 | Username must be 3–16 letters, digits or underscores |
 | `AUTH_SECRET_STORE` | auth | 无法读写系统密钥库（Windows 凭据管理器、macOS 钥匙串、Linux Secret Service） | — | 无法访问系统密钥库，登录信息没有保存 | Cannot access the system keychain, sign-in data was not saved |
+| `AUTH_XSTS_CHILD_ACCOUNT` | auth | XSTS 返回 `XErr` 2148916238：未成年账号需要加入家庭组 | — | 这是未成年人账号，需要由家长将其加入 Microsoft 家庭组后才能登录 | This is a child account. An adult must add it to a Microsoft family group before it can sign in |
+| `AUTH_XSTS_DENIED` | auth | XSTS 以其他 `XErr` 拒绝授权（如地区不可用、需要成人验证） | `xerr` | Xbox Live 拒绝了登录（错误 {xerr}），请在 xbox.com 登录一次检查账号状态 | Xbox Live refused the sign-in (error {xerr}). Sign in once at xbox.com to check your account |
+| `AUTH_XSTS_NO_XBOX_ACCOUNT` | auth | XSTS 返回 `XErr` 2148916233：微软账号还没有 Xbox 档案 | — | 这个微软账号还没有 Xbox 档案，请先在 xbox.com 登录一次创建 | This Microsoft account has no Xbox profile yet. Sign in once at xbox.com to create one |
 | `AUTH_YGGDRASIL_INVALID_CREDENTIALS` | auth | 皮肤站拒绝登录（账号或密码错误，或登录过于频繁） | — | 账号或密码错误，或登录太频繁，请稍后再试 | Wrong email or password, or too many attempts. Please try again later |
 | `AUTH_YGGDRASIL_NO_PROFILE` | auth | 皮肤站账号下没有角色 | — | 这个账号还没有角色，请先在皮肤站创建角色 | This account has no player profile yet. Create one on the skin site first |
 | `AUTH_YGGDRASIL_SESSION_EXPIRED` | auth | 外置登录的令牌已失效且无法刷新，需要重新输入密码 | `name` | {name} 的登录已过期，请在“账号”页重新登录 | Sign-in for {name} has expired, please sign in again on the Accounts page |

@@ -25,12 +25,32 @@ pub enum ErrorCode {
     AuthAccountNotFound,
     /// 地址不是有效的 Yggdrasil 皮肤站（无法解析或元数据缺少 `meta`、`skinDomains`）。
     AuthAuthlibServerInvalid,
+    /// Minecraft 服务拒绝本启动器的 Azure 应用（`login_with_xbox` 返回 403，应用未获 Mojang 批准或批准被撤销）。
+    AuthMcAppNotApproved,
+    /// 账号拥有 Minecraft 但还没有创建玩家档案（`/minecraft/profile` 返回 404）。
+    AuthMcNoProfile,
+    /// 账号没有购买 Minecraft: Java Edition（权益列表为空且没有玩家档案）。
+    AuthMcNotOwned,
+    /// 设备码在用户完成登录前过期（`expired_token`）。
+    AuthMsCodeExpired,
+    /// 用户在微软登录页拒绝了授权（`authorization_declined`）。
+    AuthMsDeclined,
+    /// 构建时没有注入 `TMCL_MS_CLIENT_ID`，微软登录不可用。
+    AuthMsDisabled,
+    /// 微软账号的刷新令牌已失效（`invalid_grant`）或密钥库中没有令牌，需要重新登录。
+    AuthMsSessionExpired,
     /// 没有可用于启动的账号（账号列表为空或未选默认账号）。
     AuthNoAccount,
     /// 离线账号用户名不符合 `^[A-Za-z0-9_]{3,16}$`。
     AuthOfflineInvalidName,
     /// 无法读写系统密钥库（Windows 凭据管理器、macOS 钥匙串、Linux Secret Service）。
     AuthSecretStore,
+    /// XSTS 返回 `XErr` 2148916238：未成年账号需要加入家庭组。
+    AuthXstsChildAccount,
+    /// XSTS 以其他 `XErr` 拒绝授权（如地区不可用、需要成人验证）。
+    AuthXstsDenied,
+    /// XSTS 返回 `XErr` 2148916233：微软账号还没有 Xbox 档案。
+    AuthXstsNoXboxAccount,
     /// 皮肤站拒绝登录（账号或密码错误，或登录过于频繁）。
     AuthYggdrasilInvalidCredentials,
     /// 皮肤站账号下没有角色。
@@ -115,9 +135,19 @@ impl ErrorCode {
             Self::AppearanceImageUnsupported => "APPEARANCE_IMAGE_UNSUPPORTED",
             Self::AuthAccountNotFound => "AUTH_ACCOUNT_NOT_FOUND",
             Self::AuthAuthlibServerInvalid => "AUTH_AUTHLIB_SERVER_INVALID",
+            Self::AuthMcAppNotApproved => "AUTH_MC_APP_NOT_APPROVED",
+            Self::AuthMcNoProfile => "AUTH_MC_NO_PROFILE",
+            Self::AuthMcNotOwned => "AUTH_MC_NOT_OWNED",
+            Self::AuthMsCodeExpired => "AUTH_MS_CODE_EXPIRED",
+            Self::AuthMsDeclined => "AUTH_MS_DECLINED",
+            Self::AuthMsDisabled => "AUTH_MS_DISABLED",
+            Self::AuthMsSessionExpired => "AUTH_MS_SESSION_EXPIRED",
             Self::AuthNoAccount => "AUTH_NO_ACCOUNT",
             Self::AuthOfflineInvalidName => "AUTH_OFFLINE_INVALID_NAME",
             Self::AuthSecretStore => "AUTH_SECRET_STORE",
+            Self::AuthXstsChildAccount => "AUTH_XSTS_CHILD_ACCOUNT",
+            Self::AuthXstsDenied => "AUTH_XSTS_DENIED",
+            Self::AuthXstsNoXboxAccount => "AUTH_XSTS_NO_XBOX_ACCOUNT",
             Self::AuthYggdrasilInvalidCredentials => "AUTH_YGGDRASIL_INVALID_CREDENTIALS",
             Self::AuthYggdrasilNoProfile => "AUTH_YGGDRASIL_NO_PROFILE",
             Self::AuthYggdrasilSessionExpired => "AUTH_YGGDRASIL_SESSION_EXPIRED",
@@ -242,9 +272,19 @@ mod tests {
             ErrorCode::AppearanceImageUnsupported,
             ErrorCode::AuthAccountNotFound,
             ErrorCode::AuthAuthlibServerInvalid,
+            ErrorCode::AuthMcAppNotApproved,
+            ErrorCode::AuthMcNoProfile,
+            ErrorCode::AuthMcNotOwned,
+            ErrorCode::AuthMsCodeExpired,
+            ErrorCode::AuthMsDeclined,
+            ErrorCode::AuthMsDisabled,
+            ErrorCode::AuthMsSessionExpired,
             ErrorCode::AuthNoAccount,
             ErrorCode::AuthOfflineInvalidName,
             ErrorCode::AuthSecretStore,
+            ErrorCode::AuthXstsChildAccount,
+            ErrorCode::AuthXstsDenied,
+            ErrorCode::AuthXstsNoXboxAccount,
             ErrorCode::AuthYggdrasilInvalidCredentials,
             ErrorCode::AuthYggdrasilNoProfile,
             ErrorCode::AuthYggdrasilSessionExpired,

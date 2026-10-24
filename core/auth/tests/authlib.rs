@@ -1,7 +1,6 @@
 //! 外置登录的离线测试：本地模拟一个 Yggdrasil 皮肤站（含 ALI 响应头与 POST 接口）。
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+mod support;
 
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -11,141 +10,26 @@ use tmcl_auth::yggdrasil::{Profile, Session, Yggdrasil, resolve_server};
 use tmcl_auth::{MemorySecretStore, SecretStore};
 use tmcl_common::{AppResult, Db, ErrorCode, TaskCtx};
 use tmcl_net::HttpClient;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpListener;
+
+use support::{Reply, Site, reply};
 
 const PROFILE_ID: &str = "0b6f4c2a9d3e4f8a8b1c2d3e4f5a6b7c";
 
-/// 一条预设响应：状态码、额外响应头、响应体。
-#[derive(Clone)]
-struct Reply {
-    status: u16,
-    headers: Vec<(String, String)>,
-    body: Vec<u8>,
-}
-
-fn reply(status: u16, body: impl Into<Vec<u8>>) -> Reply {
-    Reply {
-        status,
-        headers: vec![],
-        body: body.into(),
-    }
-}
-
-#[derive(Default)]
-struct State {
-    /// `"<METHOD> <path>"` → 依次使用的响应，最后一个重复使用。
-    routes: HashMap<String, Vec<Reply>>,
-    /// 收到的 POST：路径与 JSON 请求体。
-    posts: Vec<(String, Value)>,
-}
-
-struct Site {
-    base: String,
-    state: Arc<Mutex<State>>,
-}
-
-impl Site {
-    async fn start() -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let base = format!("http://{}", listener.local_addr().unwrap());
-        let state = Arc::new(Mutex::new(State::default()));
-        let shared = state.clone();
-        tokio::spawn(async move {
-            while let Ok((mut socket, _)) = listener.accept().await {
-                let state = shared.clone();
-                tokio::spawn(async move {
-                    let mut buf = Vec::new();
-                    let mut chunk = [0u8; 4096];
-                    let head_end = loop {
-                        let n = socket.read(&mut chunk).await.unwrap_or(0);
-                        if n == 0 {
-                            return;
-                        }
-                        buf.extend_from_slice(&chunk[..n]);
-                        if let Some(i) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
-                            break i + 4;
-                        }
-                    };
-                    let head = String::from_utf8_lossy(&buf[..head_end]).to_string();
-                    let mut lines = head.lines();
-                    let mut first = lines.next().unwrap_or_default().split(' ');
-                    let method = first.next().unwrap_or_default().to_owned();
-                    let path = first.next().unwrap_or_default().to_owned();
-                    let length: usize = lines
-                        .filter_map(|l| l.split_once(':'))
-                        .find(|(k, _)| k.eq_ignore_ascii_case("content-length"))
-                        .and_then(|(_, v)| v.trim().parse().ok())
-                        .unwrap_or(0);
-                    while buf.len() < head_end + length {
-                        let n = socket.read(&mut chunk).await.unwrap_or(0);
-                        if n == 0 {
-                            break;
-                        }
-                        buf.extend_from_slice(&chunk[..n]);
-                    }
-                    let reply = {
-                        let mut s = state.lock().unwrap();
-                        if method == "POST" {
-                            let body =
-                                serde_json::from_slice(&buf[head_end..]).unwrap_or(Value::Null);
-                            s.posts.push((path.clone(), body));
-                        }
-                        match s.routes.get_mut(&format!("{method} {path}")) {
-                            Some(list) if list.len() > 1 => list.remove(0),
-                            Some(list) => list[0].clone(),
-                            None => reply(404, ""),
-                        }
-                    };
-                    let mut out = format!(
-                        "HTTP/1.1 {} X\r\ncontent-length: {}\r\ncontent-type: application/json\r\nconnection: close\r\n",
-                        reply.status,
-                        reply.body.len()
-                    );
-                    for (k, v) in &reply.headers {
-                        out.push_str(&format!("{k}: {v}\r\n"));
-                    }
-                    out.push_str("\r\n");
-                    let _ = socket.write_all(out.as_bytes()).await;
-                    let _ = socket.write_all(&reply.body).await;
-                });
-            }
-        });
-        Self { base, state }
-    }
-
-    fn url(&self, path: &str) -> String {
-        format!("{}{path}", self.base)
-    }
-
-    fn on(&self, method: &str, path: &str, replies: Vec<Reply>) {
-        self.state
-            .lock()
-            .unwrap()
-            .routes
-            .insert(format!("{method} {path}"), replies);
-    }
-
-    fn posts(&self) -> Vec<(String, Value)> {
-        self.state.lock().unwrap().posts.clone()
-    }
-
-    /// 首页经 ALI 指向 `/api/yggdrasil`，API 根返回元数据。
-    fn serve_metadata(&self) {
-        self.on(
-            "GET",
-            "/",
-            vec![Reply {
-                status: 200,
-                headers: vec![(
-                    "X-Authlib-Injector-API-Location".into(),
-                    "/api/yggdrasil/".into(),
-                )],
-                body: b"<html></html>".to_vec(),
-            }],
-        );
-        self.on("GET", "/api/yggdrasil/", vec![reply(200, metadata())]);
-    }
+/// 首页经 ALI 指向 `/api/yggdrasil`，API 根返回元数据。
+fn serve_metadata(site: &Site) {
+    site.on(
+        "GET",
+        "/",
+        vec![Reply {
+            status: 200,
+            headers: vec![(
+                "X-Authlib-Injector-API-Location".into(),
+                "/api/yggdrasil/".into(),
+            )],
+            body: b"<html></html>".to_vec(),
+        }],
+    );
+    site.on("GET", "/api/yggdrasil/", vec![reply(200, metadata())]);
 }
 
 fn metadata() -> String {
@@ -172,7 +56,7 @@ fn clients() -> (HttpClient, Yggdrasil) {
 #[tokio::test]
 async fn resolves_api_location_and_name() {
     let site = Site::start().await;
-    site.serve_metadata();
+    serve_metadata(&site);
     let (http, _) = clients();
     let server = resolve_server(&http, &site.url("/"), &ctx()).await.unwrap();
     assert_eq!(server.api_url, site.url("/api/yggdrasil"));
@@ -194,7 +78,7 @@ async fn rejects_non_yggdrasil_site() {
 #[tokio::test]
 async fn login_saves_account_and_token() -> AppResult<()> {
     let site = Site::start().await;
-    site.serve_metadata();
+    serve_metadata(&site);
     site.on(
         "POST",
         "/api/yggdrasil/authserver/authenticate",
@@ -347,7 +231,7 @@ fn stored_session(secrets: &MemorySecretStore, db: &Db, api: &str) -> String {
 #[tokio::test]
 async fn prepare_launch_refreshes_expired_token() -> AppResult<()> {
     let site = Site::start().await;
-    site.serve_metadata();
+    serve_metadata(&site);
     let api = site.url("/api/yggdrasil");
     site.on(
         "POST",

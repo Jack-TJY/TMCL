@@ -4512,6 +4512,7 @@ name = "tmcl-auth"
 version = "0.1.0"
 dependencies = [
  "dotenvy",
+ "form_urlencoded",
  "keyring",
  "md-5",
  "reqwest",
