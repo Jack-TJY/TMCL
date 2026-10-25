@@ -93,6 +93,7 @@ mod tests {
 
     use serde_json::{Value, json};
     use std::sync::Arc;
+    use tauri::ipc::InvokeResponseBody;
     use tauri::test::{
         INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets,
     };
@@ -127,6 +128,15 @@ mod tests {
         cmd: &str,
         body: Value,
     ) -> Result<Value, Value> {
+        invoke_body(webview, cmd, body).map(|body| body.deserialize::<Value>().unwrap())
+    }
+
+    /// 同 [`invoke`]，返回未解析的响应体，供返回二进制的命令使用。
+    fn invoke_body(
+        webview: &tauri::WebviewWindow<MockRuntime>,
+        cmd: &str,
+        body: Value,
+    ) -> Result<InvokeResponseBody, Value> {
         get_ipc_response(
             webview,
             InvokeRequest {
@@ -146,7 +156,6 @@ mod tests {
                 invoke_key: INVOKE_KEY.to_owned(),
             },
         )
-        .map(|body| body.deserialize::<Value>().unwrap())
     }
 
     #[test]
@@ -155,6 +164,62 @@ mod tests {
         let info = invoke(&webview, "app_info", json!({})).unwrap();
         assert_eq!(info["os"], std::env::consts::OS);
         assert_eq!(info["ms_login_enabled"], tmcl_auth::ms_login_enabled());
+    }
+
+    #[test]
+    fn app_releases_over_ipc() {
+        let releases = json!([
+            { "tag_name": "v0.1.0-alpha.1", "name": "Alpha 1", "draft": false,
+              "prerelease": true, "published_at": "2026-10-25T08:00:00Z",
+              "html_url": "https://github.com/Jack-TJY/TMCL/releases/tag/v0.1.0-alpha.1" },
+            { "tag_name": "v0.1.1", "name": null, "draft": false, "prerelease": false,
+              "published_at": "2026-11-01T08:00:00Z",
+              "html_url": "https://github.com/Jack-TJY/TMCL/releases/tag/v0.1.1" },
+            { "tag_name": "v0.2.0", "name": "draft", "draft": true, "prerelease": false,
+              "published_at": null, "html_url": "u" }
+        ]);
+        let server = tauri::async_runtime::block_on(TestServer::start([(
+            "/releases",
+            releases.to_string().into_bytes(),
+        )]));
+        let dir = tempfile::tempdir().unwrap();
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir.path())));
+        state.releases_url = server.url("/releases");
+        let (_app, webview) = mock_app_with(state);
+
+        let list = invoke(&webview, "app_releases", json!({})).unwrap();
+        let tags: Vec<&str> = list["releases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["tag"].as_str().unwrap())
+            .collect();
+        assert_eq!(tags, ["v0.1.1", "v0.1.0-alpha.1"]);
+        assert_eq!(list["releases"][0]["name"], "");
+        assert_eq!(list["releases"][1]["prerelease"], true);
+
+        // 1 小时内走 SQLite 缓存，不再联网。
+        server.fail("/releases", [Fault::Status(500)]);
+        let again = invoke(&webview, "app_releases", json!({})).unwrap();
+        assert_eq!(again, list);
+        assert_eq!(server.hits(), 1);
+    }
+
+    #[test]
+    fn app_releases_without_cache_reports_error() {
+        let server = tauri::async_runtime::block_on(TestServer::start([(
+            "/releases",
+            b"{\"message\": \"Not Found\"}".to_vec(),
+        )]));
+        let dir = tempfile::tempdir().unwrap();
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir.path())));
+        state.releases_url = server.url("/releases");
+        let (_app, webview) = mock_app_with(state);
+
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "app_releases", json!({})).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::CommonJson);
     }
 
     #[test]
@@ -492,17 +557,25 @@ mod tests {
     }
 
     #[test]
-    fn appearance_import_and_missing_background_over_ipc() {
+    fn appearance_import_read_and_missing_background_over_ipc() {
         let dir = tempfile::tempdir().unwrap();
         let paths = DataPaths::at(dir.path().join("data"));
         let (_app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
         let source = dir.path().join("photo.png");
-        std::fs::write(&source, b"\x89PNG\r\n\x1a\n").unwrap();
+        let png = b"\x89PNG\r\n\x1a\n-image-bytes".to_vec();
+        std::fs::write(&source, &png).unwrap();
 
         let body = json!({ "args": { "path": source.display().to_string() } });
         let imported = invoke(&webview, "appearance_import_background", body).unwrap();
         let image = imported["image"].as_str().unwrap();
         assert!(paths.ui_backgrounds_dir().join(image).is_file());
+
+        // 读取命令返回原始字节，前端得到 ArrayBuffer。
+        let body = json!({ "args": { "image": image } });
+        match invoke_body(&webview, "appearance_read_background", body).unwrap() {
+            InvokeResponseBody::Raw(bytes) => assert_eq!(bytes, png),
+            other => panic!("应返回二进制，实际为 {other:?}"),
+        }
 
         let body = json!({ "args": { "image": "bg-0.png" } });
         let err = invoke(&webview, "appearance_read_background", body).unwrap_err();
@@ -546,6 +619,64 @@ mod tests {
         let err: AppError = serde_json::from_value(bad.unwrap_err()).unwrap();
         assert_eq!(err.code, ErrorCode::CommonInternal);
         assert_eq!(err.params["max_mb"], "false");
+    }
+
+    #[test]
+    fn settings_language_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(DataPaths::at(dir.path()))));
+
+        // 首次启动还没有 config.json。
+        let first = invoke(&webview, "settings_get_language", json!({})).unwrap();
+        assert_eq!(first, json!({ "language": null }));
+
+        invoke(
+            &webview,
+            "settings_set_language",
+            json!({ "args": { "language": "zh-CN" } }),
+        )
+        .unwrap();
+        let saved = invoke(&webview, "settings_get_language", json!({})).unwrap();
+        assert_eq!(saved, json!({ "language": "zh-CN" }));
+
+        // 整体保存其他设置不改界面语言。
+        let mut settings = invoke(&webview, "settings_get", json!({})).unwrap()["settings"].clone();
+        settings["theme"] = json!("dark");
+        invoke(
+            &webview,
+            "settings_set",
+            json!({ "args": { "settings": settings } }),
+        )
+        .unwrap();
+        let kept = invoke(&webview, "settings_get_language", json!({})).unwrap();
+        assert_eq!(kept, saved);
+
+        for bad in ["zh_CN", "", "x".repeat(36).as_str()] {
+            let err: AppError = serde_json::from_value(
+                invoke(
+                    &webview,
+                    "settings_set_language",
+                    json!({ "args": { "language": bad } }),
+                )
+                .unwrap_err(),
+            )
+            .unwrap();
+            assert_eq!(err.code, ErrorCode::CommonInternal, "{bad}");
+        }
+        let unchanged = invoke(&webview, "settings_get_language", json!({})).unwrap();
+        assert_eq!(unchanged, saved);
+    }
+
+    /// 打开数据目录的成功路径会启动系统文件管理器，CI 中只测数据目录不可用时的错误透传。
+    #[test]
+    fn settings_open_data_dir_without_data_dir() {
+        let state = AppState::with_data(Err(AppError::new(ErrorCode::CommonDataDirUnavailable)));
+        let (_app, webview) = mock_app_with(state);
+        let err: AppError = serde_json::from_value(
+            invoke(&webview, "settings_open_data_dir", json!({})).unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(err.code, ErrorCode::CommonDataDirUnavailable);
     }
 
     fn state_with_memory_secrets(dir: &std::path::Path) -> (AppState, Arc<MemorySecretStore>) {
@@ -634,6 +765,62 @@ mod tests {
             serde_json::from_value(invoke(&webview, "auth_authlib_server", body).unwrap_err())
                 .unwrap();
         assert_eq!(err.code, ErrorCode::AuthAuthlibServerInvalid);
+    }
+
+    /// 本地服务器同时作为皮肤站首页与 Yggdrasil API 根（TestServer 不区分请求方法）。
+    fn authlib_server() -> TestServer {
+        let profile = json!({ "id": "0b6f4c2a9d3e4f8a8b1c2d3e4f5a6b7c", "name": "Steve" });
+        let metadata = json!({
+            "meta": { "serverName": "Test Skin", "implementationName": "test" },
+            "skinDomains": ["127.0.0.1"],
+            "signaturePublickey": "-----BEGIN PUBLIC KEY-----\n-----END PUBLIC KEY-----\n"
+        });
+        let session = json!({
+            "accessToken": "test-access",
+            "clientToken": "test-client",
+            "availableProfiles": [profile],
+            "selectedProfile": profile,
+        });
+        tauri::async_runtime::block_on(TestServer::start([
+            ("/", metadata.to_string().into_bytes()),
+            ("/authserver/authenticate", session.to_string().into_bytes()),
+        ]))
+    }
+
+    #[test]
+    fn auth_add_authlib_over_ipc() {
+        let server = authlib_server();
+        let api_url = server.url("");
+        let dir = tempfile::tempdir().unwrap();
+        let (state, secrets) = state_with_memory_secrets(dir.path());
+        let (_app, webview) = mock_app_with(state);
+
+        let body = json!({ "args": { "api_url": server.url("/") } });
+        let resolved = invoke(&webview, "auth_authlib_server", body).unwrap();
+        assert_eq!(resolved, json!({ "api_url": api_url, "name": "Test Skin" }));
+
+        invoke(
+            &webview,
+            "auth_add_offline",
+            json!({ "args": { "name": "Dev" } }),
+        )
+        .unwrap();
+        let body = json!({ "args": { "api_url": server.url("/"),
+            "username": "steve@example.com", "password": "secret" } });
+        let account = invoke(&webview, "auth_add_authlib", body).unwrap();
+        assert_eq!(account["kind"], "authlib");
+        assert_eq!(account["name"], "Steve");
+        assert_eq!(account["uuid"], "0b6f4c2a-9d3e-4f8a-8b1c-2d3e4f5a6b7c");
+        assert_eq!(account["server"], resolved);
+
+        let list = invoke(&webview, "auth_list", json!({})).unwrap();
+        assert_eq!(list["accounts"].as_array().unwrap().len(), 2);
+        assert_eq!(list["default_id"], account["id"]);
+        let stored = tmcl_auth::accounts::secret(secrets.as_ref(), account["id"].as_str().unwrap())
+            .unwrap()
+            .unwrap();
+        assert!(stored.contains("test-access"));
+        assert!(!stored.contains("secret"), "密码不应保存");
     }
 
     /// 本地服务器模拟整条微软登录链路（TestServer 不区分请求方法）。
