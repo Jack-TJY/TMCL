@@ -4,7 +4,7 @@
 
 TMCL 是一个开源、跨平台的我的世界（Java 版）启动器。下载游戏、安装模组和整合包、换皮肤、管理多版本、和朋友联机，都在一个客户端里完成。
 
-> ⚠️ 项目处于早期规划阶段，还没有可用的版本。设计细节见 [TMCL 项目大纲](TMCL%20项目大纲.md)。
+> ⚠️ 当前为 Alpha 预览版，已能下载并启动游戏（含 Forge、NeoForge、Fabric、Quilt）和使用三种账号，其余功能仍在开发中，可能存在问题。设计细节见 [TMCL 项目大纲](TMCL%20项目大纲.md)，测试结果与已知问题见 [Alpha 测试矩阵](docs/testing/alpha-matrix.md)。
 >
 > TMCL 是非官方启动器，与 Mojang Studios 和 Microsoft 没有关联。
 
@@ -53,7 +53,7 @@ TMCL 是一个开源、跨平台的我的世界（Java 版）启动器。下载�
 
 ## 开发
 
-项目代码尚未建立，以下为计划中的约定。
+开发流程与分工见 [AGENTS.md](AGENTS.md) 与 [开发计划](docs/PLAN.md)。
 
 ### 微软登录 Client ID
 
@@ -85,7 +85,7 @@ TMCL 是一个开源、跨平台的我的世界（Java 版）启动器。下载�
 
 TMCL is an open-source, cross-platform launcher for Minecraft: Java Edition. Downloading the game, installing mods and modpacks, changing skins, managing multiple instances and playing with friends all happen in one client.
 
-> ⚠️ The project is in early planning and has no usable release yet. See the [project outline](TMCL%20项目大纲.md) (Chinese) for the design.
+> ⚠️ TMCL is in alpha. It can download and launch the game (including Forge, NeoForge, Fabric and Quilt) with all three account types; other features are still in development and may have issues. See the [project outline](TMCL%20项目大纲.md) (Chinese) for the design and the [alpha test matrix](docs/testing/alpha-matrix.md) (Chinese) for test results and known issues.
 >
 > TMCL is an unofficial launcher and is not affiliated with Mojang Studios or Microsoft.
 
