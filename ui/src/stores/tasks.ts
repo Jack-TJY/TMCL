@@ -17,6 +17,8 @@ export interface TaskEntry extends TaskInfo {
   label: string | null;
   /** 可以重试时为重新开始任务的函数。 */
   restart: (() => Promise<TaskStarted>) | null;
+  /** 正在安装或修改的实例；任务运行期间该实例不能启动，见 `installing`。 */
+  instanceId: string | null;
 }
 
 /** 由界面发起的任务。 */
@@ -25,6 +27,8 @@ export interface TaskRequest {
   label: string | null;
   /** 调用对应命令并返回任务 ID；重试时会再次调用。 */
   start: () => Promise<TaskStarted>;
+  /** 任务会安装或修改这个实例的游戏文件时填写（例如安装版本、加载器）。 */
+  instanceId?: string | null;
 }
 
 function blank(taskId: TaskId, kind: string): TaskEntry {
@@ -38,6 +42,7 @@ function blank(taskId: TaskId, kind: string): TaskEntry {
     error: null,
     label: null,
     restart: null,
+    instanceId: null,
   };
 }
 
@@ -48,6 +53,16 @@ export const useTasksStore = defineStore("tasks", () => {
   let initialized: Promise<void> | null = null;
 
   const running = computed(() => entries.value.filter((e) => e.status === "running"));
+
+  /** 正在安装、文件还不完整的实例 ID。 */
+  const installingIds = computed(
+    () => new Set(running.value.flatMap((e) => (e.instanceId ? [e.instanceId] : []))),
+  );
+
+  /** 实例是否有运行中的安装任务；此时不能启动。 */
+  function installing(instanceId: string): boolean {
+    return installingIds.value.has(instanceId);
+  }
 
   /** 所有运行中任务的总体进度（0–1）；没有可计算的进度时为 `null`。 */
   const overallProgress = computed(() => {
@@ -98,7 +113,8 @@ export const useTasksStore = defineStore("tasks", () => {
         const { tasks } = await taskList();
         const known = new Set(entries.value.map((e) => e.task_id));
         for (const task of tasks) {
-          if (!known.has(task.task_id)) entries.value.push({ ...task, label: null, restart: null });
+          if (!known.has(task.task_id))
+            entries.value.push({ ...task, label: null, restart: null, instanceId: null });
         }
       } catch {
         // 在浏览器中调试时没有后端。
@@ -120,6 +136,7 @@ export const useTasksStore = defineStore("tasks", () => {
     }
     entry.label = request.label;
     entry.restart = request.start;
+    entry.instanceId = request.instanceId ?? null;
     const finished = early.get(task_id);
     if (finished) {
       early.delete(task_id);
@@ -132,7 +149,12 @@ export const useTasksStore = defineStore("tasks", () => {
   async function retry(taskId: TaskId): Promise<TaskId | null> {
     const entry = find(taskId);
     if (!entry?.restart || entry.status === "running") return null;
-    const id = await start({ kind: entry.kind, label: entry.label, start: entry.restart });
+    const id = await start({
+      kind: entry.kind,
+      label: entry.label,
+      start: entry.restart,
+      instanceId: entry.instanceId,
+    });
     dismiss(taskId);
     return id;
   }
@@ -156,6 +178,7 @@ export const useTasksStore = defineStore("tasks", () => {
     entries,
     running,
     overallProgress,
+    installing,
     init,
     start,
     retry,

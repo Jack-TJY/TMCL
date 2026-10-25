@@ -57,11 +57,13 @@ async function confirm() {
             kind: LOADER_INSTALL_KIND,
             label: instanceName,
             start: () => loaderInstall({ instance_id: instance.id, ...spec }),
+            instanceId: instance.id,
           }
         : {
             kind: GAME_INSTALL_KIND,
             label: instanceName,
             start: () => gameInstall({ version_id: version.id }),
+            instanceId: instance.id,
           },
     );
     message.success(t("download.install.started", { name: instanceName }));

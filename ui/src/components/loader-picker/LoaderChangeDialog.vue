@@ -60,6 +60,7 @@ async function confirm() {
         kind: LOADER_INSTALL_KIND,
         label: instance.name,
         start: () => loaderInstall({ instance_id: instance.id, ...next }),
+        instanceId: instance.id,
       });
       emit("started", taskId);
       message.success(t("loaderPicker.change.started", { name: instance.name }));

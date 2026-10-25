@@ -5,6 +5,7 @@
   "create": "New instance",
   "play": "Play",
   "running": "Game running",
+  "installing": "Installing…",
   "lastPlayed": "Last played {date}",
   "neverPlayed": "Not played yet",
   "failed": "Couldn't launch {name}: {reason}",

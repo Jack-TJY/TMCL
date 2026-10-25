@@ -5,6 +5,7 @@
   "create": "新建实例",
   "play": "开始游戏",
   "running": "游戏运行中",
+  "installing": "正在安装…",
   "lastPlayed": "上次游玩 {date}",
   "neverPlayed": "尚未游玩",
   "failed": "启动 {name} 失败：{reason}",

@@ -10,6 +10,7 @@ import { toAppError } from "../../api/invoke";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import { isActive, useGameSessions } from "../../components/game-log/sessions";
 import { formatError } from "../../i18n";
+import { useTasksStore } from "../../stores/tasks";
 import { versionLabel } from "../instance-label";
 import type { WidgetProps } from "../types";
 
@@ -18,6 +19,7 @@ const { t, d } = useI18n();
 const router = useRouter();
 const message = useMessage();
 const games = useGameSessions();
+const tasks = useTasksStore();
 
 const instances = ref<InstanceSummary[] | null>(null);
 const preparing = ref(false);
@@ -38,10 +40,12 @@ const target = computed(() => {
 });
 const session = computed(() => (target.value ? games.sessions[target.value.id] : undefined));
 const running = computed(() => isActive(session.value));
+/** 实例还在安装时不能启动。 */
+const installing = computed(() => (target.value ? tasks.installing(target.value.id) : false));
 
 async function launch() {
   const instance = target.value;
-  if (!instance || preparing.value || running.value) return;
+  if (!instance || preparing.value || running.value || installing.value) return;
   preparing.value = true;
   try {
     await games.launch({ id: instance.id, name: instance.name });
@@ -80,13 +84,19 @@ async function launch() {
       size="large"
       class="play"
       :loading="preparing || session?.status === 'starting'"
-      :disabled="running"
+      :disabled="running || installing"
       @click="launch"
     >
       <template #icon>
         <NIcon><Play20Filled /></NIcon>
       </template>
-      {{ running ? t("widget-start-game.running") : t("widget-start-game.play") }}
+      {{
+        running
+          ? t("widget-start-game.running")
+          : installing
+            ? t("widget-start-game.installing")
+            : t("widget-start-game.play")
+      }}
     </NButton>
   </div>
 </template>
