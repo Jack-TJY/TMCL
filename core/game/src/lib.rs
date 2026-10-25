@@ -18,8 +18,8 @@ pub use install::{
 };
 pub use libraries::{GameFile, library_files, library_items};
 pub use manifest::{
-    MANIFEST_MAX_AGE, MANIFEST_URL, ManifestEntry, ManifestPolicy, ManifestStore, VersionManifest,
-    VersionType, load_manifest,
+    LoadedManifest, MANIFEST_MAX_AGE, MANIFEST_URL, ManifestEntry, ManifestPolicy, ManifestStore,
+    VersionManifest, VersionType, load_manifest, load_manifest_checked,
 };
 pub use natives::{extract_natives, new_natives_dir};
 pub use rules::{RuleEnv, rules_allow};

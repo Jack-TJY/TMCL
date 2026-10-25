@@ -34,6 +34,7 @@
     "cancelled": "已取消"
   },
   "speed": "{speed}/s",
+  "stalled": "网络可能已中断，正在等待重连…",
   "action": {
     "cancel": "取消",
     "retry": "重试",

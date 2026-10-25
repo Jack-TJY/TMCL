@@ -34,6 +34,7 @@
     "cancelled": "Cancelled"
   },
   "speed": "{speed}/s",
+  "stalled": "Connection may be lost, waiting to reconnect…",
   "action": {
     "cancel": "Cancel",
     "retry": "Retry",

@@ -14,7 +14,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 import type { AppError } from "../bindings/AppError";
 import type { TaskInfo } from "../bindings/TaskInfo";
 import type { TaskProgress } from "../bindings/TaskProgress";
-import { useTasksStore } from "./tasks";
+import { isStalled, STALL_MS, useTasksStore } from "./tasks";
 
 function emit(name: string, payload: unknown) {
   listeners.get(name)?.({ payload });
@@ -121,6 +121,38 @@ describe("tasks store", () => {
     expect(store.installing("inst")).toBe(true);
     emit("task:finished", { task_id: "b", state: "succeeded" });
     expect(store.installing("inst")).toBe(false);
+  });
+
+  it("detects a running task whose progress stopped advancing", async () => {
+    vi.useFakeTimers();
+    try {
+      tauriInvoke.mockResolvedValueOnce({ tasks: [] });
+      const store = useTasksStore();
+      await store.start({
+        kind: "game_install",
+        label: "x",
+        start: async () => ({ task_id: "s" }),
+      });
+      const entry = () => store.entries[0];
+      // 还没有进度时不算停滞（仍在准备）。
+      expect(isStalled(entry(), Date.now() + STALL_MS)).toBe(false);
+
+      emit("task:progress", progress("s", 10, 100));
+      vi.advanceTimersByTime(STALL_MS - 1);
+      expect(isStalled(entry(), Date.now())).toBe(false);
+      // 只有速度变化、字节数不变的进度事件不算前进。
+      emit("task:progress", { ...progress("s", 10, 100), speed_bps: 0 });
+      vi.advanceTimersByTime(1);
+      expect(isStalled(entry(), Date.now())).toBe(true);
+
+      emit("task:progress", progress("s", 20, 100));
+      expect(isStalled(entry(), Date.now())).toBe(false);
+
+      emit("task:finished", { task_id: "s", state: "failed", error: NETWORK_ERROR });
+      expect(isStalled(entry(), Date.now() + STALL_MS)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not retry running tasks", async () => {

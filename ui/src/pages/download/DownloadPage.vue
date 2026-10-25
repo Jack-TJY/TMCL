@@ -35,11 +35,12 @@ const filter = ref<VersionFilter>("release");
 const query = ref("");
 const selected = ref<GameVersion | null>(null);
 
-async function load() {
+/** 读取版本列表；`refresh` 为真（点“刷新”）时强制联网。 */
+async function load(refresh = false) {
   loading.value = true;
   error.value = null;
   try {
-    list.value = await gameVersionList();
+    list.value = await gameVersionList(refresh ? { refresh } : undefined);
   } catch (err) {
     error.value = toAppError(err);
   } finally {
@@ -47,7 +48,7 @@ async function load() {
   }
 }
 
-onMounted(load);
+onMounted(() => load());
 
 const counts = computed(() => {
   const result: Record<VersionFilter, number> = { release: 0, snapshot: 0, old: 0 };
@@ -119,7 +120,12 @@ const sourceNote = computed(() => {
           ><NIcon><Search20Regular /></NIcon
         ></template>
       </NInput>
-      <NButton quaternary :loading="loading" :aria-label="t('download.refresh')" @click="load">
+      <NButton
+        quaternary
+        :loading="loading"
+        :aria-label="t('download.refresh')"
+        @click="load(true)"
+      >
         <template #icon
           ><NIcon><ArrowClockwise20Regular /></NIcon
         ></template>
@@ -130,7 +136,21 @@ const sourceNote = computed(() => {
     <NAlert v-if="error" type="error" class="load-error" :title="t('download.loadFailed')">
       <div class="load-error-body">
         <span>{{ formatError(error) }}</span>
-        <NButton size="small" @click="load">{{ t("download.retry") }}</NButton>
+        <NButton size="small" @click="load(true)">{{ t("download.retry") }}</NButton>
+      </div>
+    </NAlert>
+
+    <NAlert
+      v-else-if="list?.stale"
+      type="warning"
+      class="load-error"
+      :title="t('download.staleTitle')"
+    >
+      <div class="load-error-body">
+        <span>{{ formatError(list.stale) }}</span>
+        <NButton size="small" :loading="loading" @click="load(true)">
+          {{ t("download.retry") }}
+        </NButton>
       </div>
     </NAlert>
 

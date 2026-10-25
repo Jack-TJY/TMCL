@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_game::{
-    ManifestPolicy, ManifestStore, VersionManifest, VersionType, install_version, load_manifest,
+    ManifestPolicy, ManifestStore, VersionManifest, VersionType, install_version,
+    load_manifest_checked,
 };
 use ts_rs::TS;
 
@@ -34,6 +35,15 @@ pub struct GameVersionList {
     pub latest_snapshot: String,
     /// 所有版本，新版本在前。
     pub versions: Vec<GameVersion>,
+    /// 联网获取失败、返回的是旧缓存时为获取时的错误，界面据此提示；否则为 `null`。
+    pub stale: Option<AppError>,
+}
+
+/// `game_version_list` 的参数；省略时等同 `refresh: false`。
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, TS)]
+pub struct GameVersionListArgs {
+    /// 忽略 1 小时内的缓存，强制联网获取（“刷新”按钮）。
+    pub refresh: bool,
 }
 
 /// `game_install` 的参数。
@@ -43,20 +53,28 @@ pub struct GameInstallArgs {
     pub version_id: String,
 }
 
-/// 获取官方版本清单；1 小时内使用 SQLite 中的缓存，获取失败时退回旧缓存。
+/// 获取官方版本清单；1 小时内使用 SQLite 中的缓存（`refresh` 为真时跳过），获取失败时退回旧缓存并在
+/// `stale` 中给出原因。
 #[tauri::command]
-pub async fn game_version_list(state: State<'_, AppState>) -> Result<GameVersionList, AppError> {
+pub async fn game_version_list(
+    state: State<'_, AppState>,
+    args: Option<GameVersionListArgs>,
+) -> Result<GameVersionList, AppError> {
     let downloader = state.downloader()?;
     let ctx = TaskCtx::noop("game_version_list");
-    let manifest = load_manifest(
+    let policy = ManifestPolicy {
+        refresh: args.unwrap_or_default().refresh,
+        ..ManifestPolicy::default()
+    };
+    let loaded = load_manifest_checked(
         &downloader,
         &SharedDb(&state),
         &state.game.manifest_url,
-        ManifestPolicy::default(),
+        policy,
         &ctx,
     )
     .await?;
-    Ok(to_list(manifest))
+    Ok(to_list(loaded.manifest, loaded.stale))
 }
 
 /// 通过应用的共享数据库连接存取版本清单缓存。
@@ -91,8 +109,9 @@ pub async fn game_install<R: Runtime>(
     }))
 }
 
-fn to_list(manifest: VersionManifest) -> GameVersionList {
+fn to_list(manifest: VersionManifest, stale: Option<AppError>) -> GameVersionList {
     GameVersionList {
+        stale,
         latest_release: manifest.latest.release,
         latest_snapshot: manifest.latest.snapshot,
         versions: manifest

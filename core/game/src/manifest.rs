@@ -142,6 +142,15 @@ impl Default for ManifestPolicy {
     }
 }
 
+/// [`load_manifest_checked`] 的结果。
+#[derive(Debug, Clone)]
+pub struct LoadedManifest {
+    /// 版本清单。
+    pub manifest: VersionManifest,
+    /// 需要联网获取但失败、退回旧缓存时为获取时的错误；直接使用未过期缓存或获取成功时为 `None`。
+    pub stale: Option<AppError>,
+}
+
 /// 按 `policy` 读取版本清单：缓存未过期时直接返回，否则经 `downloader`（按下载源回退）获取并写回缓存；
 /// 获取失败但有可用的旧缓存时返回旧缓存，否则返回获取时的错误。
 ///
@@ -153,6 +162,19 @@ pub async fn load_manifest(
     policy: ManifestPolicy,
     ctx: &TaskCtx,
 ) -> AppResult<VersionManifest> {
+    Ok(load_manifest_checked(downloader, store, url, policy, ctx)
+        .await?
+        .manifest)
+}
+
+/// 同 [`load_manifest`]，并说明结果是否是获取失败后退回的旧缓存，供界面提示。
+pub async fn load_manifest_checked(
+    downloader: &Downloader,
+    store: &impl ManifestStore,
+    url: &str,
+    policy: ManifestPolicy,
+    ctx: &TaskCtx,
+) -> AppResult<LoadedManifest> {
     let cached = store
         .load_manifest(url)
         .inspect_err(|e| tracing::warn!(error = %e, "读取版本清单缓存失败"))
@@ -162,7 +184,10 @@ pub async fn load_manifest(
     if let Some((manifest, at)) = &cached {
         let age = unix_now().saturating_sub(*at);
         if !policy.refresh && u64::try_from(age).is_ok_and(|age| age < policy.max_age.as_secs()) {
-            return Ok(manifest.clone());
+            return Ok(LoadedManifest {
+                manifest: manifest.clone(),
+                stale: None,
+            });
         }
     }
     let fetched = async {
@@ -177,11 +202,17 @@ pub async fn load_manifest(
             if let Err(e) = store.save_manifest(url, &body) {
                 tracing::warn!(error = %e, "写入版本清单缓存失败");
             }
-            Ok(manifest)
+            Ok(LoadedManifest {
+                manifest,
+                stale: None,
+            })
         }
         (Err(e), Some((manifest, _))) if !e.is_cancelled() => {
             tracing::warn!(error = %e, "获取版本清单失败，使用过期的缓存");
-            Ok(manifest)
+            Ok(LoadedManifest {
+                manifest,
+                stale: Some(e),
+            })
         }
         (Err(e), _) => Err(e),
     }

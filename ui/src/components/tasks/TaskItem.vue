@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 任务中心的一项：名称、阶段、进度条、速度，以及取消 / 重试 / 复制错误详情。
+// 任务中心的一项：名称、阶段、进度条、速度（停滞时提示网络可能中断），以及取消 / 重试 / 复制错误详情。
 import {
   ArrowClockwise20Regular,
   Copy20Regular,
@@ -7,11 +7,11 @@ import {
   DismissCircle20Regular,
 } from "@vicons/fluent";
 import { NButton, NIcon, NProgress, NTooltip, useMessage, useThemeVars } from "naive-ui";
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { toAppError } from "../../api/invoke";
 import { formatError } from "../../i18n";
-import { useTasksStore, type TaskEntry } from "../../stores/tasks";
+import { isStalled, useTasksStore, type TaskEntry } from "../../stores/tasks";
 import { errorDetails, formatBytes, progressPercent } from "./format";
 
 const props = defineProps<{ task: TaskEntry }>();
@@ -31,6 +31,16 @@ const title = computed(() =>
 );
 
 const percent = computed(() => progressPercent(props.task.progress));
+
+/** 每秒更新，用于判断进度是否停滞。 */
+const now = ref(Date.now());
+let timer: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+  timer = setInterval(() => (now.value = Date.now()), 1000);
+});
+onUnmounted(() => clearInterval(timer));
+
+const stalled = computed(() => isStalled(props.task, now.value));
 
 /** 阶段与条目 / 字节计数，例如“资源文件 · 120/3500 · 12.0 MB / 300 MB”。 */
 const detail = computed(() => {
@@ -138,7 +148,8 @@ async function copyError() {
       />
       <div class="task-meta">
         <span class="task-detail">{{ detail }}</span>
-        <span v-if="task.progress && task.progress.speed_bps > 0">
+        <span v-if="stalled" class="task-stalled">{{ t("task.stalled") }}</span>
+        <span v-else-if="task.progress && task.progress.speed_bps > 0">
           {{ t("task.speed", { speed: formatBytes(task.progress.speed_bps) }) }}
         </span>
       </div>
@@ -203,6 +214,11 @@ async function copyError() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.task-stalled {
+  flex-shrink: 0;
+  color: v-bind("themeVars.warningColor");
 }
 
 .task-error {

@@ -101,7 +101,7 @@ mod tests {
     use tmcl_common::{AppError, DataPaths, ErrorCode, TaskFinished, TaskProgress, TaskState};
 
     use tmcl_auth::MemorySecretStore;
-    use tmcl_net::testing::TestServer;
+    use tmcl_net::testing::{Fault, TestServer};
 
     use super::*;
     use crate::events::{TASK_FINISHED, TASK_PROGRESS};
@@ -272,10 +272,22 @@ mod tests {
             list["versions"][1]["release_time"],
             "2023-06-12T13:25:51+00:00"
         );
+        assert!(list["stale"].is_null());
         // 第二次读取命中 SQLite 缓存，不再请求服务器。
         let again = invoke(&webview, "game_version_list", json!({})).unwrap();
         assert_eq!(again, list);
         assert_eq!(server.hits(), 1);
+        // 刷新时强制联网；失败则退回缓存并给出原因。
+        server.fail("/manifest.json", (0..10).map(|_| Fault::Status(503)));
+        let stale = invoke(
+            &webview,
+            "game_version_list",
+            json!({ "args": { "refresh": true } }),
+        )
+        .unwrap();
+        assert_eq!(stale["versions"], list["versions"]);
+        assert_eq!(stale["stale"]["code"], "NET_HTTP_STATUS");
+        assert!(server.hits() > 1);
     }
 
     #[test]
