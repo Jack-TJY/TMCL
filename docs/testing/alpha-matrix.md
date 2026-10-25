@@ -79,7 +79,7 @@
 ### 环境
 
 - 提交：`main` @ `5b51343`（含 M0-10 的 #102、#103），由 `build.yml` 构建安装包（[run 40165780752](https://github.com/Jack-TJY/TMCL/actions/runs/40165780752)）后，维护者补配 `TMCL_MS_CLIENT_ID` Secret 再次构建。
-- 机器：Windows 10 实机；Windows 11 虚拟机（VMware，虚拟显卡 `SVGA3D`，Mesa 24.0.2，OpenGL 4.1）。
+- 机器：Windows 10 实机；Windows 11 虚拟机（VirtualBox，虚拟显卡 `SVGA3D`，Mesa 24.0.2，OpenGL 4.1）。
 
 ### 结果
 
@@ -96,7 +96,7 @@
 | --- | --- | --- | --- |
 | D4 | P1 | 新建实例后安装任务还在运行时，首页“开始游戏”与实例卡片已可点击启动，启动必然失败。 | 已修复：#109 安装期间禁用启动按钮并显示“正在安装”。 |
 | D5 | P2 | 新版 log4j 的 XMLLayout 不用 CDATA，堆栈中的制表符与引号以 `&#x9;`、`&#39;` 残留在日志窗口。 | 已修复：#107。 |
-| D6 | P2 | 26.3 在 VMware 虚拟显卡（SVGA3D / Mesa）上黑屏，声音与材质正常加载、游戏已进入主菜单；同一虚拟机中 1.20.1 正常，同样的启动参数在 Win10 实机上正常。 | 虚拟显卡驱动问题，非启动器缺陷，登记为已知问题；Win11 实机待测。 |
+| D6 | P2 | 26.3 在 VirtualBox 虚拟显卡（SVGA3D / Mesa）上黑屏，声音与材质正常加载、游戏已进入主菜单；同一虚拟机中 1.20.1 正常，同样的启动参数在 Win10 实机上正常。 | 虚拟显卡驱动问题，非启动器缺陷，登记为已知问题；Win11 实机待测。 |
 | D7 | — | `build.yml` 构建的安装包未带微软登录：仓库 Actions 未配置 `TMCL_MS_CLIENT_ID` Secret（构建日志中该变量为空）。 | 维护者已补配。 |
 
 本轮未发现 P0。
@@ -135,7 +135,7 @@
 
 ### 待测
 
-- 启动失败时的错误为本地化文案（例如断网时启动未装完的实例）。
+见第 5 轮。
 
 ### 暂缓（维护者 2026-10-25 决定挂起，不阻塞本轮记录）
 
@@ -168,9 +168,31 @@
 
 | 编号 | 等级 | 描述 | 处理 |
 | --- | --- | --- | --- |
-| D10 | P2 | X11 下（`GDK_BACKEND=x11` 或“Ubuntu on Xorg”会话）窗口打开但一片空白；设置 `WEBKIT_DISABLE_DMABUF_RENDERER=1` 后正常，原因是 WebKitGTK 的 DMABUF 渲染器。目前只在 vmwgfx 上见到，NVIDIA + X11 也可能触发。Wayland 下正常。 | 候选修复：Linux 启动时若未设置该变量则自动设置。等维护者决定。 |
+| D10 | P2 | X11 下（`GDK_BACKEND=x11` 或“Ubuntu on Xorg”会话）窗口打开但一片空白；设置 `WEBKIT_DISABLE_DMABUF_RENDERER=1` 后正常，原因是 WebKitGTK 的 DMABUF 渲染器。目前只在 vmwgfx 上见到，NVIDIA + X11 也可能触发。Wayland 下正常。 | 已修复：#114 Linux 启动时若未设置该变量则设为 `1`，虚拟机中 X11 与 Wayland 均正常显示。 |
 | D11 | P2 | WebKit 在 `tmcl-data` 之外写入 `~/.local/share/io.github.jack-tjy.tmcl`（约 60 KB），deb 与 AppImage 共用，卸载后残留，`docs/contracts/data-layout.md` 未记载。 | 待登记或改为放进 `tmcl-data`。 |
 
 X11 测试中强制结束进程产生过一次 WebKitWebProcess 崩溃报告，由强制结束引起，不计缺陷。证据保存在维护者电脑的 `G:\VMs\tmcl-linux-08ba3f7\`。
 
 本轮未发现 P0。
+
+## 第 5 轮 · 2026-10-25 · claude-alpha
+
+### 环境
+
+- `main` @ `5f8c242`（含 #112、#114），Win10 实机，真实应用窗口，断网用第 3 轮的本地代理模拟。
+
+### 结果
+
+| 项目 | 结果 |
+| --- | --- |
+| 断网时启动已装好的 1.20.1（离线账号）能进入游戏 | ✅ |
+| 断网时启动未装完的 26.2：先补全文件，10 秒后任务中心提示网络可能中断，约 95 秒后弹出“无法启动“26.2”：无法连接到服务器 …”，任务中心同样显示中文原因并可复制详情 | ✅ |
+
+另：第 2 轮记录的 Win11 虚拟机实为 VirtualBox（已更正）。
+
+本轮未发现 P0。
+
+### 剩余
+
+- 暂缓（维护者决定）：Win11 实机上的游戏画面（D6）、macOS arm64 的安装、启动与卸载。
+- 未修复的非 P0 缺陷：D1（Forge 1.7.10 自身竞态，已知问题）、D3（首页“快捷操作”默认尺寸需滚动）、D11（WebKit 在 `tmcl-data` 外写约 60 KB 并在卸载后残留）。
