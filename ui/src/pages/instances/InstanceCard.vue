@@ -155,6 +155,10 @@ function open() {
 }
 
 .card-meta {
+  /* 靠右放，与左侧的启动、日志按钮拉开距离 */
+  margin-left: auto;
+  min-width: 0;
+  text-align: right;
   font-size: 12px;
   color: var(--tmcl-text-secondary);
 }
