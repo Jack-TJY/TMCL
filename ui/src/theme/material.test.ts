@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyMaterial, detectMaterial } from "./material";
+import { applyMaterial, detectMaterial, removeWindows10Frame } from "./material";
 
 const windows = (platformVersion: string) => ({
   platform: "Windows",
@@ -30,5 +30,11 @@ describe("detectMaterial", () => {
 describe("applyMaterial", () => {
   it("is inactive outside Tauri", async () => {
     expect(await applyMaterial("mica", true, false)).toBe(false);
+  });
+});
+
+describe("removeWindows10Frame", () => {
+  it("does nothing outside Tauri", async () => {
+    await expect(removeWindows10Frame(windows("10.0.0"))).resolves.toBeUndefined();
   });
 });

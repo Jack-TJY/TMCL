@@ -31,6 +31,24 @@ export async function detectMaterial(
 }
 
 /**
+ * Windows 10 上去掉无边框窗口的阴影。Tauri 为无边框窗口模拟阴影时会保留 1px 的 DWM 边框，
+ * 在 Windows 10 上窗口获得焦点后显示为一圈细描边；Windows 11 的阴影与圆角依赖它，保持不变。
+ */
+export async function removeWindows10Frame(
+  uaData: UserAgentData | undefined = (navigator as { userAgentData?: UserAgentData })
+    .userAgentData,
+): Promise<void> {
+  if (!isTauri() || uaData?.platform !== "Windows") return;
+  const { platformVersion } = await uaData.getHighEntropyValues(["platformVersion"]);
+  if (Number(platformVersion?.split(".")[0]) >= 13) return;
+  try {
+    await getCurrentWindow().setShadow(false);
+  } catch {
+    // 去不掉描边不影响使用。
+  }
+}
+
+/**
  * 应用或清除窗口材质，并让材质的明暗跟随界面主题。返回材质是否生效；
  * 不在 Tauri 中运行或调用失败时返回 `false`，页面应使用纯色背景。
  */

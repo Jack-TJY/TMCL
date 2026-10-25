@@ -14,7 +14,12 @@ import { settingsGet, settingsSet } from "../api/settings";
 import type { LauncherSettings } from "../bindings/LauncherSettings";
 import { DEFAULT_BACKGROUND } from "../theme/background";
 import { DEFAULT_ACCENT, systemAccent } from "../theme/fluent";
-import { applyMaterial, detectMaterial, type MaterialKind } from "../theme/material";
+import {
+  applyMaterial,
+  detectMaterial,
+  removeWindows10Frame,
+  type MaterialKind,
+} from "../theme/material";
 
 /** 设置页编辑的设置：后端的 `LauncherSettings` 加上暂存于前端的下载源。 */
 export type Settings = LauncherSettings & {
@@ -87,6 +92,7 @@ export const useSettingsStore = defineStore("settings", () => {
 
   /** 读取已保存的设置；读取失败（例如在浏览器中调试、没有后端）时保持默认值。 */
   async function load() {
+    void removeWindows10Frame().catch(() => undefined);
     try {
       const [snapshot, source, material] = await Promise.all([
         settingsGet().catch(() => null),
