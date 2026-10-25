@@ -39,7 +39,7 @@
 | `auth_remove` | `AuthIdArgs { id }` | 无 | 删除账号及其密钥库中的令牌；删除默认账号后默认改为列表第一个；不存在返回 `AUTH_ACCOUNT_NOT_FOUND` |
 | `auth_set_default` | `AuthIdArgs { id }` | 无 | 设为启动时使用的账号；不存在返回 `AUTH_ACCOUNT_NOT_FOUND` |
 | `game_install` | `GameInstallArgs { version_id }` | `TaskStarted` | 任务种类 `game_install`：下载并校验该版本的版本 JSON、资源索引、依赖库与资源文件，阶段依次为 `version_json`、`asset_index`、`libraries`、`assets`；`version_id` 为空、超过 64 字符或含 `/`、`\`、`:`、`..` 时直接返回 `COMMON_INTERNAL`；版本不存在时任务以 `GAME_VERSION_NOT_FOUND` 失败 |
-| `game_version_list` | 无 | `GameVersionList { latest_release, latest_snapshot, versions: GameVersion { id, kind, release_time }[] }` | 官方版本清单，新版本在前；`kind` 为 `release` \| `snapshot` \| `old_beta` \| `old_alpha` \| `other` |
+| `game_version_list` | `GameVersionListArgs { refresh }`（可省略，等同 `refresh: false`） | `GameVersionList { latest_release, latest_snapshot, versions: GameVersion { id, kind, release_time }[], stale }` | 官方版本清单，新版本在前；`kind` 为 `release` \| `snapshot` \| `old_beta` \| `old_alpha` \| `other`。1 小时内使用缓存，`refresh` 为真时强制联网；联网失败但有旧缓存时返回旧缓存，`stale` 为获取时的 `AppError`，否则为 `null` |
 | `instance_create` | `InstanceCreateArgs { name, game_version, loader? }` | `InstanceConfig` | 新建实例（只写 `instance.json` 与空的 `game/`，不下载游戏文件）；名称非法返回 `INSTANCE_INVALID_NAME` |
 | `instance_delete` | `InstanceIdArgs { id }` | 无 | 把实例目录移到回收站 `trash/`，7 天后清理；损坏的实例也可删除 |
 | `instance_duplicate` | `InstanceDuplicateArgs { id, name, include_saves }` | `TaskStarted` | 任务种类 `instance_duplicate`：复制为新实例（新 ID），`include_saves` 为 `false` 时跳过 `game/saves/`；完成后重新调用 `instance_list` 获取新实例 |

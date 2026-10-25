@@ -11,6 +11,7 @@
   "latest": "Latest",
   "search": "Search versions",
   "refresh": "Refresh",
+  "staleTitle": "Couldn't fetch the latest version list; showing the last one fetched",
   "loadFailed": "Couldn't load the version list",
   "retry": "Retry",
   "install": {

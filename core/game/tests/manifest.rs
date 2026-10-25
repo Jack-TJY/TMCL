@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use tmcl_common::{Db, ErrorCode, TaskCtx};
-use tmcl_game::{ManifestPolicy, ManifestStore, VersionType, load_manifest};
+use tmcl_game::{ManifestPolicy, ManifestStore, VersionType, load_manifest, load_manifest_checked};
 use tmcl_net::testing::{Fault, TestServer};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient, RetryPolicy};
 
@@ -99,10 +99,14 @@ async fn falls_back_to_stale_cache_when_offline() {
         .await
         .unwrap();
     server.fail("/m.json", [Fault::Status(503)]);
-    let stale = load_manifest(&dl, &db, &url, expired(), &ctx)
+    let stale = load_manifest_checked(&dl, &db, &url, expired(), &ctx)
         .await
         .unwrap();
-    assert_eq!(stale.latest.release, "1.20.1");
+    assert_eq!(stale.manifest.latest.release, "1.20.1");
+    assert_eq!(
+        stale.stale.map(|e| e.code),
+        Some(tmcl_common::ErrorCode::NetHttpStatus)
+    );
     assert_eq!(server.hits(), 2);
 
     // 服务器返回了无法解析的内容时同样退回缓存，并且不会覆盖缓存。

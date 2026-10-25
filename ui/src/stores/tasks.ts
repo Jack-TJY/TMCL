@@ -19,6 +19,8 @@ export interface TaskEntry extends TaskInfo {
   restart: (() => Promise<TaskStarted>) | null;
   /** 正在安装或修改的实例；任务运行期间该实例不能启动，见 `installing`。 */
   instanceId: string | null;
+  /** 进度最后一次前进（完成数或字节数增加）的时间，用于判断是否停滞，见 `isStalled`。 */
+  advanced_at: number;
 }
 
 /** 由界面发起的任务。 */
@@ -43,7 +45,24 @@ function blank(taskId: TaskId, kind: string): TaskEntry {
     label: null,
     restart: null,
     instanceId: null,
+    advanced_at: Date.now(),
   };
+}
+
+/** 运行中的任务超过这么久没有进度时视为停滞（通常是网络中断，下载引擎仍在等待或重试）。 */
+export const STALL_MS = 10_000;
+
+/** 任务在 `now` 时是否处于停滞状态。 */
+export function isStalled(entry: TaskEntry, now: number): boolean {
+  return (
+    entry.status === "running" && entry.progress !== null && now - entry.advanced_at >= STALL_MS
+  );
+}
+
+function advanced(prev: TaskProgress | null, next: TaskProgress): boolean {
+  return (
+    !prev || prev.stage !== next.stage || next.done > prev.done || next.bytes_done > prev.bytes_done
+  );
 }
 
 export const useTasksStore = defineStore("tasks", () => {
@@ -91,7 +110,9 @@ export const useTasksStore = defineStore("tasks", () => {
       entries.value.unshift(blank(progress.task_id, progress.kind));
       entry = entries.value[0];
     }
-    if (entry.status === "running") entry.progress = progress;
+    if (entry.status !== "running") return;
+    if (advanced(entry.progress, progress)) entry.advanced_at = Date.now();
+    entry.progress = progress;
   }
 
   function applyFinished(finished: TaskFinished) {
@@ -114,7 +135,13 @@ export const useTasksStore = defineStore("tasks", () => {
         const known = new Set(entries.value.map((e) => e.task_id));
         for (const task of tasks) {
           if (!known.has(task.task_id))
-            entries.value.push({ ...task, label: null, restart: null, instanceId: null });
+            entries.value.push({
+              ...task,
+              label: null,
+              restart: null,
+              instanceId: null,
+              advanced_at: Date.now(),
+            });
         }
       } catch {
         // 在浏览器中调试时没有后端。

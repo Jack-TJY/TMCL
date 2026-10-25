@@ -22,6 +22,10 @@ describe("task and game commands", () => {
   it("invokes game commands with args", async () => {
     await gameVersionList();
     expect(tauriInvoke).toHaveBeenLastCalledWith("game_version_list", undefined);
+    await gameVersionList({ refresh: true });
+    expect(tauriInvoke).toHaveBeenLastCalledWith("game_version_list", {
+      args: { refresh: true },
+    });
     await gameInstall({ version_id: "1.20.1" });
     expect(tauriInvoke).toHaveBeenLastCalledWith("game_install", {
       args: { version_id: "1.20.1" },
