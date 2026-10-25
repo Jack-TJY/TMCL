@@ -29,7 +29,13 @@ export type Settings = LauncherSettings & {
 /** 与后端 `Config::default()` 一致的默认设置。 */
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
-  appearance: { accent: null, window_material: true, background: DEFAULT_BACKGROUND },
+  appearance: {
+    accent: null,
+    window_material: true,
+    material: "acrylic",
+    material_opacity: 0,
+    background: DEFAULT_BACKGROUND,
+  },
   memory: { max_mb: 4096 },
   download: { max_concurrency: 16, source: DEFAULT_SOURCE },
 };
@@ -87,6 +93,7 @@ export const useSettingsStore = defineStore("settings", () => {
       materialKind.value,
       settings.value.appearance.window_material,
       isDark.value,
+      settings.value.appearance.material,
     );
   }
 

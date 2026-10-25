@@ -15,6 +15,7 @@ import { useI18n } from "vue-i18n";
 import AppBackground from "./components/app-background/AppBackground.vue";
 import AppLayout from "./layouts/AppLayout.vue";
 import { useSettingsStore } from "./stores/settings";
+import { scaleAlpha } from "./theme/background";
 import { fluentCssVars, fluentOverrides } from "./theme/fluent";
 
 const settings = useSettingsStore();
@@ -28,16 +29,26 @@ const naiveDateLocale = computed(() => (locale.value === "zh-CN" ? dateZhCN : da
 // 布局等非 Naive UI 元素使用的变量，挂在根元素上。
 watchEffect(() => {
   const root = document.documentElement;
-  for (const [name, value] of Object.entries(fluentCssVars(settings.accent, settings.isDark))) {
+  const vars = fluentCssVars(settings.accent, settings.isDark);
+  for (const [name, value] of Object.entries(vars)) {
     root.style.setProperty(name, value);
   }
-  if (settings.materialActive) root.style.setProperty("--tmcl-bg", "transparent");
+  // 材质生效时主题底色按设置半透明叠在材质上：0% 为纯材质，100% 为纯色。
+  if (settings.materialActive) {
+    const opacity = settings.settings.appearance.material_opacity / 100;
+    root.style.setProperty("--tmcl-bg", scaleAlpha(vars["--tmcl-bg"], opacity));
+  }
   root.style.colorScheme = settings.isDark ? "dark" : "light";
 });
 
 // 材质的开关与明暗跟随设置变化。
 watch(
-  () => [settings.settings.appearance.window_material, settings.isDark, settings.materialKind],
+  () => [
+    settings.settings.appearance.window_material,
+    settings.settings.appearance.material,
+    settings.isDark,
+    settings.materialKind,
+  ],
   () => void settings.syncMaterial(),
   { immediate: true },
 );

@@ -33,6 +33,17 @@ pub enum ThemeMode {
     Dark,
 }
 
+/// Windows 11 上使用的窗口材质。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowMaterial {
+    /// 磨砂玻璃：模糊窗口后方的内容。需要 Windows 11 22H2 及以上，更早的系统回退 Mica。
+    #[default]
+    Acrylic,
+    /// Mica：只取桌面壁纸的颜色，不透出后方窗口。
+    Mica,
+}
+
 /// 外观设置。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default)]
@@ -42,6 +53,10 @@ pub struct AppearanceConfig {
     /// 平台支持时使用窗口材质（Mica / vibrancy），此时不显示 `background`；
     /// 平台不支持或关闭时使用 `background`。
     pub window_material: bool,
+    /// Windows 11 上的材质类型；macOS 始终使用 vibrancy。
+    pub material: WindowMaterial,
+    /// 材质上方主题底色的不透明度（%），0 为纯材质，100 为纯色。
+    pub material_opacity: u8,
     /// 窗口背景与透明度（PLAN.md M1-19）。
     pub background: BackgroundConfig,
 }
@@ -51,6 +66,8 @@ impl Default for AppearanceConfig {
         Self {
             accent: None,
             window_material: true,
+            material: WindowMaterial::Acrylic,
+            material_opacity: 0,
             background: BackgroundConfig::default(),
         }
     }

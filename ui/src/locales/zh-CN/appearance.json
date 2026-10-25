@@ -8,6 +8,16 @@
     "image": "图片",
     "material": "窗口材质"
   },
+  "material": {
+    "label": "材质类型",
+    "description": "磨砂玻璃会模糊窗口后方的内容；Mica 只取桌面壁纸的颜色",
+    "acrylic": "磨砂玻璃",
+    "mica": "Mica"
+  },
+  "material_opacity": {
+    "label": "材质底色不透明度",
+    "description": "在材质上叠加主题底色：0% 为纯材质，100% 为纯色"
+  },
   "color": {
     "label": "背景颜色"
   },
