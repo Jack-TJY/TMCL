@@ -1,4 +1,5 @@
-//! 游戏进程：启动、按行批量转发 stdout/stderr、崩溃识别与强制结束。
+//! 游戏进程：启动、按行批量转发 stdout/stderr（log4j XML 事件转换为文本行，见 [`crate::log4j`]）、
+//! 崩溃识别与强制结束。
 
 use std::process::Stdio;
 use std::time::Duration;
@@ -10,6 +11,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use crate::args::{LaunchCommand, mask};
+use crate::log4j::Log4jDecoder;
 
 /// 日志来源。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -182,6 +184,7 @@ async fn forward(
     // 按字节读取再有损解码：Windows 上 Java 可能以 GBK 等本地编码输出，
     // 不能因为非 UTF-8 而停止读取，否则管道写满会卡住游戏。
     let mut reader = BufReader::new(reader);
+    let mut decoder = Log4jDecoder::new();
     let mut buf = Vec::new();
     loop {
         buf.clear();
@@ -191,9 +194,14 @@ async fn forward(
                 let line = String::from_utf8_lossy(&buf);
                 let line = line.trim_end_matches(['\r', '\n']).to_owned();
                 // 接收端已丢弃时继续读取并丢弃，保证管道不被写满。
-                let _ = tx.send((stream, line));
+                for line in decoder.push(line) {
+                    let _ = tx.send((stream, line));
+                }
             }
         }
+    }
+    for line in decoder.flush() {
+        let _ = tx.send((stream, line));
     }
 }
 
