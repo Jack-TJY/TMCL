@@ -153,17 +153,49 @@ fn element(body: &str, tag: &str) -> Option<String> {
     Some(out)
 }
 
+/// 反转义 XML 的五个预定义实体与数字字符引用（`&#39;`、`&#x9;`）；认不出的原样保留。
 fn unescape(s: &str) -> String {
     if !s.contains('&') {
         return s.to_owned();
     }
-    s.replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&#13;", "\r")
-        .replace("&#10;", "\n")
-        .replace("&amp;", "&")
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find('&') {
+        out.push_str(&rest[..i]);
+        rest = &rest[i..];
+        let decoded = rest
+            .get(1..rest.find(';').unwrap_or(0))
+            .and_then(|name| Some((entity(name)?, name.len() + 2)));
+        match decoded {
+            Some((c, len)) => {
+                out.push(c);
+                rest = &rest[len..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+fn entity(name: &str) -> Option<char> {
+    match name {
+        "lt" => Some('<'),
+        "gt" => Some('>'),
+        "quot" => Some('"'),
+        "apos" => Some('\''),
+        "amp" => Some('&'),
+        _ => {
+            let code = match name.strip_prefix("#x").or_else(|| name.strip_prefix("#X")) {
+                Some(hex) => u32::from_str_radix(hex, 16).ok()?,
+                None => name.strip_prefix('#')?.parse().ok()?,
+            };
+            char::from_u32(code)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -222,6 +254,27 @@ plain after"#;
                 "plain before",
                 "[08:00:00] [t & \"q\"/WARN]: a]]>b",
                 "plain after",
+            ]
+        );
+    }
+
+    #[test]
+    fn decodes_escaped_text_without_cdata() {
+        // 新版 log4j 的 XMLLayout 不用 CDATA，制表符与引号写成字符引用。
+        let raw = r#"<log4j:Event logger="x" timestamp="0" level="ERROR" thread="Download-1">
+<log4j:Message>Realms error &#39;a &amp; b&#39; &lt;c&gt; &bogus; &#xZZ; & tail</log4j:Message>
+<log4j:Throwable>java.lang.RuntimeException: boom
+&#x9;at a.b(C.java:1)
+&#9;... 5 more
+</log4j:Throwable>
+</log4j:Event>"#;
+        assert_eq!(
+            decode(raw),
+            [
+                "[08:00:00] [Download-1/ERROR]: Realms error 'a & b' <c> &bogus; &#xZZ; & tail",
+                "java.lang.RuntimeException: boom",
+                "\tat a.b(C.java:1)",
+                "\t... 5 more",
             ]
         );
     }
