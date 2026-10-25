@@ -1,15 +1,18 @@
 <script setup lang="ts">
-// 设置页“背景与透明度”（PLAN.md M1-19）：背景来源、图片填充、透明度、模糊、遮罩与卡片透明度。
+// 设置页“背景与透明度”（PLAN.md M1-19）：背景来源、窗口材质类型与底色、图片填充、透明度、
+// 模糊、遮罩与卡片透明度。
 // 滑块拖动时立即预览，停止 300 ms 后保存。
 import {
   ArrowReset24Regular,
   Blur24Regular,
   BrightnessHigh24Regular,
   CircleHalfFill24Regular,
+  ColorBackground24Regular,
   Image24Regular,
   Layer24Regular,
   PaintBucket24Regular,
   Wallpaper24Regular,
+  WindowNew24Regular,
 } from "@vicons/fluent";
 import { NButton, NColorPicker, NSelect, NSlider, useMessage } from "naive-ui";
 import { computed, onBeforeUnmount } from "vue";
@@ -19,6 +22,7 @@ import { pickFile } from "../../../api/dialog";
 import { toAppError } from "../../../api/invoke";
 import type { BackgroundConfig } from "../../../bindings/BackgroundConfig";
 import type { BackgroundFit } from "../../../bindings/BackgroundFit";
+import type { WindowMaterial } from "../../../bindings/WindowMaterial";
 import { formatError } from "../../../i18n";
 import { useSettingsStore, type Settings } from "../../../stores/settings";
 import {
@@ -28,10 +32,12 @@ import {
   type BackgroundSource,
 } from "../../../theme/background";
 import { isHexColor } from "../../../theme/fluent";
+import { materialSelectable } from "../../../theme/material";
 import SettingRow from "../SettingRow.vue";
 
 const SOURCES: BackgroundSource[] = ["default", "color", "image", "material"];
 const FITS: BackgroundFit[] = ["fill", "fit", "center", "tile"];
+const MATERIALS: WindowMaterial[] = ["acrylic", "mica"];
 const SAVE_DELAY_MS = 300;
 
 const { t } = useI18n();
@@ -56,6 +62,12 @@ const sourceOptions = computed(() =>
     disabled: value === "material" && !materialSupported.value,
   })),
 );
+const materialOptions = computed(() =>
+  MATERIALS.map((value) => ({ label: t(`appearance.material.${value}`), value })),
+);
+const showMaterialKind = computed(
+  () => usesMaterial.value && materialSelectable(store.materialKind),
+);
 const fitOptions = computed(() =>
   FITS.map((value) => ({ label: t(`appearance.fit.${value}`), value })),
 );
@@ -70,9 +82,12 @@ function save(change: (draft: Settings) => void) {
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 
+type SliderKey = "material_opacity" | "opacity" | "blur" | "mask" | "card_opacity";
+
 /** 滑块：立即预览，停止拖动后保存。 */
-function preview<K extends "opacity" | "blur" | "mask" | "card_opacity">(key: K, value: number) {
-  store.settings.appearance.background[key] = value;
+function preview(key: SliderKey, value: number) {
+  if (key === "material_opacity") store.settings.appearance.material_opacity = value;
+  else store.settings.appearance.background[key] = value;
   clearTimeout(timer);
   timer = setTimeout(() => save(() => undefined), SAVE_DELAY_MS);
 }
@@ -118,6 +133,10 @@ function setColor(value: string) {
   if (isHexColor(value)) save((s) => (s.appearance.background.color = value.toUpperCase()));
 }
 
+function setMaterial(value: WindowMaterial) {
+  save((s) => (s.appearance.material = value));
+}
+
 function setFit(value: BackgroundFit) {
   save((s) => (s.appearance.background.fit = value));
 }
@@ -126,6 +145,8 @@ function setFit(value: BackgroundFit) {
 function reset() {
   save((s) => {
     s.appearance.window_material = true;
+    s.appearance.material = "acrylic";
+    s.appearance.material_opacity = 0;
     s.appearance.background = { ...DEFAULT_BACKGROUND, image: s.appearance.background.image };
   });
 }
@@ -136,7 +157,17 @@ const signed = (value: number) => (value > 0 ? `+${value}` : String(value));
 
 const sliders = computed(() => {
   const bg: BackgroundConfig = background.value;
+  const material = {
+    key: "material_opacity" as const,
+    icon: ColorBackground24Regular,
+    min: 0,
+    max: 100,
+    value: store.settings.appearance.material_opacity,
+    format: percent,
+    disabled: false,
+  };
   return [
+    ...(usesMaterial.value ? [material] : []),
     {
       key: "opacity" as const,
       icon: CircleHalfFill24Regular,
@@ -190,6 +221,19 @@ const sliders = computed(() => {
       :value="source"
       :options="sourceOptions"
       @update:value="setSource"
+    />
+  </SettingRow>
+  <SettingRow
+    v-if="showMaterialKind"
+    :icon="WindowNew24Regular"
+    :title="t('appearance.material.label')"
+    :description="t('appearance.material.description')"
+  >
+    <NSelect
+      class="control-select"
+      :value="store.settings.appearance.material"
+      :options="materialOptions"
+      @update:value="setMaterial"
     />
   </SettingRow>
   <SettingRow

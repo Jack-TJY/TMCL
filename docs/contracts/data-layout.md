@@ -52,6 +52,8 @@
   "appearance": {
     "accent": null,
     "window_material": true,
+    "material": "acrylic",
+    "material_opacity": 0,
     "background": {
       "kind": "default",
       "color": "#1F4E79",
@@ -79,7 +81,9 @@
 | `language` | 字符串 | `"zh-CN"` | 界面语言，BCP 47 标签 |
 | `theme` | `"system"` \| `"light"` \| `"dark"` | `"system"` | 界面主题 |
 | `appearance.accent` | 字符串 \| `null` | `null` | 强调色 `#RRGGBB`；`null` 跟随系统强调色（取不到时用 `#0067C0`） |
-| `appearance.window_material` | 布尔 | `true` | 平台支持时使用窗口材质（Win11 Mica、macOS vibrancy），否则纯色背景 |
+| `appearance.window_material` | 布尔 | `true` | 平台支持时使用窗口材质（Win11 磨砂玻璃或 Mica、macOS vibrancy），否则使用 `background` |
+| `appearance.material` | `"acrylic"` \| `"mica"` | `"acrylic"` | Windows 11 上的材质：磨砂玻璃（模糊窗口后方内容，需 22H2 及以上，更早的系统回退 Mica）或 Mica；macOS 始终用 vibrancy |
+| `appearance.material_opacity` | 整数 0–100 | `0` | 材质生效时叠在材质上的主题底色不透明度（%），0 为纯材质，100 为纯色 |
 | `appearance.background.kind` | `"default"` \| `"color"` \| `"image"` | `"default"` | 窗口材质未生效时的背景：内置亮/暗背景（跟随主题）、纯色、自定义图片；图片缺失时回退 `default` |
 | `appearance.background.color` | 字符串 | `"#1F4E79"` | 纯色背景 `#RRGGBB` |
 | `appearance.background.image` | 字符串 \| `null` | `null` | `ui/backgrounds/` 中的文件名，由 `appearance_import_background` 生成 |

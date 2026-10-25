@@ -1,11 +1,15 @@
-// 窗口材质（PLAN.md M1-11）：Windows 11 用 Mica（不可用时 Acrylic），macOS 用 vibrancy，
-// Linux 与 Windows 10 回退为纯色背景。窗口在 tauri.conf.json 中设为透明，
-// 材质生效时页面底色透明，否则使用主题底色。
+// 窗口材质（PLAN.md M1-11）：Windows 11 可选磨砂玻璃（Acrylic）或 Mica，macOS 用 vibrancy，
+// Linux 与 Windows 10 回退为背景图层。窗口在 tauri.conf.json 中设为透明，
+// 材质生效时页面底色按 `material_opacity` 半透明叠在材质上，否则使用主题底色。
 import { isTauri } from "@tauri-apps/api/core";
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
+import type { WindowMaterial } from "../bindings/WindowMaterial";
 
-/** 当前平台可用的窗口材质。 */
-export type MaterialKind = "mica" | "vibrancy" | "none";
+/**
+ * 当前平台可用的窗口材质：`acrylic` 为 Windows 11 22H2 及以上（磨砂玻璃与 Mica 都可用），
+ * `mica` 为更早的 Windows 11（Acrylic 走旧接口，拖动窗口时卡顿，只用 Mica）。
+ */
+export type MaterialKind = "acrylic" | "mica" | "vibrancy" | "none";
 
 /** Chromium 的 User-Agent Client Hints；WebView2 与 Chrome 提供，其他浏览器没有。 */
 interface UserAgentData {
@@ -14,8 +18,8 @@ interface UserAgentData {
 }
 
 /**
- * 判断平台是否支持窗口材质。Windows 上 Client Hints 的 `platformVersion` 主版本号
- * ≥ 13 即为 Windows 11；Windows 10 的 Acrylic 在拖动窗口时卡顿，因此不启用。
+ * 判断平台支持的窗口材质。Windows 上 Client Hints 的 `platformVersion` 主版本号
+ * ≥ 13 即为 Windows 11，≥ 15 为 22H2 及以上；Windows 10 的 Acrylic 在拖动窗口时卡顿，因此不启用。
  */
 export async function detectMaterial(
   uaData: UserAgentData | undefined = (navigator as { userAgentData?: UserAgentData })
@@ -24,7 +28,9 @@ export async function detectMaterial(
 ): Promise<MaterialKind> {
   if (uaData?.platform === "Windows") {
     const { platformVersion } = await uaData.getHighEntropyValues(["platformVersion"]);
-    return Number(platformVersion?.split(".")[0]) >= 13 ? "mica" : "none";
+    const major = Number(platformVersion?.split(".")[0]);
+    if (major >= 15) return "acrylic";
+    return major >= 13 ? "mica" : "none";
   }
   if (/Macintosh|Mac OS X/.test(userAgent)) return "vibrancy";
   return "none";
@@ -56,6 +62,7 @@ export async function applyMaterial(
   kind: MaterialKind,
   enabled: boolean,
   dark: boolean,
+  material: WindowMaterial = "acrylic",
 ): Promise<boolean> {
   if (!isTauri()) return false;
   const window = getCurrentWindow();
@@ -65,10 +72,21 @@ export async function applyMaterial(
       await window.clearEffects();
       return false;
     }
-    const effects = kind === "mica" ? [Effect.Mica, Effect.Acrylic] : [Effect.Sidebar];
-    await window.setEffects({ effects });
+    await window.setEffects({ effects: materialEffects(kind, material) });
     return true;
   } catch {
     return false;
   }
+}
+
+/** 平台与所选材质对应的窗口效果。 */
+export function materialEffects(kind: MaterialKind, material: WindowMaterial): Effect[] {
+  if (kind === "vibrancy") return [Effect.Sidebar];
+  if (kind === "acrylic" && material === "acrylic") return [Effect.Acrylic];
+  return [Effect.Mica];
+}
+
+/** 是否可以在设置中选择材质类型（磨砂玻璃 / Mica）。 */
+export function materialSelectable(kind: MaterialKind): boolean {
+  return kind === "acrylic";
 }

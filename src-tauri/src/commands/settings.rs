@@ -129,7 +129,8 @@ fn validate_settings(settings: &LauncherSettings) -> AppResult<()> {
     });
     let concurrency_ok = (1..=MAX_CONCURRENCY).contains(&settings.download.max_concurrency);
     let memory_ok = MEMORY_RANGE_MB.contains(&settings.memory.max_mb);
-    let background_ok = background_valid(&settings.appearance.background);
+    let background_ok = background_valid(&settings.appearance.background)
+        && settings.appearance.material_opacity <= 100;
     if !(accent_ok && concurrency_ok && memory_ok && background_ok) {
         return Err(AppError::new(ErrorCode::CommonInternal)
             .with_param("accent", accent_ok)
@@ -316,13 +317,14 @@ mod tests {
     #[test]
     fn rejects_out_of_range_settings() {
         assert!(validate_settings(&sample()).is_ok());
-        let cases: [fn(&mut LauncherSettings); 6] = [
+        let cases: [fn(&mut LauncherSettings); 7] = [
             |s| s.appearance.accent = Some("red".to_owned()),
             |s| s.appearance.accent = Some("#GGGGGG".to_owned()),
             |s| s.download.max_concurrency = 0,
             |s| s.download.max_concurrency = MAX_CONCURRENCY + 1,
             |s| s.memory.max_mb = 256,
             |s| s.appearance.background.blur = 41,
+            |s| s.appearance.material_opacity = 101,
         ];
         for change in cases {
             let mut settings = sample();

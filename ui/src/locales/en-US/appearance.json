@@ -8,6 +8,16 @@
     "image": "Picture",
     "material": "Window material"
   },
+  "material": {
+    "label": "Material type",
+    "description": "Acrylic blurs what is behind the window; Mica only tints with the desktop wallpaper",
+    "acrylic": "Acrylic (frosted glass)",
+    "mica": "Mica"
+  },
+  "material_opacity": {
+    "label": "Material tint opacity",
+    "description": "Theme color layered over the material: 0% is pure material, 100% is solid"
+  },
   "color": {
     "label": "Background color"
   },
