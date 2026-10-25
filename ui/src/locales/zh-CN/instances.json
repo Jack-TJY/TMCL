@@ -94,6 +94,7 @@
   "launch": {
     "action": "启动",
     "running": "运行中",
+    "installing": "正在安装",
     "recent": "开始游戏：{name}",
     "log": "游戏日志",
     "failed": "无法启动“{name}”：{reason}"

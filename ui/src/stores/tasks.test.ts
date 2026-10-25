@@ -103,6 +103,26 @@ describe("tasks store", () => {
     expect(store.entries[0]).toMatchObject({ label: "1.20.1", status: "running" });
   });
 
+  it("marks an instance as installing while its task runs", async () => {
+    tauriInvoke.mockResolvedValueOnce({ tasks: [] });
+    const store = useTasksStore();
+    const start = vi
+      .fn()
+      .mockResolvedValueOnce({ task_id: "a" })
+      .mockResolvedValueOnce({ task_id: "b" });
+    await store.start({ kind: "loader_install", label: "x", start, instanceId: "inst" });
+    expect(store.installing("inst")).toBe(true);
+    expect(store.installing("other")).toBe(false);
+
+    emit("task:finished", { task_id: "a", state: "failed", error: NETWORK_ERROR });
+    expect(store.installing("inst")).toBe(false);
+
+    await store.retry("a");
+    expect(store.installing("inst")).toBe(true);
+    emit("task:finished", { task_id: "b", state: "succeeded" });
+    expect(store.installing("inst")).toBe(false);
+  });
+
   it("does not retry running tasks", async () => {
     tauriInvoke.mockResolvedValueOnce({ tasks: [] });
     const store = useTasksStore();

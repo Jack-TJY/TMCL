@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 卡片上的启动按钮：未运行时“启动”，启动中显示加载，运行中显示“运行中”；有日志时可打开日志窗口。
+// 卡片上的启动按钮：未运行时“启动”，启动中显示加载，运行中显示“运行中”，安装中显示“正在安装”且不可点；
+// 有日志时可打开日志窗口。
 import { DocumentText20Regular, Play20Filled } from "@vicons/fluent";
 import { NButton, NIcon, useMessage } from "naive-ui";
 import { computed, ref } from "vue";
@@ -8,6 +9,7 @@ import { toAppError } from "../../api/invoke";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import { isActive, useGameSessions } from "../../components/game-log/sessions";
 import { formatError } from "../../i18n";
+import { useTasksStore } from "../../stores/tasks";
 
 const props = defineProps<{ instance: InstanceSummary; primary?: boolean }>();
 const emit = defineEmits<{ log: [instanceId: string]; launched: [] }>();
@@ -15,13 +17,15 @@ const emit = defineEmits<{ log: [instanceId: string]; launched: [] }>();
 const { t } = useI18n();
 const message = useMessage();
 const games = useGameSessions();
+const tasks = useTasksStore();
 
 const preparing = ref(false);
 const session = computed(() => games.sessions[props.instance.id]);
 const running = computed(() => isActive(session.value));
+const installing = computed(() => tasks.installing(props.instance.id));
 
 async function launch() {
-  if (preparing.value || running.value) return;
+  if (preparing.value || running.value || installing.value) return;
   preparing.value = true;
   try {
     await games.launch({ id: props.instance.id, name: props.instance.name });
@@ -46,7 +50,7 @@ async function launch() {
       :secondary="!primary && !running"
       :size="primary ? 'medium' : 'small'"
       :loading="preparing || session?.status === 'starting'"
-      :disabled="running"
+      :disabled="running || installing"
       @click="launch"
     >
       <template #icon
@@ -55,9 +59,11 @@ async function launch() {
       {{
         running
           ? t("instances.launch.running")
-          : primary
-            ? t("instances.launch.recent", { name: instance.name })
-            : t("instances.launch.action")
+          : installing
+            ? t("instances.launch.installing")
+            : primary
+              ? t("instances.launch.recent", { name: instance.name })
+              : t("instances.launch.action")
       }}
     </NButton>
     <NButton

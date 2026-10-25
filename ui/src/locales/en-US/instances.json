@@ -94,6 +94,7 @@
   "launch": {
     "action": "Play",
     "running": "Running",
+    "installing": "Installing",
     "recent": "Play {name}",
     "log": "Game log",
     "failed": "Couldn't start \"{name}\": {reason}"
