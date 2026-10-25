@@ -164,6 +164,7 @@ async fn run(args: Args) -> AppResult<i32> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    tmcl_launch::init_local_offset();
     let args = match parse_args() {
         Ok(args) => args,
         Err(msg) => {

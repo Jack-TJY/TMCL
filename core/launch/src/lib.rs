@@ -4,14 +4,17 @@
 //!
 //! - [`precheck`]：补全文件、选择 Java、解压 natives，得到 [`PreparedLaunch`]；
 //! - [`args`]：拼装命令，占位符见 [`placeholders`]，classpath 见 [`classpath`]；
-//! - [`process`]：启动进程、批量转发日志、识别崩溃、强制结束。
+//! - [`process`]：启动进程、批量转发日志、识别崩溃、强制结束；
+//! - [`log4j`]：把游戏输出的 log4j XML 事件转换为文本行。
 
 pub mod args;
 pub mod classpath;
+pub mod log4j;
 pub mod placeholders;
 pub mod precheck;
 pub mod process;
 
 pub use args::{LaunchAccount, LaunchCommand, LaunchSpec, build_command};
+pub use log4j::init_local_offset;
 pub use precheck::{LaunchEnv, PreparedLaunch, prepare, version_id};
 pub use process::{ExitInfo, GameProcess, KillHandle, LogStream, is_crash_line, spawn};
