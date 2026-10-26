@@ -42,6 +42,8 @@ pub struct AppState {
     pub ms: AppResult<MsClient>,
     /// Modrinth 客户端，克隆体共享速率限制状态；测试中指向本地服务器。
     pub modrinth: AppResult<ModrinthClient>,
+    /// Minecraft 服务根地址（皮肤与披风接口）；测试中指向本地服务器。
+    pub minecraft_api: String,
 }
 
 impl AppState {
@@ -75,6 +77,7 @@ impl AppState {
             secrets: Arc::new(KeyringStore),
             ms: MsClient::from_build(),
             modrinth: HttpClient::new().and_then(|http| ModrinthClient::new(&http)),
+            minecraft_api: tmcl_skin::mojang::API_BASE.to_owned(),
         }
     }
 

@@ -83,7 +83,10 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::skin::skin_library_remove,
         commands::skin::skin_library_update,
         commands::skin::skin_open_site,
+        commands::skin::skin_profile,
+        commands::skin::skin_set_cape,
         commands::skin::skin_site_url,
+        commands::skin::skin_upload,
         // task
         commands::task::task_cancel,
         commands::task::task_list,
@@ -1447,6 +1450,127 @@ mod tests {
         assert_eq!(site, json!({ "url": server.url("/") }));
 
         for cmd in ["skin_site_url", "skin_open_site"] {
+            let body = json!({ "args": { "account_id": offline["id"] } });
+            assert_eq!(
+                error_code(invoke(&webview, cmd, body)),
+                ErrorCode::CommonInternal
+            );
+            let body = json!({ "args": { "account_id": "missing" } });
+            assert_eq!(
+                error_code(invoke(&webview, cmd, body)),
+                ErrorCode::AuthAccountNotFound
+            );
+        }
+    }
+
+    /// 带一个令牌未过期的正版账号的状态，皮肤接口指向本地服务器（不区分请求方法）。
+    fn skin_ms_app() -> (
+        tauri::App<MockRuntime>,
+        tauri::WebviewWindow<MockRuntime>,
+        TestServer,
+        tempfile::TempDir,
+        String,
+    ) {
+        let profile = r#"{"id":"0b6f4c2a9d3e4f8a8b1c2d3e4f5a6b7c","name":"Steve",
+            "skins":[{"id":"s1","state":"ACTIVE","url":"http://textures.minecraft.net/texture/aa","variant":"SLIM"}],
+            "capes":[{"id":"c1","state":"ACTIVE","url":"http://textures.minecraft.net/texture/cc","alias":"Migrator"}]}"#;
+        let server = tauri::async_runtime::block_on(TestServer::start(
+            [
+                "/minecraft/profile",
+                "/minecraft/profile/skins",
+                "/minecraft/profile/capes/active",
+            ]
+            .map(|path| (path, profile.as_bytes().to_vec())),
+        ));
+        let dir = tempfile::tempdir().unwrap();
+        let (mut state, secrets) = state_with_memory_secrets(dir.path());
+        state.ms = tmcl_auth::MsClient::new(
+            "00000000-0000-0000-0000-000000000000",
+            tmcl_auth::Endpoints::default(),
+        );
+        state.minecraft_api = server.url("");
+        let session = tmcl_auth::MicrosoftSession {
+            refresh_token: "test-refresh".into(),
+            access_token: "test-mc".into(),
+            expires_at: u64::MAX,
+            profile: tmcl_auth::minecraft::McProfile {
+                id: "0b6f4c2a9d3e4f8a8b1c2d3e4f5a6b7c".into(),
+                name: "Steve".into(),
+            },
+        };
+        let account = state
+            .with_db(|_, db| tmcl_auth::store::save_session(db, secrets.as_ref(), &session))
+            .unwrap();
+        let (app, webview) = mock_app_with(state);
+        (app, webview, server, dir, account.id)
+    }
+
+    #[test]
+    fn skin_profile_upload_and_cape_over_ipc() {
+        let (_app, webview, server, dir, id) = skin_ms_app();
+        let profile = invoke(
+            &webview,
+            "skin_profile",
+            json!({ "args": { "account_id": id } }),
+        )
+        .unwrap();
+        assert_eq!(profile["skins"][0]["variant"], "slim");
+        assert_eq!(profile["skins"][0]["active"], true);
+        assert_eq!(profile["capes"][0]["alias"], "Migrator");
+
+        let source = dir.path().join("skin.png");
+        std::fs::write(&source, skin_png(64, 64)).unwrap();
+        let body =
+            json!({ "args": { "path": source.display().to_string(), "variant": "classic" } });
+        let skin = invoke(&webview, "skin_library_import", body).unwrap();
+        let body = json!({ "args": { "account_id": id, "skin_id": skin["id"] } });
+        assert_eq!(invoke(&webview, "skin_upload", body).unwrap(), profile);
+        let body = json!({ "args": { "account_id": id, "cape_id": "c1" } });
+        assert_eq!(invoke(&webview, "skin_set_cape", body).unwrap(), profile);
+        let body = json!({ "args": { "account_id": id } });
+        assert_eq!(invoke(&webview, "skin_set_cape", body).unwrap(), profile);
+        let paths: Vec<String> = server.requests().into_iter().map(|r| r.path).collect();
+        assert_eq!(
+            paths,
+            [
+                "/minecraft/profile",
+                "/minecraft/profile/skins",
+                "/minecraft/profile/capes/active",
+                "/minecraft/profile/capes/active",
+            ]
+        );
+
+        let body = json!({ "args": { "account_id": id, "skin_id": "0".repeat(64) } });
+        assert_eq!(
+            error_code(invoke(&webview, "skin_upload", body)),
+            ErrorCode::SkinNotFound
+        );
+        server.fail("/minecraft/profile", [Fault::Status(401)]);
+        let err: AppError = serde_json::from_value(
+            invoke(
+                &webview,
+                "skin_profile",
+                json!({ "args": { "account_id": id } }),
+            )
+            .unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(err.code, ErrorCode::AuthMsSessionExpired);
+        assert_eq!(err.params["name"], "Steve");
+    }
+
+    #[test]
+    fn skin_ms_commands_reject_other_accounts() {
+        let dir = tempfile::tempdir().unwrap();
+        let (state, _) = state_with_memory_secrets(dir.path());
+        let (_app, webview) = mock_app_with(state);
+        let offline = invoke(
+            &webview,
+            "auth_add_offline",
+            json!({ "args": { "name": "Dev" } }),
+        )
+        .unwrap();
+        for cmd in ["skin_profile", "skin_set_cape"] {
             let body = json!({ "args": { "account_id": offline["id"] } });
             assert_eq!(
                 error_code(invoke(&webview, cmd, body)),

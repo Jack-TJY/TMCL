@@ -2,6 +2,7 @@
 //!
 //! 功能模块 crate，只依赖 `core/*`，不依赖 `tauri`，见 `docs/PLAN.md` 第 2 节。
 //!
+//! - [`mojang`]：正版账号的皮肤与披风（`api.minecraftservices.com`）。
 //! - [`yggdrasil`]：外置登录账号的皮肤站地址。
 //! - [`library`]：本地皮肤库 `<data_root>/skins/` 与 PNG 校验。
 
@@ -9,9 +10,11 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 pub mod library;
+pub mod mojang;
 pub mod yggdrasil;
 
 pub use library::{SkinEntry, SkinLibrary, validate_png};
+pub use mojang::{MojangClient, ProfileCape, ProfileSkin, SkinProfile};
 
 /// 皮肤模型：`classic`（Steve，4 像素手臂）或 `slim`（Alex，3 像素手臂）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]

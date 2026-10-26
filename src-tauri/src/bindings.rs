@@ -37,10 +37,12 @@ use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
 use crate::commands::skin::{
-    SkinAccountArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList, SkinSite, SkinUpdateArgs,
+    SkinAccountArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList, SkinSetCapeArgs, SkinSite,
+    SkinUpdateArgs, SkinUploadArgs,
 };
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
 use crate::events::{DeviceCode, GameExited, GameLog, TaskStarted};
+use tmcl_skin::SkinProfile;
 
 /// 置为 `1` 时测试改为写入生成物。
 const UPDATE_ENV: &str = "TMCL_UPDATE_BINDINGS";
@@ -123,13 +125,16 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SettingsSetArgs::export_all(&cfg)?;
     SettingsSetLanguageArgs::export_all(&cfg)?;
     SettingsSnapshot::export_all(&cfg)?;
-    // skin（SkinEntry、SkinVariant 随 SkinLibraryList 一并导出）
+    // skin（SkinEntry、SkinVariant 随 SkinLibraryList，ProfileSkin、ProfileCape 随 SkinProfile 一并导出）
     SkinAccountArgs::export_all(&cfg)?;
     SkinIdArgs::export_all(&cfg)?;
     SkinImportArgs::export_all(&cfg)?;
     SkinLibraryList::export_all(&cfg)?;
+    SkinProfile::export_all(&cfg)?;
+    SkinSetCapeArgs::export_all(&cfg)?;
     SkinSite::export_all(&cfg)?;
     SkinUpdateArgs::export_all(&cfg)?;
+    SkinUploadArgs::export_all(&cfg)?;
     // task
     TaskCancelArgs::export_all(&cfg)?;
     TaskCancelResult::export_all(&cfg)?;
