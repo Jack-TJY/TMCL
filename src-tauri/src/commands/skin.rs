@@ -1,6 +1,8 @@
-//! `skin_*` 命令（PLAN.md M2-07）：本地皮肤库、外置登录账号的皮肤站。
+//! `skin_*` 命令（PLAN.md M2-07）：本地皮肤库、正版账号的皮肤与披风、外置登录账号的皮肤站。
 //!
 //! 皮肤库位于 `<data_root>/skins/`，界面经 `skin_library_read` 取回图片内容，不直接访问文件系统。
+//! 正版接口使用的 Minecraft 访问令牌经 `tmcl_auth::store::prepare_launch` 取得（快过期时续期），
+//! 不写入日志。
 
 use std::fs;
 use std::path::Path;
@@ -9,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use tauri::ipc::Response;
 use tmcl_auth::accounts::{self, Account};
-use tmcl_auth::{AccountKind, AuthlibServer};
+use tmcl_auth::{AccountKind, AuthlibServer, store};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::HttpClient;
 use tmcl_skin::library::MAX_SKIN_BYTES;
-use tmcl_skin::{SkinEntry, SkinLibrary, SkinVariant, yggdrasil};
+use tmcl_skin::{MojangClient, SkinEntry, SkinLibrary, SkinProfile, SkinVariant, yggdrasil};
 use ts_rs::TS;
 
 use crate::commands::settings::open_in_file_manager;
@@ -58,6 +60,26 @@ pub struct SkinUpdateArgs {
 pub struct SkinAccountArgs {
     /// 账号 ID。
     pub account_id: String,
+}
+
+/// `skin_upload` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SkinUploadArgs {
+    /// 正版账号 ID。
+    pub account_id: String,
+    /// 要上传的皮肤库中的皮肤 ID；模型取该皮肤的 `variant`。
+    pub skin_id: String,
+}
+
+/// `skin_set_cape` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SkinSetCapeArgs {
+    /// 正版账号 ID。
+    pub account_id: String,
+    /// 要显示的披风 ID；`null` 表示隐藏披风。
+    #[serde(default)]
+    #[ts(optional)]
+    pub cape_id: Option<String>,
 }
 
 /// 外置登录账号的皮肤站页面。
@@ -127,18 +149,87 @@ pub async fn skin_library_remove(
     library(&state)?.remove(&args.id)
 }
 
+fn account(state: &AppState, account_id: &str) -> AppResult<Account> {
+    state
+        .with_db(|_, db| accounts::get(db, account_id))?
+        .ok_or_else(|| AppError::new(ErrorCode::AuthAccountNotFound).with_param("id", account_id))
+}
+
+/// 账号类型不适用于该命令。
+fn wrong_kind(kind: AccountKind) -> AppError {
+    AppError::new(ErrorCode::CommonInternal).with_param("kind", format!("{kind:?}").to_lowercase())
+}
+
 /// 外置登录账号的皮肤站；不是外置登录账号返回 `COMMON_INTERNAL`（`params.kind`）。
 fn authlib_server(state: &AppState, account_id: &str) -> AppResult<AuthlibServer> {
-    let account: Account = state
-        .with_db(|_, db| accounts::get(db, account_id))?
-        .ok_or_else(|| {
-            AppError::new(ErrorCode::AuthAccountNotFound).with_param("id", account_id)
-        })?;
+    let account = account(state, account_id)?;
     match (account.kind, account.server) {
         (AccountKind::Authlib, Some(server)) => Ok(server),
-        (kind, _) => Err(AppError::new(ErrorCode::CommonInternal)
-            .with_param("kind", format!("{kind:?}").to_lowercase())),
+        (kind, _) => Err(wrong_kind(kind)),
     }
+}
+
+/// 对正版账号执行 `op`：取得（必要时续期）Minecraft 访问令牌后调用皮肤接口。
+/// 不是微软账号返回 `COMMON_INTERNAL`（`params.kind`）；令牌失效返回 `AUTH_MS_SESSION_EXPIRED`。
+async fn with_ms_token<F, Fut>(state: &AppState, account_id: &str, op: F) -> AppResult<SkinProfile>
+where
+    F: FnOnce(MojangClient, String, TaskCtx) -> Fut,
+    Fut: Future<Output = AppResult<SkinProfile>>,
+{
+    let account = account(state, account_id)?;
+    if account.kind != AccountKind::Microsoft {
+        return Err(wrong_kind(account.kind));
+    }
+    let ms = state.ms.clone()?;
+    let ctx = TaskCtx::noop("skin");
+    let session = store::prepare_launch(state.secrets.as_ref(), &ms, &account, &ctx).await?;
+    let client = MojangClient::with_base(&state.minecraft_api)?;
+    op(client, session.access_token, ctx).await.map_err(|err| {
+        if err.code == ErrorCode::AuthMsSessionExpired {
+            err.with_param("name", &account.name)
+        } else {
+            err
+        }
+    })
+}
+
+/// 正版账号档案中的皮肤与披风。
+#[tauri::command]
+pub async fn skin_profile(
+    state: State<'_, AppState>,
+    args: SkinAccountArgs,
+) -> Result<SkinProfile, AppError> {
+    with_ms_token(&state, &args.account_id, |client, token, ctx| async move {
+        client.profile(&token, &ctx).await
+    })
+    .await
+}
+
+/// 把皮肤库中的皮肤上传到正版账号并设为当前皮肤，返回新的档案。
+#[tauri::command]
+pub async fn skin_upload(
+    state: State<'_, AppState>,
+    args: SkinUploadArgs,
+) -> Result<SkinProfile, AppError> {
+    let library = library(&state)?;
+    let entry = library.get(&args.skin_id)?;
+    let png = library.read(&args.skin_id)?;
+    with_ms_token(&state, &args.account_id, |client, token, ctx| async move {
+        client.upload_skin(&token, entry.variant, &png, &ctx).await
+    })
+    .await
+}
+
+/// 切换正版账号显示的披风；`cape_id` 为 `null` 时隐藏披风。返回新的档案。
+#[tauri::command]
+pub async fn skin_set_cape(
+    state: State<'_, AppState>,
+    args: SkinSetCapeArgs,
+) -> Result<SkinProfile, AppError> {
+    with_ms_token(&state, &args.account_id, |client, token, ctx| async move {
+        client.set_cape(&token, args.cape_id.as_deref(), &ctx).await
+    })
+    .await
 }
 
 async fn site_url(state: &AppState, account_id: &str) -> AppResult<SkinSite> {
