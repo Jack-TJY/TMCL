@@ -70,3 +70,6 @@
 | `RESOURCES_WORLD_NOT_FOUND` | resources | 数据包要安装到的存档不存在或名称非法 | `world` | 找不到存档 {world} | World {world} was not found |
 | `SKIN_INVALID_IMAGE` | skin | 皮肤文件不是 PNG，或尺寸不是 64×64 / 64×32；正版上传时服务器拒收（400）也用此码 | `width`、`height`（可识别时） | 皮肤必须是 64×64 或 64×32 像素的 PNG 图片 | A skin must be a 64×64 or 64×32 PNG image |
 | `SKIN_NOT_FOUND` | skin | 本地皮肤库中没有该皮肤（已被删除或 ID 无效） | `id` | 皮肤库中没有这个皮肤，请刷新列表 | This skin is not in the library, please refresh the list |
+| `SYNC_MASTER_INVALID` | sync | 设置同步主配置无效：`master.json` 损坏或格式版本不受支持，或要保存的选项键/值非法 | — | 设置同步的主配置无效，请重新采集或编辑 | The settings sync master profile is invalid. Capture or edit it again |
+| `SYNC_NO_MASTER` | sync | 预览或应用前还没有保存主配置 | — | 还没有设置同步的主配置，请先从实例采集或手动编辑 | No settings sync master profile yet. Capture one from an instance or edit it first |
+| `SYNC_SOURCE_NO_OPTIONS` | sync | 作为来源的实例还没有 `options.txt`（从未启动过游戏） | `id` | 实例 {id} 还没有游戏设置，请先启动一次游戏 | Instance {id} has no game settings yet. Launch the game once first |

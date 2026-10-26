@@ -157,7 +157,7 @@ pub fn capture_options(file: &OptionsFile, game_version: &str) -> Vec<SyncOption
         .collect()
 }
 
-/// 读取主配置；从未保存过时为 `None`。文件损坏返回 `COMMON_JSON`。
+/// 读取主配置；从未保存过时为 `None`。文件损坏或格式版本不受支持返回 `SYNC_MASTER_INVALID`。
 pub fn load_master(paths: &DataPaths) -> AppResult<Option<SyncProfile>> {
     let path = master_file(paths);
     let bytes = match fs::read(&path) {
@@ -165,17 +165,20 @@ pub fn load_master(paths: &DataPaths) -> AppResult<Option<SyncProfile>> {
         Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
         Err(e) => return Err(AppError::from(e).with_param("path", path.display())),
     };
-    let file: MasterFile = serde_json::from_slice(&bytes)
-        .map_err(|e| AppError::from(e).with_param("path", path.display()))?;
+    let file: MasterFile = serde_json::from_slice(&bytes).map_err(|e| {
+        AppError::new(ErrorCode::SyncMasterInvalid)
+            .with_param("path", path.display())
+            .with_detail(e.to_string())
+    })?;
     if file.schema != MASTER_SCHEMA {
-        return Err(AppError::new(ErrorCode::CommonJson)
+        return Err(AppError::new(ErrorCode::SyncMasterInvalid)
             .with_param("path", path.display())
             .with_detail(format!("unsupported master.json schema {}", file.schema)));
     }
     Ok(Some(file.profile))
 }
 
-/// 校验并原子保存主配置。键为空或含 `:`、换行，值含换行，或选项过多时返回 `COMMON_INTERNAL`。
+/// 校验并原子保存主配置。键为空或含 `:`、换行，值含换行，或选项过多时返回 `SYNC_MASTER_INVALID`。
 pub fn save_master(paths: &DataPaths, profile: &SyncProfile) -> AppResult<()> {
     let bad_line = |s: &str| s.contains(['\r', '\n']);
     let valid = profile.options.len() <= MAX_OPTIONS
@@ -183,7 +186,7 @@ pub fn save_master(paths: &DataPaths, profile: &SyncProfile) -> AppResult<()> {
             !o.key.is_empty() && !o.key.contains(':') && !bad_line(&o.key) && !bad_line(&o.value)
         });
     if !valid {
-        return Err(AppError::new(ErrorCode::CommonInternal)
+        return Err(AppError::new(ErrorCode::SyncMasterInvalid)
             .with_detail("sync master: invalid option key or value"));
     }
     let doc = MasterFile {
@@ -253,9 +256,12 @@ mod tests {
 
         profile.options[0].value = "1\nx:2".into();
         let err = save_master(&paths, &profile).unwrap_err();
-        assert_eq!(err.code, ErrorCode::CommonInternal);
+        assert_eq!(err.code, ErrorCode::SyncMasterInvalid);
 
         fs::write(master_file(&paths), b"{ broken").unwrap();
-        assert_eq!(load_master(&paths).unwrap_err().code, ErrorCode::CommonJson);
+        assert_eq!(
+            load_master(&paths).unwrap_err().code,
+            ErrorCode::SyncMasterInvalid
+        );
     }
 }

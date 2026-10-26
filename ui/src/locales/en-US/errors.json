@@ -59,5 +59,8 @@
   "RESOURCES_VERSION_NOT_FOUND": "Resource version {version} was not found",
   "RESOURCES_WORLD_NOT_FOUND": "World {world} was not found",
   "SKIN_INVALID_IMAGE": "A skin must be a 64×64 or 64×32 PNG image",
-  "SKIN_NOT_FOUND": "This skin is not in the library, please refresh the list"
+  "SKIN_NOT_FOUND": "This skin is not in the library, please refresh the list",
+  "SYNC_MASTER_INVALID": "The settings sync master profile is invalid. Capture or edit it again",
+  "SYNC_NO_MASTER": "No settings sync master profile yet. Capture one from an instance or edit it first",
+  "SYNC_SOURCE_NO_OPTIONS": "Instance {id} has no game settings yet. Launch the game once first"
 }

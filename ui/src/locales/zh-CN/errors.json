@@ -59,5 +59,8 @@
   "RESOURCES_VERSION_NOT_FOUND": "找不到资源版本 {version}",
   "RESOURCES_WORLD_NOT_FOUND": "找不到存档 {world}",
   "SKIN_INVALID_IMAGE": "皮肤必须是 64×64 或 64×32 像素的 PNG 图片",
-  "SKIN_NOT_FOUND": "皮肤库中没有这个皮肤，请刷新列表"
+  "SKIN_NOT_FOUND": "皮肤库中没有这个皮肤，请刷新列表",
+  "SYNC_MASTER_INVALID": "设置同步的主配置无效，请重新采集或编辑",
+  "SYNC_NO_MASTER": "还没有设置同步的主配置，请先从实例采集或手动编辑",
+  "SYNC_SOURCE_NO_OPTIONS": "实例 {id} 还没有游戏设置，请先启动一次游戏"
 }
