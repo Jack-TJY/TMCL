@@ -9,6 +9,7 @@ use tmcl_game::InstallOptions;
 use tmcl_instance::InstanceStore;
 use tmcl_loader::Endpoints;
 use tmcl_net::{Downloader, HttpClient};
+use tmcl_resources::modrinth::ModrinthClient;
 use tokio::sync::Mutex;
 
 use crate::commands::launch::GameRegistry;
@@ -39,6 +40,8 @@ pub struct AppState {
     pub secrets: Arc<dyn SecretStore>,
     /// 微软登录客户端；构建时没有 Client ID 时为 `AUTH_MS_DISABLED`。测试中指向本地服务器。
     pub ms: AppResult<MsClient>,
+    /// Modrinth 客户端，克隆体共享速率限制状态；测试中指向本地服务器。
+    pub modrinth: AppResult<ModrinthClient>,
 }
 
 impl AppState {
@@ -71,6 +74,7 @@ impl AppState {
             db: StdMutex::new(None),
             secrets: Arc::new(KeyringStore),
             ms: MsClient::from_build(),
+            modrinth: HttpClient::new().and_then(|http| ModrinthClient::new(&http)),
         }
     }
 
@@ -103,6 +107,11 @@ impl AppState {
             None => guard.insert(open_db(paths)?),
         };
         f(paths, db)
+    }
+
+    /// Modrinth 客户端；创建失败时返回当时的错误。
+    pub fn modrinth(&self) -> AppResult<&ModrinthClient> {
+        self.modrinth.as_ref().map_err(Clone::clone)
     }
 
     /// 当前的下载引擎；克隆体共享同一个连接数上限。

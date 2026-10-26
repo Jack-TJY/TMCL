@@ -125,6 +125,14 @@ pub enum ErrorCode {
     NetSizeMismatch,
     /// 连接或读取超时。
     NetTimeout,
+    /// 必需前置在 Modrinth 上没有适用于该实例的版本（或项目已不存在）。
+    ResourcesDependencyUnavailable,
+    /// 要安装的资源与已安装或同批安装的资源不兼容（`incompatible` 依赖）。
+    ResourcesIncompatible,
+    /// Modrinth 上找不到要安装的版本，或该版本没有文件。
+    ResourcesVersionNotFound,
+    /// 数据包要安装到的存档不存在或名称非法。
+    ResourcesWorldNotFound,
 }
 
 impl ErrorCode {
@@ -185,6 +193,10 @@ impl ErrorCode {
             Self::NetRequest => "NET_REQUEST",
             Self::NetSizeMismatch => "NET_SIZE_MISMATCH",
             Self::NetTimeout => "NET_TIMEOUT",
+            Self::ResourcesDependencyUnavailable => "RESOURCES_DEPENDENCY_UNAVAILABLE",
+            Self::ResourcesIncompatible => "RESOURCES_INCOMPATIBLE",
+            Self::ResourcesVersionNotFound => "RESOURCES_VERSION_NOT_FOUND",
+            Self::ResourcesWorldNotFound => "RESOURCES_WORLD_NOT_FOUND",
         }
     }
 }
@@ -322,6 +334,10 @@ mod tests {
             ErrorCode::NetRequest,
             ErrorCode::NetSizeMismatch,
             ErrorCode::NetTimeout,
+            ErrorCode::ResourcesDependencyUnavailable,
+            ErrorCode::ResourcesIncompatible,
+            ErrorCode::ResourcesVersionNotFound,
+            ErrorCode::ResourcesWorldNotFound,
         ] {
             let json = serde_json::to_string(&code).unwrap();
             assert_eq!(json, format!("\"{}\"", code.as_str()));

@@ -52,5 +52,9 @@
   "NET_HTTP_STATUS": "服务器返回错误 {status}：{url}",
   "NET_REQUEST": "网络请求失败 {url}",
   "NET_SIZE_MISMATCH": "文件大小不符 {url}",
-  "NET_TIMEOUT": "连接超时 {url}"
+  "NET_TIMEOUT": "连接超时 {url}",
+  "RESOURCES_DEPENDENCY_UNAVAILABLE": "找不到适用于此实例的前置 {project}",
+  "RESOURCES_INCOMPATIBLE": "{project} 与 {with} 不兼容，已取消安装",
+  "RESOURCES_VERSION_NOT_FOUND": "找不到资源版本 {version}",
+  "RESOURCES_WORLD_NOT_FOUND": "找不到存档 {world}"
 }

@@ -8,5 +8,6 @@ pub mod instance;
 pub mod launch;
 pub mod layout;
 pub mod loader;
+pub mod resources;
 pub mod settings;
 pub mod task;

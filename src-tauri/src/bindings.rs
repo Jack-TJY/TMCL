@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use tmcl_auth::AccountList;
 use tmcl_common::{AppError, TaskFinished, TaskProgress};
+use tmcl_resources::{InstallPlan, ResourcePage};
 use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo, ReleaseList};
@@ -27,6 +28,9 @@ use crate::commands::launch::{
 };
 use crate::commands::layout::{LayoutSaveArgs, LayoutSnapshot};
 use crate::commands::loader::{LoaderInstallArgs, LoaderListArgs, LoaderVersionList};
+use crate::commands::resources::{
+    ResourceVersionList, ResourcesInstallArgs, ResourcesSearchArgs, ResourcesVersionsArgs,
+};
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
@@ -93,6 +97,13 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     LoaderInstallArgs::export_all(&cfg)?;
     LoaderListArgs::export_all(&cfg)?;
     LoaderVersionList::export_all(&cfg)?;
+    // resources（ResourceKind、ResourceSort、ResourceVersion 等随之导出）
+    InstallPlan::export_all(&cfg)?;
+    ResourcePage::export_all(&cfg)?;
+    ResourceVersionList::export_all(&cfg)?;
+    ResourcesInstallArgs::export_all(&cfg)?;
+    ResourcesSearchArgs::export_all(&cfg)?;
+    ResourcesVersionsArgs::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
     SettingsSetArgs::export_all(&cfg)?;

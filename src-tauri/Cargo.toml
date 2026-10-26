@@ -32,6 +32,7 @@ tmcl-java = { path = "../core/java" }
 tmcl-launch = { path = "../core/launch" }
 tmcl-loader = { path = "../core/loader" }
 tmcl-net = { path = "../core/net" }
+tmcl-resources = { path = "../modules/resources" }
 tokio = { workspace = true, features = ["sync"] }
 tokio-util = { workspace = true }
 tracing = { workspace = true }

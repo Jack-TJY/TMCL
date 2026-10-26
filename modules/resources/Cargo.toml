@@ -15,6 +15,7 @@ tmcl-common = { path = "../../core/common" }
 tmcl-net = { path = "../../core/net" }
 tokio = { workspace = true }
 tracing = { workspace = true }
+ts-rs = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
