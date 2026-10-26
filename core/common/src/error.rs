@@ -139,6 +139,12 @@ pub enum ErrorCode {
     SkinInvalidImage,
     /// 本地皮肤库中没有该皮肤（已被删除或 ID 无效）。
     SkinNotFound,
+    /// 设置同步主配置无效：`master.json` 损坏、格式版本不受支持，或保存的选项键/值非法。
+    SyncMasterInvalid,
+    /// 还没有保存设置同步的主配置。
+    SyncNoMaster,
+    /// 作为来源的实例还没有 `options.txt`（从未启动过游戏）。
+    SyncSourceNoOptions,
 }
 
 impl ErrorCode {
@@ -206,6 +212,9 @@ impl ErrorCode {
             Self::ResourcesWorldNotFound => "RESOURCES_WORLD_NOT_FOUND",
             Self::SkinInvalidImage => "SKIN_INVALID_IMAGE",
             Self::SkinNotFound => "SKIN_NOT_FOUND",
+            Self::SyncMasterInvalid => "SYNC_MASTER_INVALID",
+            Self::SyncNoMaster => "SYNC_NO_MASTER",
+            Self::SyncSourceNoOptions => "SYNC_SOURCE_NO_OPTIONS",
         }
     }
 }
@@ -350,6 +359,9 @@ mod tests {
             ErrorCode::ResourcesWorldNotFound,
             ErrorCode::SkinInvalidImage,
             ErrorCode::SkinNotFound,
+            ErrorCode::SyncMasterInvalid,
+            ErrorCode::SyncNoMaster,
+            ErrorCode::SyncSourceNoOptions,
         ] {
             let json = serde_json::to_string(&code).unwrap();
             assert_eq!(json, format!("\"{}\"", code.as_str()));

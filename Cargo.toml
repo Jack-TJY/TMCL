@@ -11,6 +11,7 @@ members = [
     "core/net",
     "modules/resources",
     "modules/skin",
+    "modules/sync",
     "src-tauri",
 ]
 
