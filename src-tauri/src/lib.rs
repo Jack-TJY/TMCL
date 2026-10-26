@@ -59,6 +59,11 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // loader
         commands::loader::loader_install,
         commands::loader::loader_list,
+        // resources
+        commands::resources::resources_install,
+        commands::resources::resources_install_plan,
+        commands::resources::resources_search,
+        commands::resources::resources_versions,
         // settings
         commands::settings::settings_get,
         commands::settings::settings_get_language,
@@ -1080,5 +1085,158 @@ mod tests {
         assert_eq!(loader, json!({ "kind": "fabric", "version": "0.16.5" }));
         let list = invoke(&webview, "task_list", json!({})).unwrap();
         assert_eq!(list["tasks"][0]["kind"], "loader_install");
+    }
+
+    /// 本地服务器上 Modrinth 请求的路径加查询串，编码方式与客户端相同。
+    fn modrinth_target(path: &str, query: &[(&str, &str)]) -> String {
+        let mut url = tauri::Url::parse(&format!("http://test{path}")).unwrap();
+        if query.is_empty() {
+            return url.path().to_owned();
+        }
+        url.query_pairs_mut().extend_pairs(query);
+        format!("{}?{}", url.path(), url.query().unwrap())
+    }
+
+    /// 本地 Modrinth（API 与 CDN）+ 临时数据目录，带一个 Fabric 1.20.1 实例。
+    fn resources_app() -> (
+        tauri::App<MockRuntime>,
+        tauri::WebviewWindow<MockRuntime>,
+        TestServer,
+        tempfile::TempDir,
+        Value,
+    ) {
+        const JAR: &[u8] = b"fake mod jar";
+        let dir = tempfile::tempdir().unwrap();
+        let jar = dir.path().join("probe.jar");
+        std::fs::write(&jar, JAR).unwrap();
+        let sha1 = tauri::async_runtime::block_on(tmcl_net::sha1_file(&jar)).unwrap();
+        let server =
+            tauri::async_runtime::block_on(TestServer::start([("/cdn/a.jar", JAR.to_vec())]));
+        let version = json!({ "id": "v1", "project_id": "P", "name": "A 1.0",
+            "version_number": "1.0", "version_type": "release", "game_versions": ["1.20.1"],
+            "loaders": ["fabric"], "dependencies": [],
+            "files": [{ "hashes": { "sha1": sha1 }, "url": server.url("/cdn/a.jar"),
+                "filename": "a.jar", "primary": true, "size": JAR.len() }] });
+        let project = json!({ "id": "P", "slug": "p", "project_type": "mod", "title": "Mod A",
+            "client_side": "required", "server_side": "optional", "license": { "id": "MIT" } });
+        let hit = json!({ "project_id": "P", "project_type": "mod", "slug": "p", "title": "Mod A",
+            "client_side": "required", "server_side": "optional", "downloads": 5 });
+        let facets = r#"[["project_type:mod"],["versions:1.20.1"],["categories:fabric"]]"#;
+        let filter = [
+            ("loaders", r#"["fabric"]"#),
+            ("game_versions", r#"["1.20.1"]"#),
+        ];
+        for (path, body) in [
+            ("/v2/version/v1".to_owned(), version.clone()),
+            (
+                modrinth_target("/v2/projects", &[("ids", r#"["P"]"#)]),
+                json!([project]),
+            ),
+            (
+                modrinth_target("/v2/project/P/version", &filter),
+                json!([version]),
+            ),
+            (
+                modrinth_target(
+                    "/v2/search",
+                    &[
+                        ("query", "sod"),
+                        ("facets", facets),
+                        ("index", "relevance"),
+                        ("limit", "20"),
+                    ],
+                ),
+                json!({ "hits": [hit], "offset": 0, "limit": 20, "total_hits": 1 }),
+            ),
+        ] {
+            server.route(path, body.to_string().into_bytes());
+        }
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir.path().join("data"))));
+        state.modrinth = tmcl_resources::modrinth::ModrinthClient::with_base(
+            &tmcl_net::HttpClient::new().unwrap(),
+            &server.url("/v2"),
+        );
+        let (app, webview) = mock_app_with(state);
+        let body = json!({ "args": { "name": "x", "game_version": "1.20.1",
+            "loader": { "kind": "fabric", "version": "0.16.5" } } });
+        let config = invoke(&webview, "instance_create", body).unwrap();
+        (app, webview, server, dir, config)
+    }
+
+    #[test]
+    fn resources_search_and_versions_over_ipc() {
+        let (_app, webview, _server, _dir, config) = resources_app();
+        let id = config["id"].clone();
+        let body = json!({ "args": { "instance_id": id, "kind": "mod", "query": "sod" } });
+        let page = invoke(&webview, "resources_search", body).unwrap();
+        assert_eq!(page["hits"][0]["title"], "Mod A");
+        assert_eq!(page["total_hits"], 1);
+
+        let body = json!({ "args": { "instance_id": id, "kind": "mod", "project_id": "P" } });
+        let list = invoke(&webview, "resources_versions", body).unwrap();
+        assert_eq!(list["versions"][0]["id"], "v1");
+        assert_eq!(list["versions"][0]["channel"], "release");
+        assert_eq!(list["versions"][0]["file_name"], "a.jar");
+        // 项目不存在：空列表。
+        let body = json!({ "args": { "instance_id": id, "kind": "mod", "project_id": "Q" } });
+        let list = invoke(&webview, "resources_versions", body).unwrap();
+        assert_eq!(list["versions"], json!([]));
+
+        let body = json!({ "args": { "instance_id": "missing", "kind": "mod", "query": "" } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "resources_search", body).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
+    }
+
+    #[test]
+    fn resources_install_plan_and_install_over_ipc() {
+        let (app, webview, _server, dir, config) = resources_app();
+        let finished_rx = finished_events(&app);
+        let id = config["id"].clone();
+        let args = json!({ "args": { "instance_id": id, "kind": "mod", "version_id": "v1" } });
+        let plan = invoke(&webview, "resources_install_plan", args.clone()).unwrap();
+        assert_eq!(plan["files"][0]["title"], "Mod A");
+        assert_eq!(plan["files"][0]["file_name"], "a.jar");
+        assert_eq!(plan["files"][0]["required_by"], Value::Null);
+        assert_eq!(plan["conflicts"], json!([]));
+        assert_eq!(plan["unavailable"], json!([]));
+
+        let finished = run_task(&webview, &finished_rx, "resources_install", args);
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+        let game = DataPaths::at(dir.path().join("data")).instance_game_dir(id.as_str().unwrap());
+        assert_eq!(
+            std::fs::read(game.join("mods/a.jar")).unwrap(),
+            b"fake mod jar"
+        );
+        let list = invoke(&webview, "task_list", json!({})).unwrap();
+        assert_eq!(list["tasks"][0]["kind"], "resources_install");
+
+        let missing = json!({ "args": { "instance_id": id, "kind": "mod", "version_id": "zz" } });
+        let err: AppError = serde_json::from_value(
+            invoke(&webview, "resources_install_plan", missing.clone()).unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(err.code, ErrorCode::ResourcesVersionNotFound);
+        let finished = run_task(&webview, &finished_rx, "resources_install", missing);
+        assert_eq!(finished.state, TaskState::Failed);
+        assert_eq!(
+            finished.error.unwrap().code,
+            ErrorCode::ResourcesVersionNotFound
+        );
+
+        let datapack = json!({ "args": { "instance_id": id, "kind": "datapack",
+            "version_id": "v1", "world": "Nope" } });
+        let err: AppError = serde_json::from_value(
+            invoke(&webview, "resources_install_plan", datapack).unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(err.code, ErrorCode::ResourcesWorldNotFound);
+        let unknown = json!({ "args": { "instance_id": "missing", "kind": "mod",
+            "version_id": "v1" } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "resources_install", unknown).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
     }
 }

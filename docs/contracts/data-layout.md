@@ -38,6 +38,8 @@
 └─ logs/                     # 启动器日志，已脱敏
 ```
 
+实例 `game/` 下由资源安装（M2-03）写入的目录沿用游戏自身的约定：`mods/`、`resourcepacks/`、`shaderpacks/`、`saves/<存档>/datapacks/`；被禁用的资源文件名追加 `.disabled` 后缀。
+
 代码中一律通过 `DataPaths` 的方法取路径（`config_file()`、`instance_game_dir(id)` 等），不手写拼接。`DataPaths::ensure_dirs()` 创建上述固定目录，可重复调用。
 
 ## 3. config.json
