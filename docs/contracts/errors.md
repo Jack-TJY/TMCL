@@ -68,3 +68,5 @@
 | `RESOURCES_INCOMPATIBLE` | resources | 要安装的资源与已安装或同批安装的资源不兼容（Modrinth `incompatible` 依赖） | `project`、`with` | {project} 与 {with} 不兼容，已取消安装 | {project} is incompatible with {with}, installation cancelled |
 | `RESOURCES_VERSION_NOT_FOUND` | resources | Modrinth 上找不到要安装的版本，或该版本没有文件 | `version` | 找不到资源版本 {version} | Resource version {version} was not found |
 | `RESOURCES_WORLD_NOT_FOUND` | resources | 数据包要安装到的存档不存在或名称非法 | `world` | 找不到存档 {world} | World {world} was not found |
+| `SKIN_INVALID_IMAGE` | skin | 皮肤文件不是 PNG，或尺寸不是 64×64 / 64×32；正版上传时服务器拒收（400）也用此码 | `width`、`height`（可识别时） | 皮肤必须是 64×64 或 64×32 像素的 PNG 图片 | A skin must be a 64×64 or 64×32 PNG image |
+| `SKIN_NOT_FOUND` | skin | 本地皮肤库中没有该皮肤（已被删除或 ID 无效） | `id` | 皮肤库中没有这个皮肤，请刷新列表 | This skin is not in the library, please refresh the list |

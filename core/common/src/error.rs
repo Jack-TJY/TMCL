@@ -135,6 +135,10 @@ pub enum ErrorCode {
     ResourcesVersionNotFound,
     /// 数据包要安装到的存档不存在或名称非法。
     ResourcesWorldNotFound,
+    /// 皮肤文件不是 PNG，或尺寸不是 64×64 / 64×32（正版上传时服务器拒收也用此码）。
+    SkinInvalidImage,
+    /// 本地皮肤库中没有该皮肤（已被删除或 ID 无效）。
+    SkinNotFound,
 }
 
 impl ErrorCode {
@@ -200,6 +204,8 @@ impl ErrorCode {
             Self::ResourcesIncompatible => "RESOURCES_INCOMPATIBLE",
             Self::ResourcesVersionNotFound => "RESOURCES_VERSION_NOT_FOUND",
             Self::ResourcesWorldNotFound => "RESOURCES_WORLD_NOT_FOUND",
+            Self::SkinInvalidImage => "SKIN_INVALID_IMAGE",
+            Self::SkinNotFound => "SKIN_NOT_FOUND",
         }
     }
 }
@@ -342,6 +348,8 @@ mod tests {
             ErrorCode::ResourcesIncompatible,
             ErrorCode::ResourcesVersionNotFound,
             ErrorCode::ResourcesWorldNotFound,
+            ErrorCode::SkinInvalidImage,
+            ErrorCode::SkinNotFound,
         ] {
             let json = serde_json::to_string(&code).unwrap();
             assert_eq!(json, format!("\"{}\"", code.as_str()));

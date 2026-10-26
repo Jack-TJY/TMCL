@@ -4681,6 +4681,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmcl-skin"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "tmcl-auth",
+ "tmcl-common",
+ "tmcl-net",
+ "tokio",
+ "tracing",
+ "ts-rs",
+]
+
+[[package]]
 name = "tokio"
 version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
