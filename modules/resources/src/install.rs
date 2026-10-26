@@ -115,8 +115,45 @@ pub fn kind_dir(game_dir: &Path, kind: ResourceKind, world: Option<&str>) -> App
     })
 }
 
-/// 扫描目录中的资源文件（`.jar`、`.zip`，含 `.disabled` 后缀的），按 SHA1 在 Modrinth 反查版本。
-/// 不存在的目录视为空；找不到来源的文件不出现在结果中。
+/// 目录中的一个资源文件。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalFile {
+    /// 文件路径。
+    pub path: PathBuf,
+    /// SHA1（小写十六进制）。
+    pub sha1: String,
+    /// 文件大小（字节）。
+    pub size: u64,
+}
+
+/// 列出目录中的资源文件（见 [`is_resource_file`]）并计算 SHA1，按文件名排序；不存在的目录视为空。
+pub async fn local_files(dir: &Path, ctx: &TaskCtx) -> AppResult<Vec<LocalFile>> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(io_error(dir, &e)),
+    };
+    let mut files = Vec::new();
+    for entry in entries {
+        let path = entry.map_err(|e| io_error(dir, &e))?.path();
+        let Ok(meta) = std::fs::metadata(&path) else {
+            continue;
+        };
+        if meta.is_file() && is_resource_file(&path) {
+            ctx.check_cancelled()?;
+            let sha1 = sha1_file(&path).await?;
+            files.push(LocalFile {
+                path,
+                sha1,
+                size: meta.len(),
+            });
+        }
+    }
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok(files)
+}
+
+/// 扫描目录中的资源文件，按 SHA1 在 Modrinth 反查版本；找不到来源的文件不出现在结果中。
 pub async fn scan_installed(
     client: &ModrinthClient,
     dirs: &[PathBuf],
@@ -124,17 +161,8 @@ pub async fn scan_installed(
 ) -> AppResult<Vec<InstalledVersion>> {
     let mut by_hash: HashMap<String, PathBuf> = HashMap::new();
     for dir in dirs {
-        let entries = match std::fs::read_dir(dir) {
-            Ok(entries) => entries,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(e) => return Err(io_error(dir, &e)),
-        };
-        for entry in entries {
-            let path = entry.map_err(|e| io_error(dir, &e))?.path();
-            if path.is_file() && is_resource_file(&path) {
-                ctx.check_cancelled()?;
-                by_hash.insert(sha1_file(&path).await?, path);
-            }
+        for file in local_files(dir, ctx).await? {
+            by_hash.insert(file.sha1, file.path);
         }
     }
     let hashes: Vec<String> = by_hash.keys().cloned().collect();
@@ -297,13 +325,13 @@ impl ResourceInstaller {
     }
 }
 
-fn file_name(path: &Path) -> String {
+pub(crate) fn file_name(path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default()
 }
 
-fn io_error(path: &Path, err: &std::io::Error) -> AppError {
+pub(crate) fn io_error(path: &Path, err: &std::io::Error) -> AppError {
     AppError::new(ErrorCode::CommonIo)
         .with_param("path", path.display())
         .with_detail(err.to_string())

@@ -6,11 +6,13 @@
 //! - [`browse`]：按实例的游戏版本与加载器统一搜索 mod、资源包、光影、数据包。
 //! - [`deps`]：递归解析必需前置，安装前检查不兼容。
 //! - [`install`]：生成安装计划并下载到实例的对应目录。
+//! - [`update`]：已安装资源的列表、启用/禁用、删除、检查更新与更新。
 
 pub mod browse;
 pub mod deps;
 pub mod install;
 pub mod modrinth;
+pub mod update;
 
 pub use browse::{
     BrowseQuery, InstanceTarget, ResourceChannel, ResourceHit, ResourceKind, ResourcePage,
@@ -18,3 +20,6 @@ pub use browse::{
 };
 pub use deps::{Conflict, InstalledVersion, Resolution, Resolved, UnavailableDependency};
 pub use install::{InstallPlan, InstallRequest, PlannedFile, ResourceInstaller};
+pub use update::{
+    InstalledList, InstalledResource, ResourceManager, ResourceSource, ResourceUpdate,
+};

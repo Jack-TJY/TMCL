@@ -1,4 +1,5 @@
-//! `resources_*` 命令：按实例搜索 Modrinth 资源、列出版本、生成安装计划并安装。
+//! `resources_*` 命令：按实例搜索 Modrinth 资源、列出版本、生成安装计划并安装；
+//! 管理已安装资源（列表、启用/禁用、删除、检查更新与更新）。
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
@@ -6,9 +7,10 @@ use tmcl_common::{AppError, AppResult, TaskCtx};
 use tmcl_instance::InstanceStore;
 use tmcl_resources::browse::{self, BrowseQuery};
 use tmcl_resources::modrinth::ModrinthClient;
+use tmcl_resources::update;
 use tmcl_resources::{
-    InstallPlan, InstallRequest, InstanceTarget, ResourceInstaller, ResourceKind, ResourcePage,
-    ResourceSort, ResourceVersion,
+    InstallPlan, InstallRequest, InstalledList, InstanceTarget, ResourceInstaller, ResourceKind,
+    ResourceManager, ResourcePage, ResourceSort, ResourceUpdate, ResourceVersion,
 };
 use ts_rs::TS;
 
@@ -17,6 +19,9 @@ use crate::state::AppState;
 
 /// 资源安装任务的种类名。
 pub const RESOURCES_INSTALL_KIND: &str = "resources_install";
+
+/// 资源更新任务的种类名。
+pub const RESOURCES_UPDATE_KIND: &str = "resources_update";
 
 /// `resources_search` 的参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
@@ -85,6 +90,96 @@ impl ResourcesInstallArgs {
     }
 }
 
+/// `resources_installed`、`resources_check_updates` 的参数：实例中的某一类资源。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesDirArgs {
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 资源种类。
+    pub kind: ResourceKind,
+    /// 数据包所在的存档，其他种类忽略。
+    #[serde(default)]
+    #[ts(optional)]
+    pub world: Option<String>,
+}
+
+/// `resources_set_enabled` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesSetEnabledArgs {
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 资源种类。
+    pub kind: ResourceKind,
+    /// 数据包所在的存档，其他种类忽略。
+    #[serde(default)]
+    #[ts(optional)]
+    pub world: Option<String>,
+    /// 当前文件名，来自 `resources_installed`。
+    pub file_name: String,
+    /// 启用（去掉 `.disabled`）或禁用（加上 `.disabled`）。
+    pub enabled: bool,
+}
+
+/// `resources_set_enabled` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ResourcesSetEnabledResult {
+    /// 改名后的文件名。
+    pub file_name: String,
+}
+
+/// `resources_remove` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesRemoveArgs {
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 资源种类。
+    pub kind: ResourceKind,
+    /// 数据包所在的存档，其他种类忽略。
+    #[serde(default)]
+    #[ts(optional)]
+    pub world: Option<String>,
+    /// 文件名，来自 `resources_installed`。
+    pub file_name: String,
+}
+
+/// `resources_check_updates` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ResourceUpdateList {
+    /// 可更新的资源，按文件名排序。
+    pub updates: Vec<ResourceUpdate>,
+}
+
+/// `resources_update` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesUpdateArgs {
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 资源种类。
+    pub kind: ResourceKind,
+    /// 数据包所在的存档，其他种类忽略。
+    #[serde(default)]
+    #[ts(optional)]
+    pub world: Option<String>,
+    /// 要更新的文件名；省略时更新全部可更新的资源。
+    #[serde(default)]
+    #[ts(optional)]
+    pub file_names: Option<Vec<String>>,
+}
+
+/// `resources_worlds` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesWorldsArgs {
+    /// 实例 ID。
+    pub instance_id: String,
+}
+
+/// `resources_worlds` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ResourceWorldList {
+    /// `saves/` 下的存档目录名，按名称排序。
+    pub worlds: Vec<String>,
+}
+
 /// 按实例的游戏版本与加载器搜索资源。
 #[tauri::command]
 pub async fn resources_search(
@@ -148,6 +243,83 @@ pub async fn resources_install<R: Runtime>(
     ))
 }
 
+/// 列出实例中某类已安装的资源，按 SHA1 在 Modrinth 反查来源；反查失败时列表照常返回。
+#[tauri::command]
+pub async fn resources_installed(
+    state: State<'_, AppState>,
+    args: ResourcesDirArgs,
+) -> Result<InstalledList, AppError> {
+    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
+    manager.list(&TaskCtx::noop("resources_installed")).await
+}
+
+/// 启用或禁用资源文件（`.disabled` 后缀）。
+#[tauri::command]
+pub async fn resources_set_enabled(
+    state: State<'_, AppState>,
+    args: ResourcesSetEnabledArgs,
+) -> Result<ResourcesSetEnabledResult, AppError> {
+    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
+    let file_name = manager.set_enabled(&args.file_name, args.enabled)?;
+    Ok(ResourcesSetEnabledResult { file_name })
+}
+
+/// 删除资源文件。
+#[tauri::command]
+pub async fn resources_remove(
+    state: State<'_, AppState>,
+    args: ResourcesRemoveArgs,
+) -> Result<(), AppError> {
+    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
+    manager.remove(&args.file_name)
+}
+
+/// 检查已安装资源在 Modrinth 上是否有适用于实例的新版本。
+#[tauri::command]
+pub async fn resources_check_updates(
+    state: State<'_, AppState>,
+    args: ResourcesDirArgs,
+) -> Result<ResourceUpdateList, AppError> {
+    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
+    let updates = manager
+        .check_updates(&TaskCtx::noop("resources_check_updates"))
+        .await?;
+    Ok(ResourceUpdateList { updates })
+}
+
+/// 更新资源（一键更新时省略 `file_names`），立即返回任务 ID。
+#[tauri::command]
+pub async fn resources_update<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    args: ResourcesUpdateArgs,
+) -> Result<TaskStarted, AppError> {
+    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
+    let downloader = state.downloader()?;
+    let files = args.file_names;
+    Ok(spawn_task(
+        &app,
+        RESOURCES_UPDATE_KIND,
+        move |ctx| async move {
+            let done = manager.update(&downloader, files.as_deref(), &ctx).await?;
+            Ok(done.len())
+        },
+    ))
+}
+
+/// 列出实例的存档，供选择数据包的安装目标。
+#[tauri::command]
+pub async fn resources_worlds(
+    state: State<'_, AppState>,
+    args: ResourcesWorldsArgs,
+) -> Result<ResourceWorldList, AppError> {
+    target(&state, &args.instance_id)?;
+    let game_dir = state.data()?.instance_game_dir(&args.instance_id);
+    Ok(ResourceWorldList {
+        worlds: update::worlds(&game_dir)?,
+    })
+}
+
 /// 读取实例的游戏版本与加载器；实例不存在返回 `INSTANCE_NOT_FOUND`。
 fn target(state: &AppState, instance_id: &str) -> AppResult<InstanceTarget> {
     let config = state.with_db(|paths, db| InstanceStore::new(paths, db).get(instance_id))?;
@@ -167,4 +339,15 @@ fn installer(state: &AppState, instance_id: &str) -> AppResult<ResourceInstaller
         game_dir,
         target,
     ))
+}
+
+fn manager(
+    state: &AppState,
+    instance_id: &str,
+    kind: ResourceKind,
+    world: Option<&str>,
+) -> AppResult<ResourceManager> {
+    let target = target(state, instance_id)?;
+    let game_dir = state.data()?.instance_game_dir(instance_id);
+    ResourceManager::new(state.modrinth()?.clone(), target, &game_dir, kind, world)
 }

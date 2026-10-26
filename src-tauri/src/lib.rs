@@ -60,10 +60,16 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::loader::loader_install,
         commands::loader::loader_list,
         // resources
+        commands::resources::resources_check_updates,
         commands::resources::resources_install,
         commands::resources::resources_install_plan,
+        commands::resources::resources_installed,
+        commands::resources::resources_remove,
         commands::resources::resources_search,
+        commands::resources::resources_set_enabled,
+        commands::resources::resources_update,
         commands::resources::resources_versions,
+        commands::resources::resources_worlds,
         // settings
         commands::settings::settings_get,
         commands::settings::settings_get_language,
@@ -1097,7 +1103,11 @@ mod tests {
         format!("{}?{}", url.path(), url.query().unwrap())
     }
 
+    const JAR: &[u8] = b"fake mod jar";
+    const JAR_V2: &[u8] = b"fake mod jar, version 2";
+
     /// 本地 Modrinth（API 与 CDN）+ 临时数据目录，带一个 Fabric 1.20.1 实例。
+    /// 项目 `P` 有版本 `v1`（`a.jar`）与更新的 `v2`（`a-2.jar`）。
     fn resources_app() -> (
         tauri::App<MockRuntime>,
         tauri::WebviewWindow<MockRuntime>,
@@ -1105,18 +1115,32 @@ mod tests {
         tempfile::TempDir,
         Value,
     ) {
-        const JAR: &[u8] = b"fake mod jar";
         let dir = tempfile::tempdir().unwrap();
-        let jar = dir.path().join("probe.jar");
-        std::fs::write(&jar, JAR).unwrap();
-        let sha1 = tauri::async_runtime::block_on(tmcl_net::sha1_file(&jar)).unwrap();
-        let server =
-            tauri::async_runtime::block_on(TestServer::start([("/cdn/a.jar", JAR.to_vec())]));
-        let version = json!({ "id": "v1", "project_id": "P", "name": "A 1.0",
-            "version_number": "1.0", "version_type": "release", "game_versions": ["1.20.1"],
-            "loaders": ["fabric"], "dependencies": [],
-            "files": [{ "hashes": { "sha1": sha1 }, "url": server.url("/cdn/a.jar"),
-                "filename": "a.jar", "primary": true, "size": JAR.len() }] });
+        let sha1 = |body: &[u8]| {
+            let probe = dir.path().join("probe.jar");
+            std::fs::write(&probe, body).unwrap();
+            tauri::async_runtime::block_on(tmcl_net::sha1_file(&probe)).unwrap()
+        };
+        let (sha1, sha1_new) = (sha1(JAR), sha1(JAR_V2));
+        let server = tauri::async_runtime::block_on(TestServer::start([
+            ("/cdn/a.jar", JAR.to_vec()),
+            ("/cdn/a-2.jar", JAR_V2.to_vec()),
+        ]));
+        let version_of = |id: &str, date: &str, name: &str, hash: &str, size: usize| {
+            json!({ "id": id, "project_id": "P", "name": id, "version_number": id,
+                "version_type": "release", "game_versions": ["1.20.1"], "date_published": date,
+                "loaders": ["fabric"], "dependencies": [],
+                "files": [{ "hashes": { "sha1": hash }, "url": server.url(&format!("/cdn/{name}")),
+                    "filename": name, "primary": true, "size": size }] })
+        };
+        let version = version_of("v1", "2024-01-01T00:00:00Z", "a.jar", &sha1, JAR.len());
+        let newer = version_of(
+            "v2",
+            "2024-02-01T00:00:00Z",
+            "a-2.jar",
+            &sha1_new,
+            JAR_V2.len(),
+        );
         let project = json!({ "id": "P", "slug": "p", "project_type": "mod", "title": "Mod A",
             "client_side": "required", "server_side": "optional", "license": { "id": "MIT" } });
         let hit = json!({ "project_id": "P", "project_type": "mod", "slug": "p", "title": "Mod A",
@@ -1128,6 +1152,14 @@ mod tests {
         ];
         for (path, body) in [
             ("/v2/version/v1".to_owned(), version.clone()),
+            (
+                "/v2/version_files".to_owned(),
+                json!({ sha1.clone(): version }),
+            ),
+            (
+                "/v2/version_files/update".to_owned(),
+                json!({ sha1: newer }),
+            ),
             (
                 modrinth_target("/v2/projects", &[("ids", r#"["P"]"#)]),
                 json!([project]),
@@ -1236,6 +1268,78 @@ mod tests {
             "version_id": "v1" } });
         let err: AppError =
             serde_json::from_value(invoke(&webview, "resources_install", unknown).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
+    }
+
+    #[test]
+    fn resources_manage_over_ipc() {
+        let (app, webview, _server, dir, config) = resources_app();
+        let finished_rx = finished_events(&app);
+        let id = config["id"].clone();
+        let game = DataPaths::at(dir.path().join("data")).instance_game_dir(id.as_str().unwrap());
+        std::fs::create_dir_all(game.join("mods")).unwrap();
+        std::fs::write(game.join("mods/a.jar"), JAR).unwrap();
+        std::fs::write(game.join("mods/local.jar"), b"local").unwrap();
+        let dir_args = json!({ "args": { "instance_id": id, "kind": "mod" } });
+
+        let list = invoke(&webview, "resources_installed", dir_args.clone()).unwrap();
+        assert_eq!(list["lookup_error"], Value::Null);
+        assert_eq!(list["resources"][0]["file_name"], "a.jar");
+        assert_eq!(list["resources"][0]["source"]["title"], "Mod A");
+        assert_eq!(list["resources"][0]["source"]["version_id"], "v1");
+        assert_eq!(list["resources"][1]["file_name"], "local.jar");
+        assert_eq!(list["resources"][1]["source"], Value::Null);
+
+        let updates = invoke(&webview, "resources_check_updates", dir_args.clone()).unwrap();
+        assert_eq!(updates["updates"][0]["file_name"], "a.jar");
+        assert_eq!(updates["updates"][0]["latest"]["id"], "v2");
+        let finished = run_task(&webview, &finished_rx, "resources_update", dir_args);
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+        assert_eq!(std::fs::read(game.join("mods/a-2.jar")).unwrap(), JAR_V2);
+        assert!(!game.join("mods/a.jar").exists());
+
+        let file = |name: &str, extra: Value| {
+            let mut args = json!({ "instance_id": id, "kind": "mod", "file_name": name });
+            args.as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            json!({ "args": args })
+        };
+        let renamed = invoke(
+            &webview,
+            "resources_set_enabled",
+            file("local.jar", json!({ "enabled": false })),
+        )
+        .unwrap();
+        assert_eq!(renamed["file_name"], "local.jar.disabled");
+        assert!(game.join("mods/local.jar.disabled").is_file());
+        invoke(
+            &webview,
+            "resources_remove",
+            file("local.jar.disabled", json!({})),
+        )
+        .unwrap();
+        let err: AppError = serde_json::from_value(
+            invoke(
+                &webview,
+                "resources_remove",
+                file("local.jar.disabled", json!({})),
+            )
+            .unwrap_err(),
+        )
+        .unwrap();
+        assert_eq!(err.code, ErrorCode::ResourcesFileNotFound);
+
+        let worlds = json!({ "args": { "instance_id": id } });
+        let list = invoke(&webview, "resources_worlds", worlds.clone()).unwrap();
+        assert_eq!(list["worlds"], json!([]));
+        std::fs::create_dir_all(game.join("saves/World")).unwrap();
+        let list = invoke(&webview, "resources_worlds", worlds).unwrap();
+        assert_eq!(list["worlds"], json!(["World"]));
+        let missing = json!({ "args": { "instance_id": "missing" } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "resources_worlds", missing).unwrap_err())
                 .unwrap();
         assert_eq!(err.code, ErrorCode::InstanceNotFound);
     }
