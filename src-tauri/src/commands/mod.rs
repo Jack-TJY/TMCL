@@ -11,4 +11,5 @@ pub mod loader;
 pub mod resources;
 pub mod settings;
 pub mod skin;
+pub mod sync;
 pub mod task;
