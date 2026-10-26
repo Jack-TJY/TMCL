@@ -4512,6 +4512,7 @@ dependencies = [
  "tmcl-launch",
  "tmcl-loader",
  "tmcl-net",
+ "tmcl-resources",
  "tokio",
  "tokio-util",
  "tracing",
@@ -4676,6 +4677,7 @@ dependencies = [
  "tmcl-net",
  "tokio",
  "tracing",
+ "ts-rs",
 ]
 
 [[package]]
