@@ -4513,6 +4513,7 @@ dependencies = [
  "tmcl-loader",
  "tmcl-net",
  "tmcl-resources",
+ "tmcl-skin",
  "tokio",
  "tokio-util",
  "tracing",
@@ -4673,6 +4674,23 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "tmcl-common",
+ "tmcl-net",
+ "tokio",
+ "tracing",
+ "ts-rs",
+]
+
+[[package]]
+name = "tmcl-skin"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "tmcl-auth",
  "tmcl-common",
  "tmcl-net",
  "tokio",

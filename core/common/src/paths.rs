@@ -205,6 +205,11 @@ impl DataPaths {
     pub fn logs_dir(&self) -> PathBuf {
         self.root.join("logs")
     }
+
+    /// `skins/`：本地皮肤库（PNG 与 `index.json`）。
+    pub fn skins_dir(&self) -> PathBuf {
+        self.root.join("skins")
+    }
 }
 
 /// `X.app/Contents/MacOS` → `X.app` 的父目录；不是应用包结构时返回 `None`。

@@ -1,0 +1,25 @@
+[package]
+name = "tmcl-skin"
+description = "TMCL module: 正版皮肤与披风、外置登录皮肤站、本地皮肤库。"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tmcl-auth = { path = "../../core/auth" }
+tmcl-common = { path = "../../core/common" }
+tmcl-net = { path = "../../core/net" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+ts-rs = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["net"] }
+tmcl-net = { path = "../../core/net", features = ["test-util"] }

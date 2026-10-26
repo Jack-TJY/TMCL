@@ -36,6 +36,9 @@ use crate::commands::resources::{
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
+use crate::commands::skin::{
+    SkinAccountArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList, SkinSite, SkinUpdateArgs,
+};
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
 use crate::events::{DeviceCode, GameExited, GameLog, TaskStarted};
 
@@ -120,6 +123,13 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SettingsSetArgs::export_all(&cfg)?;
     SettingsSetLanguageArgs::export_all(&cfg)?;
     SettingsSnapshot::export_all(&cfg)?;
+    // skin（SkinEntry、SkinVariant 随 SkinLibraryList 一并导出）
+    SkinAccountArgs::export_all(&cfg)?;
+    SkinIdArgs::export_all(&cfg)?;
+    SkinImportArgs::export_all(&cfg)?;
+    SkinLibraryList::export_all(&cfg)?;
+    SkinSite::export_all(&cfg)?;
+    SkinUpdateArgs::export_all(&cfg)?;
     // task
     TaskCancelArgs::export_all(&cfg)?;
     TaskCancelResult::export_all(&cfg)?;

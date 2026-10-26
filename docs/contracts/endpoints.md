@@ -45,3 +45,9 @@
 | XSTS 授权 | `https://xsts.auth.xboxlive.com/xsts/authorize` | JSON POST，`RelyingParty` 为 `rp://api.minecraftservices.com/`；401 响应的 `XErr` 2148916233（没有 Xbox 档案）、2148916238（未成年账号）单独映射 | 同上 |
 | Minecraft 登录 | `https://api.minecraftservices.com/authentication/login_with_xbox` | JSON POST `identityToken: "XBL3.0 x=<uhs>;<XSTS 令牌>"`，返回 `access_token`、`expires_in`；Azure 应用未获 Mojang 批准时返回 403 | 2026-10-24 审核通过后实测 200 |
 | 权益与档案 | `https://api.minecraftservices.com/entitlements/mcstore`、`https://api.minecraftservices.com/minecraft/profile` | `Authorization: Bearer <Minecraft 访问令牌>`；档案 404 表示没有档案，此时权益为空视为未购买。Xbox Game Pass 账号权益可能为空但有档案 | 2026-10-24 实测 200 |
+
+## skin（M2-07）
+
+| 用途 | 地址 | 说明 | 核实 |
+| --- | --- | --- | --- |
+| 外置登录皮肤站页面 | 账号保存的 Yggdrasil API 地址 | GET API 根读取元数据的 `meta.links.homepage`，没有时用 API 地址的站点根；只在系统浏览器中打开 | 离线测试 |

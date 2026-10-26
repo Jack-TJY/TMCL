@@ -57,5 +57,7 @@
   "RESOURCES_FILE_NOT_FOUND": "Resource file {file} was not found, please refresh the list",
   "RESOURCES_INCOMPATIBLE": "{project} is incompatible with {with}, installation cancelled",
   "RESOURCES_VERSION_NOT_FOUND": "Resource version {version} was not found",
-  "RESOURCES_WORLD_NOT_FOUND": "World {world} was not found"
+  "RESOURCES_WORLD_NOT_FOUND": "World {world} was not found",
+  "SKIN_INVALID_IMAGE": "A skin must be a 64×64 or 64×32 PNG image",
+  "SKIN_NOT_FOUND": "This skin is not in the library, please refresh the list"
 }
