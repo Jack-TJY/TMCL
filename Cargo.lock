@@ -4699,6 +4699,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmcl-sync"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tmcl-common",
+ "tracing",
+ "ts-rs",
+]
+
+[[package]]
 name = "tokio"
 version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
