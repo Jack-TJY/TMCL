@@ -54,6 +54,7 @@
   "NET_SIZE_MISMATCH": "File size mismatch for {url}",
   "NET_TIMEOUT": "Connection timed out: {url}",
   "RESOURCES_DEPENDENCY_UNAVAILABLE": "No version of the required dependency {project} fits this instance",
+  "RESOURCES_FILE_NOT_FOUND": "Resource file {file} was not found, please refresh the list",
   "RESOURCES_INCOMPATIBLE": "{project} is incompatible with {with}, installation cancelled",
   "RESOURCES_VERSION_NOT_FOUND": "Resource version {version} was not found",
   "RESOURCES_WORLD_NOT_FOUND": "World {world} was not found"

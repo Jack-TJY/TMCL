@@ -1,5 +1,5 @@
 //! 资源浏览、依赖解析与安装的离线测试：Modrinth API 与 CDN 都由本地模拟服务器按内存中的
-//! “目录”应答（版本、项目、哈希均为构造的最小 JSON），不联网。
+//! “目录”应答（版本、项目、哈希均为构造的最小 JSON），不联网。也覆盖已安装资源的管理与更新。
 
 #[allow(dead_code)] // 与 modrinth.rs 共用，部分辅助函数只在那边使用。
 mod support;
@@ -15,7 +15,9 @@ use tmcl_common::{ErrorCode, TaskCtx};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient, RetryPolicy};
 use tmcl_resources::browse::{self, BrowseQuery, ResourceSort};
 use tmcl_resources::modrinth::ModrinthClient;
-use tmcl_resources::{InstallRequest, InstanceTarget, ResourceInstaller, ResourceKind};
+use tmcl_resources::{
+    InstallRequest, InstanceTarget, ResourceInstaller, ResourceKind, ResourceManager, update,
+};
 
 const SEARCH: &[u8] = include_bytes!("fixtures/modrinth/search.json");
 const PROJECT_VERSIONS: &[u8] = include_bytes!("fixtures/modrinth/project_versions.json");
@@ -85,9 +87,12 @@ impl Catalog {
             .iter()
             .map(|(p, v, t)| json!({ "project_id": p, "version_id": v, "dependency_type": t }))
             .collect();
+        // 发布时间按登记顺序递增。
+        let date = format!("2024-01-01T00:00:{:02}Z", self.versions.len());
         self.versions.insert(
             id.into(),
             json!({ "id": id, "project_id": project, "name": id, "version_number": id,
+                "date_published": date,
                 "version_type": channel, "game_versions": ["1.20.1"], "loaders": ["fabric"],
                 "files": [{ "hashes": { "sha1": hash }, "url": cdn.url(&format!("/{name}")),
                     "filename": name, "primary": true, "size": body.len() }],
@@ -127,7 +132,9 @@ impl Catalog {
                 Some(ids) => pick(&self.versions, ids.clone()),
                 None => Response::status(404),
             },
-            ["version_files"] => {
+            ["version_files", rest @ ..] => {
+                // `/version_files/update` 返回项目版本列表中的第一个（最新）版本。
+                let update = rest == ["update"];
                 let body: Value = serde_json::from_slice(&req.body).unwrap();
                 let found: serde_json::Map<String, Value> = body["hashes"]
                     .as_array()
@@ -135,7 +142,13 @@ impl Catalog {
                     .iter()
                     .filter_map(|h| {
                         let h = h.as_str().unwrap();
-                        let v = self.versions.get(self.hashes.get(h)?)?;
+                        let mut v = self.versions.get(self.hashes.get(h)?)?;
+                        if update {
+                            let project = v["project_id"].as_str()?;
+                            v = self
+                                .versions
+                                .get(self.project_versions.get(project)?.first()?)?;
+                        }
                         Some((h.to_owned(), v.clone()))
                     })
                     .collect();
@@ -429,4 +442,135 @@ async fn datapacks_go_to_the_world_and_errors_are_reported() {
         .unwrap_err();
     assert_eq!(err.code, ErrorCode::ResourcesVersionNotFound);
     assert_eq!(err.params["version"], "nope");
+}
+
+fn manager(api: &MockServer, game: &Path) -> ResourceManager {
+    ResourceManager::new(client(api), fabric(), game, ResourceKind::Mod, None).unwrap()
+}
+
+#[tokio::test]
+async fn installed_list_reports_sources_and_survives_lookup_failure() {
+    let (cdn, files) = cdn().await;
+    let mut c = Catalog::default();
+    c.project("B", "mod", &["fabric"]);
+    c.version(&cdn, "vb0", "B", "release", &[]).await;
+    let tmp = tempfile::tempdir().unwrap();
+    let mods = tmp.path().join("mods");
+    std::fs::create_dir_all(&mods).unwrap();
+    std::fs::write(mods.join("b.jar"), &c.files["vb0.jar"]).unwrap();
+    std::fs::write(mods.join("local.jar.disabled"), b"not on modrinth").unwrap();
+    std::fs::write(mods.join("notes.txt"), b"ignored").unwrap();
+    let api = api(c, &files).await;
+
+    let list = manager(&api, tmp.path()).list(&ctx()).await.unwrap();
+    assert!(list.lookup_error.is_none());
+    let names: Vec<(&str, bool)> = list
+        .resources
+        .iter()
+        .map(|r| (r.file_name.as_str(), r.enabled))
+        .collect();
+    assert_eq!(names, [("b.jar", true), ("local.jar.disabled", false)]);
+    let source = list.resources[0].source.as_ref().unwrap();
+    assert_eq!(
+        (source.title.as_str(), source.version_id.as_str()),
+        ("Title B", "vb0")
+    );
+    assert!(list.resources[1].source.is_none());
+
+    // 断网或服务器出错：列表照常返回，附带错误。
+    let down = MockServer::start(|_, _| Response::status(500)).await;
+    let list = manager(&down, tmp.path()).list(&ctx()).await.unwrap();
+    assert_eq!(list.resources.len(), 2);
+    assert_eq!(list.lookup_error.unwrap().code, ErrorCode::NetHttpStatus);
+}
+
+#[tokio::test]
+async fn enable_disable_and_remove() {
+    let api = MockServer::start(|_, _| Response::status(404)).await;
+    let tmp = tempfile::tempdir().unwrap();
+    let mods = tmp.path().join("mods");
+    std::fs::create_dir_all(&mods).unwrap();
+    std::fs::write(mods.join("a.jar"), b"a").unwrap();
+    std::fs::write(mods.join("note.txt"), b"n").unwrap();
+    let m = manager(&api, tmp.path());
+
+    assert_eq!(m.set_enabled("a.jar", false).unwrap(), "a.jar.disabled");
+    assert!(mods.join("a.jar.disabled").is_file() && !mods.join("a.jar").exists());
+    assert_eq!(
+        m.set_enabled("a.jar.disabled", false).unwrap(),
+        "a.jar.disabled"
+    );
+    assert_eq!(m.set_enabled("a.jar.disabled", true).unwrap(), "a.jar");
+    assert!(mods.join("a.jar").is_file());
+    for bad in ["missing.jar", "../a.jar", "note.txt", ""] {
+        let err = m.set_enabled(bad, false).unwrap_err();
+        assert_eq!(err.code, ErrorCode::ResourcesFileNotFound, "{bad}");
+    }
+    m.remove("a.jar").unwrap();
+    assert!(!mods.join("a.jar").exists());
+    let err = m.remove("a.jar").unwrap_err();
+    assert_eq!(err.code, ErrorCode::ResourcesFileNotFound);
+}
+
+#[tokio::test]
+async fn updates_are_found_and_applied_keeping_disabled_state() {
+    let (cdn, files) = cdn().await;
+    let mut c = Catalog::default();
+    c.project("B", "mod", &["fabric"]);
+    c.project("C", "mod", &["fabric"]);
+    c.version(&cdn, "vb0", "B", "release", &[]).await;
+    c.version(&cdn, "vb1", "B", "release", &[]).await;
+    c.version(&cdn, "vc0", "C", "release", &[]).await;
+    c.project_versions
+        .insert("B".into(), vec!["vb1".into(), "vb0".into()]);
+    let tmp = tempfile::tempdir().unwrap();
+    let mods = tmp.path().join("mods");
+    std::fs::create_dir_all(&mods).unwrap();
+    std::fs::write(mods.join("b-old.jar.disabled"), &c.files["vb0.jar"]).unwrap();
+    std::fs::write(mods.join("c.jar"), &c.files["vc0.jar"]).unwrap();
+    let new_b = c.files["vb1.jar"].clone();
+    let api = api(c, &files).await;
+    let m = manager(&api, tmp.path());
+
+    let updates = m.check_updates(&ctx()).await.unwrap();
+    assert_eq!(updates.len(), 1);
+    let u = &updates[0];
+    assert_eq!(u.file_name, "b-old.jar.disabled");
+    assert_eq!(
+        (u.title.as_str(), u.current_version_id.as_str()),
+        ("Title B", "vb0")
+    );
+    assert_eq!(u.latest.id, "vb1");
+    let request = api
+        .requests()
+        .into_iter()
+        .find(|r| r.path() == "/v2/version_files/update")
+        .unwrap();
+    let body: Value = serde_json::from_slice(&request.body).unwrap();
+    assert_eq!(body["loaders"], json!(["fabric"]));
+    assert_eq!(body["game_versions"], json!(["1.20.1"]));
+
+    let downloader = Downloader::new(HttpClient::new().unwrap(), DownloadOptions::default());
+    let done = m.update(&downloader, None, &ctx()).await.unwrap();
+    assert_eq!(done.len(), 1);
+    assert_eq!(std::fs::read(mods.join("vb1.jar.disabled")).unwrap(), new_b);
+    assert!(!mods.join("b-old.jar.disabled").exists());
+    assert!(mods.join("c.jar").is_file());
+    assert!(m.check_updates(&ctx()).await.unwrap().is_empty());
+    // 只更新指定文件：没有匹配时什么都不做。
+    let none = m
+        .update(&downloader, Some(&["c.jar".to_owned()]), &ctx())
+        .await
+        .unwrap();
+    assert!(none.is_empty());
+}
+
+#[test]
+fn worlds_are_save_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    assert!(update::worlds(tmp.path()).unwrap().is_empty());
+    std::fs::create_dir_all(tmp.path().join("saves/B")).unwrap();
+    std::fs::create_dir_all(tmp.path().join("saves/A")).unwrap();
+    std::fs::write(tmp.path().join("saves/file"), b"x").unwrap();
+    assert_eq!(update::worlds(tmp.path()).unwrap(), ["A", "B"]);
 }
