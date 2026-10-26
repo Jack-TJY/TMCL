@@ -31,6 +31,7 @@
 │  ├─ instance.json          # 结构见 PLAN.md §3.5
 │  └─ game/                  # --gameDir
 ├─ trash/<unix 秒>-<instance-id>/  # 已删除的实例，7 天后清理
+├─ sync/master.json          # 设置同步的主配置，见第 6 节
 ├─ ui/
 │  ├─ layout.json            # 主页组件布局
 │  └─ backgrounds/           # 用户背景图
@@ -129,3 +130,8 @@
 | --- | --- | --- |
 | 1 | `0001_common_init.sql` | `kv(key, value, updated_at)` 通用键值表 |
 | 2 | `0002_instance_index.sql` | `instance_index`：实例列表缓存，启动时按 `instance.json` 的修改时间与大小对账 |
+
+## 6. 设置同步
+
+- `sync/master.json`：`{ "schema": 1, "source_instance", "source_version", "updated_at", "options": [{ "key", "value" }] }`，原子写入。选项按 1.13 以后的格式存储（按键为 `key.keyboard.*` / `key.mouse.*`，语言代码小写），应用时按目标版本转换。实现于 `modules/sync`。
+- `instances/<id>/game/options.txt.tmcl-bak-<unix 毫秒>`：应用主配置前对原 `options.txt` 的备份，每个实例保留最近 10 份；撤销时移回 `options.txt`。

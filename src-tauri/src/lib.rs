@@ -87,6 +87,13 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::skin::skin_set_cape,
         commands::skin::skin_site_url,
         commands::skin::skin_upload,
+        // sync
+        commands::sync::sync_apply,
+        commands::sync::sync_capture,
+        commands::sync::sync_get_master,
+        commands::sync::sync_preview,
+        commands::sync::sync_restore,
+        commands::sync::sync_save_master,
         // task
         commands::task::task_cancel,
         commands::task::task_list,
@@ -699,6 +706,117 @@ mod tests {
         )
         .unwrap();
         assert_eq!(err.code, ErrorCode::CommonDataDirUnavailable);
+    }
+
+    #[test]
+    fn sync_capture_preview_apply_restore_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path());
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+        let create = |name: &str, version: &str| {
+            let body = json!({ "args": { "name": name, "game_version": version } });
+            invoke(&webview, "instance_create", body).unwrap()["id"].clone()
+        };
+        let source = create("新", "1.20.1");
+        let target = create("旧", "1.12.2");
+        let target_game = paths.instance_game_dir(target.as_str().unwrap());
+        std::fs::write(
+            paths
+                .instance_game_dir(source.as_str().unwrap())
+                .join("options.txt"),
+            "version:3465
+key_key.jump:key.keyboard.j
+fov:0.5
+",
+        )
+        .unwrap();
+        let original = "version:1343
+key_key.jump:57
+fov:0.0
+";
+        let err = invoke(
+            &webview,
+            "sync_capture",
+            json!({ "args": { "instance_id": target } }),
+        )
+        .unwrap_err();
+        assert_eq!(err["code"], "SYNC_SOURCE_NO_OPTIONS");
+        assert_eq!(err["params"]["id"], target);
+        std::fs::write(target_game.join("options.txt"), original).unwrap();
+
+        let empty = invoke(&webview, "sync_get_master", json!({})).unwrap();
+        assert_eq!(empty["profile"], Value::Null);
+        let targets = json!({ "args": { "instance_ids": [target], "categories": ["keys"] } });
+        let err = invoke(&webview, "sync_preview", targets.clone()).unwrap_err();
+        assert_eq!(err["code"], "SYNC_NO_MASTER");
+        let err = invoke(&webview, "sync_apply", targets.clone()).unwrap_err();
+        assert_eq!(err["code"], "SYNC_NO_MASTER");
+        let err = invoke(
+            &webview,
+            "sync_capture",
+            json!({ "args": { "instance_id": "missing" } }),
+        );
+        assert_eq!(err.unwrap_err()["code"], "INSTANCE_NOT_FOUND");
+
+        let master = invoke(
+            &webview,
+            "sync_capture",
+            json!({ "args": { "instance_id": source } }),
+        )
+        .unwrap();
+        assert_eq!(master["source_version"], "1.20.1");
+        assert_eq!(
+            master["options"],
+            json!([{ "key": "key_key.jump", "value": "key.keyboard.j" },
+                { "key": "fov", "value": "0.5" }])
+        );
+        let saved = invoke(&webview, "sync_get_master", json!({})).unwrap();
+        assert_eq!(saved["profile"], master);
+
+        let preview = invoke(&webview, "sync_preview", targets.clone()).unwrap();
+        assert_eq!(
+            preview["targets"][0]["changes"],
+            json!([{ "key": "key_key.jump", "category": "keys", "old": "57", "new": "36" }])
+        );
+        assert_eq!(preview["targets"][0]["has_backup"], false);
+
+        let applied = invoke(&webview, "sync_apply", targets.clone()).unwrap();
+        assert_eq!(applied["targets"][0]["changed"], 1);
+        assert!(applied["targets"][0]["backup"].is_string());
+        let written = std::fs::read_to_string(target_game.join("options.txt")).unwrap();
+        assert_eq!(
+            written,
+            "version:1343
+key_key.jump:36
+fov:0.0
+"
+        );
+
+        let body = json!({ "args": { "instance_id": target } });
+        let restored = invoke(&webview, "sync_restore", body.clone()).unwrap();
+        assert_eq!(restored["restored"], true);
+        let back = std::fs::read_to_string(target_game.join("options.txt")).unwrap();
+        assert_eq!(back, original);
+        assert_eq!(
+            invoke(&webview, "sync_restore", body).unwrap()["restored"],
+            false
+        );
+
+        let options = json!([{ "key": "fov", "value": "1.0" }]);
+        let edited = invoke(
+            &webview,
+            "sync_save_master",
+            json!({ "args": { "options": options } }),
+        )
+        .unwrap();
+        assert_eq!(edited["source_instance"], Value::Null);
+        let bad = json!([{ "key": "a:b", "value": "1" }]);
+        let err = invoke(
+            &webview,
+            "sync_save_master",
+            json!({ "args": { "options": bad } }),
+        );
+        assert_eq!(err.unwrap_err()["code"], "SYNC_MASTER_INVALID");
     }
 
     fn state_with_memory_secrets(dir: &std::path::Path) -> (AppState, Arc<MemorySecretStore>) {

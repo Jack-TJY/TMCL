@@ -40,6 +40,10 @@ use crate::commands::skin::{
     SkinAccountArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList, SkinSetCapeArgs, SkinSite,
     SkinUpdateArgs, SkinUploadArgs,
 };
+use crate::commands::sync::{
+    SyncApplyResult, SyncCaptureArgs, SyncMaster, SyncPreview, SyncRestoreArgs, SyncRestoreResult,
+    SyncSaveMasterArgs, SyncTargetsArgs,
+};
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
 use crate::events::{DeviceCode, GameExited, GameLog, TaskStarted};
 use tmcl_skin::SkinProfile;
@@ -135,6 +139,15 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SkinSite::export_all(&cfg)?;
     SkinUpdateArgs::export_all(&cfg)?;
     SkinUploadArgs::export_all(&cfg)?;
+    // sync（SyncProfile、SyncOption、SyncOptionChange、SyncCategory 随之导出）
+    SyncApplyResult::export_all(&cfg)?;
+    SyncCaptureArgs::export_all(&cfg)?;
+    SyncMaster::export_all(&cfg)?;
+    SyncPreview::export_all(&cfg)?;
+    SyncRestoreArgs::export_all(&cfg)?;
+    SyncRestoreResult::export_all(&cfg)?;
+    SyncSaveMasterArgs::export_all(&cfg)?;
+    SyncTargetsArgs::export_all(&cfg)?;
     // task
     TaskCancelArgs::export_all(&cfg)?;
     TaskCancelResult::export_all(&cfg)?;

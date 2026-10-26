@@ -4514,6 +4514,7 @@ dependencies = [
  "tmcl-net",
  "tmcl-resources",
  "tmcl-skin",
+ "tmcl-sync",
  "tokio",
  "tokio-util",
  "tracing",
