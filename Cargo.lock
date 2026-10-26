@@ -4513,6 +4513,7 @@ dependencies = [
  "tmcl-loader",
  "tmcl-net",
  "tmcl-resources",
+ "tmcl-skin",
  "tokio",
  "tokio-util",
  "tracing",

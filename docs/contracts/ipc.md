@@ -74,6 +74,13 @@
 | `settings_open_data_dir` | 无 | 无 | 在系统文件管理器中打开数据目录（不存在时先创建） |
 | `settings_set` | `SettingsSetArgs { settings: LauncherSettings }` | `LauncherSettings` | 整体保存设置，界面语言不变，返回保存后的设置；`appearance.accent` 须为 `#RRGGBB` 或 `null`、`download.max_concurrency` 1–64、`memory.max_mb` 512–32768、`appearance.background` 各项在下表范围内（`background`），否则返回 `COMMON_INTERNAL`（`params` 中对应项为 `false`）；下载设置变化时重建下载引擎，已在运行的任务不受影响 |
 | `settings_set_language` | `SettingsSetLanguageArgs { language }` | 无 | 写入界面语言，其他设置不变；`language` 须为由字母、数字、连字符组成的 BCP 47 标签（≤ 35 字符），否则返回 `COMMON_INTERNAL` |
+| `skin_library_import` | `SkinImportArgs { path, name?, variant }` | `SkinEntry { id, name, variant, height, added_at }` | 把用户选中的 PNG 加入本地皮肤库 `skins/`；`variant` 为 `classic` \| `slim`，`name` 省略时用文件名（去掉首尾空白后 1–64 字符，否则 `COMMON_INTERNAL`）；不是 PNG、尺寸不是 64×64 / 64×32 或超过 1 MB 返回 `SKIN_INVALID_IMAGE`；同一张图片（SHA-256 相同）已在库中时返回已有条目 |
+| `skin_library_list` | 无 | `SkinLibraryList { skins: SkinEntry[] }` | 本地皮肤库，最近加入的在前；`id` 为 PNG 内容的 SHA-256，`added_at` 为 unix 毫秒 |
+| `skin_library_read` | `SkinIdArgs { id }` | 二进制（前端为 `ArrayBuffer`） | 读取皮肤 PNG；不存在返回 `SKIN_NOT_FOUND` |
+| `skin_library_remove` | `SkinIdArgs { id }` | 无 | 从皮肤库删除皮肤及其图片；不存在返回 `SKIN_NOT_FOUND` |
+| `skin_library_update` | `SkinUpdateArgs { id, name, variant }` | `SkinEntry` | 修改名称与模型；不存在返回 `SKIN_NOT_FOUND`，名称不合法返回 `COMMON_INTERNAL` |
+| `skin_open_site` | `SkinAccountArgs { account_id }` | `SkinSite { url }` | 在系统浏览器中打开外置登录账号的皮肤站页面（同 `skin_site_url`），返回打开的地址 |
+| `skin_site_url` | `SkinAccountArgs { account_id }` | `SkinSite { url }` | 外置登录账号的皮肤站页面：API 元数据的 `meta.links.homepage`，没有或读取失败时为 API 地址的站点根；只返回 http(s) 且不含 `&`、引号等字符的地址。账号不存在返回 `AUTH_ACCOUNT_NOT_FOUND`，不是外置登录账号返回 `COMMON_INTERNAL`（`params.kind`） |
 | `task_cancel` | `TaskCancelArgs { task_id }` | `TaskCancelResult { cancelled }` | 请求取消运行中的任务，任务随后以 `task:finished`（`cancelled`）结束；任务不存在或已结束时 `cancelled` 为 `false`，不报错 |
 | `task_list` | 无 | `TaskList { tasks: TaskInfo[] }` | 全局任务列表：运行中的按开始时间先后在前，随后是最近结束的至多 50 条。`TaskInfo { task_id, kind, status, started_at, finished_at, progress, error }`，`status` 为 `running` \| `succeeded` \| `failed` \| `cancelled`，时间为 unix 毫秒，`progress` 为最近一次推送的 `TaskProgress` |
 

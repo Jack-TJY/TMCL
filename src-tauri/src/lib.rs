@@ -76,6 +76,14 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::settings::settings_open_data_dir,
         commands::settings::settings_set,
         commands::settings::settings_set_language,
+        // skin
+        commands::skin::skin_library_import,
+        commands::skin::skin_library_list,
+        commands::skin::skin_library_read,
+        commands::skin::skin_library_remove,
+        commands::skin::skin_library_update,
+        commands::skin::skin_open_site,
+        commands::skin::skin_site_url,
         // task
         commands::task::task_cancel,
         commands::task::task_list,
@@ -1342,5 +1350,113 @@ mod tests {
             serde_json::from_value(invoke(&webview, "resources_worlds", missing).unwrap_err())
                 .unwrap();
         assert_eq!(err.code, ErrorCode::InstanceNotFound);
+    }
+
+    /// 只有签名与 IHDR 头的 PNG，足以通过皮肤尺寸校验。
+    fn skin_png(width: u32, height: u32) -> Vec<u8> {
+        let mut bytes = b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR".to_vec();
+        bytes.extend_from_slice(&width.to_be_bytes());
+        bytes.extend_from_slice(&height.to_be_bytes());
+        bytes.extend_from_slice(&[8, 6, 0, 0, 0]);
+        bytes
+    }
+
+    fn error_code(result: Result<Value, Value>) -> ErrorCode {
+        serde_json::from_value::<AppError>(result.unwrap_err())
+            .unwrap()
+            .code
+    }
+
+    #[test]
+    fn skin_library_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path().join("data"));
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+        let list = invoke(&webview, "skin_library_list", json!({})).unwrap();
+        assert_eq!(list, json!({ "skins": [] }));
+
+        let bad = dir.path().join("big.png");
+        std::fs::write(&bad, skin_png(128, 128)).unwrap();
+        let body = json!({ "args": { "path": bad.display().to_string(), "variant": "classic" } });
+        let err = invoke(&webview, "skin_library_import", body);
+        assert_eq!(error_code(err), ErrorCode::SkinInvalidImage);
+
+        let source = dir.path().join("My Skin.png");
+        std::fs::write(&source, skin_png(64, 64)).unwrap();
+        let body = json!({ "args": { "path": source.display().to_string(), "variant": "slim" } });
+        let entry = invoke(&webview, "skin_library_import", body).unwrap();
+        assert_eq!(entry["name"], "My Skin");
+        assert_eq!(entry["variant"], "slim");
+        assert_eq!(entry["height"], 64);
+        let id = entry["id"].as_str().unwrap().to_owned();
+        assert!(paths.skins_dir().join(format!("{id}.png")).is_file());
+        let list = invoke(&webview, "skin_library_list", json!({})).unwrap();
+        assert_eq!(list["skins"], json!([entry]));
+
+        match invoke_body(
+            &webview,
+            "skin_library_read",
+            json!({ "args": { "id": id } }),
+        )
+        .unwrap()
+        {
+            InvokeResponseBody::Raw(bytes) => assert_eq!(bytes, skin_png(64, 64)),
+            other => panic!("应返回二进制，实际为 {other:?}"),
+        }
+        let body = json!({ "args": { "id": id, "name": "Alex", "variant": "classic" } });
+        let updated = invoke(&webview, "skin_library_update", body).unwrap();
+        assert_eq!(
+            (&updated["name"], &updated["variant"]),
+            (&json!("Alex"), &json!("classic"))
+        );
+
+        invoke(
+            &webview,
+            "skin_library_remove",
+            json!({ "args": { "id": id } }),
+        )
+        .unwrap();
+        for cmd in ["skin_library_remove", "skin_library_read"] {
+            let err = invoke(&webview, cmd, json!({ "args": { "id": id } }));
+            assert_eq!(error_code(err), ErrorCode::SkinNotFound, "{cmd}");
+        }
+        let body = json!({ "args": { "id": "../x", "name": "a", "variant": "slim" } });
+        let err = invoke(&webview, "skin_library_update", body);
+        assert_eq!(error_code(err), ErrorCode::SkinNotFound);
+    }
+
+    #[test]
+    fn skin_site_over_ipc() {
+        let server = authlib_server();
+        let dir = tempfile::tempdir().unwrap();
+        let (state, _) = state_with_memory_secrets(dir.path());
+        let (_app, webview) = mock_app_with(state);
+        let body = json!({ "args": { "api_url": server.url("/"),
+            "username": "steve@example.com", "password": "secret" } });
+        let authlib = invoke(&webview, "auth_add_authlib", body).unwrap();
+        let offline = invoke(
+            &webview,
+            "auth_add_offline",
+            json!({ "args": { "name": "Dev" } }),
+        )
+        .unwrap();
+
+        // 元数据没有 `meta.links.homepage`，退回站点根。
+        let body = json!({ "args": { "account_id": authlib["id"] } });
+        let site = invoke(&webview, "skin_site_url", body).unwrap();
+        assert_eq!(site, json!({ "url": server.url("/") }));
+
+        for cmd in ["skin_site_url", "skin_open_site"] {
+            let body = json!({ "args": { "account_id": offline["id"] } });
+            assert_eq!(
+                error_code(invoke(&webview, cmd, body)),
+                ErrorCode::CommonInternal
+            );
+            let body = json!({ "args": { "account_id": "missing" } });
+            assert_eq!(
+                error_code(invoke(&webview, cmd, body)),
+                ErrorCode::AuthAccountNotFound
+            );
+        }
     }
 }
