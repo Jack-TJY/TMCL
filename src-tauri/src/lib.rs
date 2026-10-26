@@ -734,13 +734,23 @@ fov:0.5
 key_key.jump:57
 fov:0.0
 ";
+        let err = invoke(
+            &webview,
+            "sync_capture",
+            json!({ "args": { "instance_id": target } }),
+        )
+        .unwrap_err();
+        assert_eq!(err["code"], "SYNC_SOURCE_NO_OPTIONS");
+        assert_eq!(err["params"]["id"], target);
         std::fs::write(target_game.join("options.txt"), original).unwrap();
 
         let empty = invoke(&webview, "sync_get_master", json!({})).unwrap();
         assert_eq!(empty["profile"], Value::Null);
         let targets = json!({ "args": { "instance_ids": [target], "categories": ["keys"] } });
         let err = invoke(&webview, "sync_preview", targets.clone()).unwrap_err();
-        assert_eq!(err["code"], "COMMON_INTERNAL");
+        assert_eq!(err["code"], "SYNC_NO_MASTER");
+        let err = invoke(&webview, "sync_apply", targets.clone()).unwrap_err();
+        assert_eq!(err["code"], "SYNC_NO_MASTER");
         let err = invoke(
             &webview,
             "sync_capture",
@@ -806,7 +816,7 @@ fov:0.0
             "sync_save_master",
             json!({ "args": { "options": bad } }),
         );
-        assert_eq!(err.unwrap_err()["code"], "COMMON_INTERNAL");
+        assert_eq!(err.unwrap_err()["code"], "SYNC_MASTER_INVALID");
     }
 
     fn state_with_memory_secrets(dir: &std::path::Path) -> (AppState, Arc<MemorySecretStore>) {

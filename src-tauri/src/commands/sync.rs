@@ -110,9 +110,7 @@ pub async fn sync_capture(
 ) -> Result<SyncProfile, AppError> {
     let (game_dir, game_version) = instance_target(&state, &args.instance_id)?;
     let file = apply::read_existing(&game_dir)?.ok_or_else(|| {
-        let path = game_dir.join(apply::OPTIONS_FILE);
-        AppError::from(std::io::Error::from(std::io::ErrorKind::NotFound))
-            .with_param("path", path.display())
+        AppError::new(ErrorCode::SyncSourceNoOptions).with_param("id", &args.instance_id)
     })?;
     let master = SyncProfile {
         source_instance: Some(args.instance_id),
@@ -207,11 +205,9 @@ fn instance_target(state: &AppState, id: &str) -> AppResult<(PathBuf, String)> {
     })
 }
 
-/// 已保存的主配置；尚未保存时返回 `COMMON_INTERNAL`。
+/// 已保存的主配置；尚未保存时返回 `SYNC_NO_MASTER`。
 fn require_master(state: &AppState) -> AppResult<SyncProfile> {
-    profile::load_master(state.data()?)?.ok_or_else(|| {
-        AppError::new(ErrorCode::CommonInternal).with_detail("sync master has not been saved")
-    })
+    profile::load_master(state.data()?)?.ok_or_else(|| AppError::new(ErrorCode::SyncNoMaster))
 }
 
 fn now_millis() -> u64 {
