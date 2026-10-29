@@ -5,7 +5,7 @@ import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { SyncOptionChange } from "../../bindings/SyncOptionChange";
 import type { SyncPreview } from "../../bindings/SyncPreview";
-import { isHiddenOption, optionLabel, valueLabel } from "./options";
+import { isHiddenOption, modBinding, optionLabel, valueLabel } from "./options";
 import { OPTION_SPANS, spanText, supportedOn, usesLegacyKeys } from "./versions";
 
 const props = defineProps<{ preview: SyncPreview; names: Record<string, string> }>();
@@ -19,6 +19,7 @@ const hiddenCount = computed(
   () =>
     props.preview.targets.flatMap((x) => x.changes).filter((c) => isHiddenOption(c.key, tr)).length,
 );
+const modOf = (key: string) => (optionLabel(key, tr) === null ? modBinding(key) : null);
 const shown = (changes: SyncOptionChange[]) =>
   showHidden.value ? changes : changes.filter((c) => !isHiddenOption(c.key, tr));
 </script>
@@ -56,9 +57,14 @@ const shown = (changes: SyncOptionChange[]) =>
         <tbody>
           <tr v-for="change in shown(target.changes)" :key="change.key">
             <td>
-              <div>{{ optionLabel(change.key, tr) ?? change.key }}</div>
-              <div v-if="optionLabel(change.key, tr)" class="mono raw">{{ change.key }}</div>
+              <div>{{ optionLabel(change.key, tr) ?? modOf(change.key)?.name ?? change.key }}</div>
+              <div v-if="optionLabel(change.key, tr) || modOf(change.key)" class="mono raw">
+                {{ change.key }}
+              </div>
               <div class="marks">
+                <NTag v-if="modOf(change.key)?.mod" size="tiny" type="info" :bordered="false">
+                  {{ t("sync.modBinding") }} · {{ modOf(change.key)?.mod }}
+                </NTag>
                 <NTag
                   v-if="supportedOn(change.key, target.game_version) === false"
                   size="tiny"

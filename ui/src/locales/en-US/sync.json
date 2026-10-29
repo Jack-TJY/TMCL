@@ -206,15 +206,41 @@
     "fullscreen": "Toggle Fullscreen",
     "spectatorOutlines": "Highlight Players (Spectators)",
     "swapOffhand": "Swap Item With Offhand",
-    "swapHands": "Swap Item With Offhand",
+    "swapHands": "Swap Item In Hands",
     "saveToolbarActivator": "Save Hotbar Activator",
     "loadToolbarActivator": "Load Hotbar Activator",
     "advancements": "Advancements",
     "streamStartStop": "Start/Stop Stream",
     "streamPauseUnpause": "Pause/Unpause Stream",
-    "streamCommercials": "Show Stream Commercials",
+    "streamCommercial": "Show Stream Commercials",
     "streamToggleMic": "Push To Talk/Mute",
-    "hotbar": "Hotbar Slot {n}"
+    "hotbar": "Hotbar Slot {n}",
+    "debug_clearChat": "Clear Chat",
+    "debug_copyLocation": "Copy Location",
+    "debug_copyRecreateCommand": "Copy Data",
+    "debug_crash": "Debug Crash",
+    "debug_debugOptions": "Debug Options",
+    "debug_dumpDynamicTextures": "Dump Dynamic Textures",
+    "debug_dumpVersion": "Dump Version Info",
+    "debug_focusPause": "Toggle Lost Focus Pause",
+    "debug_fpsCharts": "FPS Charts",
+    "debug_lightmapTexture": "Lightmap Texture",
+    "debug_modifier": "Debug Modifier Key",
+    "debug_networkCharts": "Network Charts",
+    "debug_overlay": "Toggle Overlay",
+    "debug_profiling": "Start/Stop Profiling",
+    "debug_profilingChart": "Profiling Chart",
+    "debug_reloadChunk": "Reload Chunks",
+    "debug_reloadResourcePacks": "Reload Resource Packs",
+    "debug_showAdvancedTooltips": "Show Advanced Tooltips",
+    "debug_showChunkBorders": "Show Chunk Boundaries",
+    "debug_showHitboxes": "Show Hitboxes",
+    "debug_spectate": "Cycle Spectator",
+    "debug_switchGameMode": "Game Mode Switcher",
+    "quickActions": "Quick Actions",
+    "spectatorHotbar": "Select On Hotbar",
+    "toggleGui": "Toggle GUI",
+    "toggleSpectatorShaderEffects": "Toggle Spectator Shader Effects"
   },
   "sound": {
     "master": "Master Volume",
@@ -374,5 +400,6 @@
   "hidden": {
     "showHidden": "Show options with no in-game setting ({count})",
     "hiddenHint": "These are states the game records itself (such as tutorial progress or skipped warnings) and don't appear in the settings screens."
-  }
+  },
+  "modBinding": "Mod"
 }
