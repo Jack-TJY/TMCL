@@ -56,6 +56,8 @@
   "RESOURCES_DEPENDENCY_UNAVAILABLE": "No version of the required dependency {project} fits this instance",
   "RESOURCES_FILE_NOT_FOUND": "Resource file {file} was not found, please refresh the list",
   "RESOURCES_INCOMPATIBLE": "{project} is incompatible with {with}, installation cancelled",
+  "RESOURCES_MODPACK_INVALID": "The modpack file is damaged or not a valid modpack",
+  "RESOURCES_MODPACK_UNSUPPORTED": "This modpack is not supported: {name}",
   "RESOURCES_VERSION_NOT_FOUND": "Resource version {version} was not found",
   "RESOURCES_WORLD_NOT_FOUND": "World {world} was not found",
   "SKIN_INVALID_IMAGE": "A skin must be a 64×64 or 64×32 PNG image",

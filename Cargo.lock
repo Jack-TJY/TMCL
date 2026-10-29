@@ -4674,12 +4674,17 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sha1",
  "tempfile",
  "tmcl-common",
+ "tmcl-game",
+ "tmcl-instance",
+ "tmcl-loader",
  "tmcl-net",
  "tokio",
  "tracing",
  "ts-rs",
+ "zip",
 ]
 
 [[package]]

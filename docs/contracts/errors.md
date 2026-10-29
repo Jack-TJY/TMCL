@@ -66,6 +66,8 @@
 | `RESOURCES_DEPENDENCY_UNAVAILABLE` | resources | 必需前置在 Modrinth 上没有适用于该实例游戏版本与加载器的版本，或前置项目已不存在 | `project` | 找不到适用于此实例的前置 {project} | No version of the required dependency {project} fits this instance |
 | `RESOURCES_FILE_NOT_FOUND` | resources | 实例中找不到要启用、禁用或删除的资源文件（已被移走或文件名非法） | `file` | 找不到资源文件 {file}，请刷新列表 | Resource file {file} was not found, please refresh the list |
 | `RESOURCES_INCOMPATIBLE` | resources | 要安装的资源与已安装或同批安装的资源不兼容（Modrinth `incompatible` 依赖） | `project`、`with` | {project} 与 {with} 不兼容，已取消安装 | {project} is incompatible with {with}, installation cancelled |
+| `RESOURCES_MODPACK_INVALID` | resources | 整合包文件无效：不是 zip、缺少或损坏 `modrinth.index.json`，或其中的文件路径、哈希、下载地址非法 | — | 整合包文件已损坏或格式不正确 | The modpack file is damaged or not a valid modpack |
+| `RESOURCES_MODPACK_UNSUPPORTED` | resources | 整合包的格式版本、游戏或依赖（加载器）不受支持 | `name` | 不支持此整合包：{name} | This modpack is not supported: {name} |
 | `RESOURCES_VERSION_NOT_FOUND` | resources | Modrinth 上找不到要安装的版本，或该版本没有文件 | `version` | 找不到资源版本 {version} | Resource version {version} was not found |
 | `RESOURCES_WORLD_NOT_FOUND` | resources | 数据包要安装到的存档不存在或名称非法 | `world` | 找不到存档 {world} | World {world} was not found |
 | `SKIN_INVALID_IMAGE` | skin | 皮肤文件不是 PNG，或尺寸不是 64×64 / 64×32；正版上传时服务器拒收（400）也用此码 | `width`、`height`（可识别时） | 皮肤必须是 64×64 或 64×32 像素的 PNG 图片 | A skin must be a 64×64 or 64×32 PNG image |
