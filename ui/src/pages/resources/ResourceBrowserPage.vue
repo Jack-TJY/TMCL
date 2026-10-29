@@ -16,6 +16,7 @@ import LoaderChangeDialog from "../../components/loader-picker/LoaderChangeDialo
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import BrowsePanel from "./BrowsePanel.vue";
+import CreateInstanceDialog from "./CreateInstanceDialog.vue";
 import InstallDialog from "./InstallDialog.vue";
 import PickInstanceDialog from "./PickInstanceDialog.vue";
 import { BROWSER_KINDS, loaderName } from "./targets";
@@ -105,6 +106,33 @@ function picked(instance: InstanceSummary) {
   picking.value = null;
   if (hit) installing.value = { hit, instance };
 }
+
+/** 为资源一键新建实例；实例的下载任务成功后继续打开安装对话框。 */
+const creating = ref<ResourceHit | null>(null);
+const pendingCreate = ref<{ taskId: TaskId; hit: ResourceHit; instanceId: string } | null>(null);
+
+function startCreate() {
+  creating.value = picking.value;
+  picking.value = null;
+}
+
+watch(
+  () => {
+    const pending = pendingCreate.value;
+    return pending ? tasks.entries.find((e) => e.task_id === pending.taskId)?.status : undefined;
+  },
+  async (status) => {
+    const pending = pendingCreate.value;
+    if (!pending || !status || status === "running") return;
+    pendingCreate.value = null;
+    if (status !== "succeeded") return;
+    await loadInstances();
+    const instance = instances.value.find((i) => i.id === pending.instanceId);
+    if (!instance) return;
+    message.info(t("resources.create.ready", { name: instance.name, title: pending.hit.title }));
+    installing.value = { hit: pending.hit, instance };
+  },
+);
 
 /** 后装加载器：成功后重新读取实例列表。 */
 const loaderTarget = ref<InstanceConfig | null>(null);
@@ -204,6 +232,18 @@ watch(
       :instances="instances"
       @close="picking = null"
       @pick="picked"
+      @create="startCreate"
+    />
+    <CreateInstanceDialog
+      :hit="creating"
+      :kind="kind"
+      @close="creating = null"
+      @started="
+        (taskId: TaskId, instance: InstanceConfig) => {
+          if (creating) pendingCreate = { taskId, hit: creating, instanceId: instance.id };
+          void loadInstances();
+        }
+      "
     />
     <InstallDialog
       :hit="installing?.hit ?? null"

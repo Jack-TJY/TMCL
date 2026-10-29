@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 未选实例时安装资源：先选择装到哪个实例，按搜索结果中的游戏版本与加载器标出不兼容的实例。
+// 未选实例时安装资源：先选择装到哪个实例。按搜索结果中的游戏版本与加载器标出不兼容的实例；
+// 没有实例或没有兼容的实例时，可以为它一键新建实例。
 import { NButton, NEmpty, NModal, NRadio, NRadioGroup } from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -12,7 +13,7 @@ const props = defineProps<{
   kind: ResourceKind;
   instances: InstanceSummary[];
 }>();
-const emit = defineEmits<{ close: []; pick: [instance: InstanceSummary] }>();
+const emit = defineEmits<{ close: []; pick: [instance: InstanceSummary]; create: [] }>();
 
 const { t } = useI18n();
 
@@ -84,6 +85,13 @@ function confirm() {
     </template>
     <template #footer>
       <div class="dialog-actions">
+        <NButton
+          :type="compatible.length === 0 ? 'primary' : 'default'"
+          class="create"
+          @click="emit('create')"
+        >
+          {{ t("resources.pick.create") }}
+        </NButton>
         <NButton @click="emit('close')">{{ t("resources.install.cancel") }}</NButton>
         <NButton type="primary" :disabled="choice === null" @click="confirm">
           {{ t("resources.pick.next") }}
@@ -150,7 +158,10 @@ function confirm() {
 
 .dialog-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
+}
+
+.create {
+  margin-right: auto;
 }
 </style>
