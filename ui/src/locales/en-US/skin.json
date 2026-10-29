@@ -1,5 +1,6 @@
 {
   "cancel": "Cancel",
+  "retry": "Retry",
   "model": {
     "label": "Model",
     "classic": "Steve (wide arms)",
@@ -17,6 +18,8 @@
   },
   "preview": {
     "empty": "Select or drop a skin to preview it",
+    "profile": "Account's current skin",
+    "cape": "Cape",
     "autoRotate": "Auto-rotate",
     "webgl": "Can't create the 3D view (WebGL unavailable). Update your graphics driver or system WebView and try again.",
     "loadFailed": "Couldn't load the skin image",
@@ -44,5 +47,21 @@
     "title": "Delete skin {name}?",
     "content": "This only removes it from the local library. The skin your account uses is not affected.",
     "confirm": "Delete"
+  },
+  "account": {
+    "title": "Current account",
+    "none": "No account yet. Add one on the Accounts page to upload skins to a Microsoft account.",
+    "current": "In use",
+    "previewCurrent": "Preview",
+    "noSkin": "No skin",
+    "cape": "Cape",
+    "noCape": "No cape",
+    "upload": "Use “{name}” as my skin",
+    "selectFirst": "Select a skin in the library first",
+    "uploaded": "{name} is now your skin. It takes effect in game.",
+    "capeChanged": "Cape updated",
+    "authlib": "Skins for this account are managed on its skin site.",
+    "openSite": "Open skin site",
+    "offline": "Offline accounts have no online skin. You can still preview skins locally."
   }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// 皮肤页（PLAN.md M2-08）：左侧 3D 预览（动作、Steve/Alex、自动旋转），右侧本地皮肤库。
-// 拖入 PNG 即预览，可再加入皮肤库。
+// 皮肤页（PLAN.md M2-08）：左侧 3D 预览（动作、Steve/Alex、披风、自动旋转），右侧当前账号的
+// 皮肤与本地皮肤库。拖入 PNG 即预览，可再加入皮肤库。
 import { Add20Regular } from "@vicons/fluent";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
@@ -26,24 +26,32 @@ import {
   skinLibraryList,
   skinLibraryRead,
   skinLibraryRemove,
+  skinTexture,
+  type ProfileSkin,
   type SkinEntry,
   type SkinVariant,
 } from "../../api/skin";
 import { SKIN_ANIMATIONS, type SkinAnimation } from "../../components/skin-viewer/animations";
 import SkinViewer from "../../components/skin-viewer/SkinViewer.vue";
 import { formatError } from "../../i18n";
+import { useAccountsStore } from "../../stores/accounts";
+import AccountSkinPanel from "./AccountSkinPanel.vue";
 import EditSkinDialog from "./EditSkinDialog.vue";
 import SkinLibraryGrid from "./SkinLibraryGrid.vue";
 import { fileStem, firstPng } from "./skins";
 
 /** 正在预览的皮肤来自哪里。 */
-type Preview = { kind: "library"; entry: SkinEntry } | { kind: "file"; path: string; name: string };
+type Preview =
+  | { kind: "library"; entry: SkinEntry }
+  | { kind: "file"; path: string; name: string }
+  | { kind: "profile"; skin: ProfileSkin };
 
 const PNG_FILTER = [{ name: "PNG", extensions: ["png"] }];
 
 const { t } = useI18n();
 const message = useMessage();
 const dialog = useDialog();
+const accounts = useAccountsStore();
 
 const entries = ref<SkinEntry[]>([]);
 const urls = ref<Record<string, string>>({});
@@ -55,6 +63,8 @@ const ownedUrl = ref<string | null>(null);
 const variant = ref<SkinVariant>("classic");
 const animation = ref<SkinAnimation>("walk");
 const autoRotate = ref(false);
+const capeUrl = ref<string | null>(null);
+const showCape = ref(true);
 const viewerError = ref<"webgl" | "load" | null>(null);
 const dragging = ref(false);
 const editing = ref<SkinEntry | null>(null);
@@ -69,7 +79,9 @@ const selected = computed(() => (preview.value?.kind === "library" ? preview.val
 const previewName = computed(() => {
   const current = preview.value;
   if (!current) return "";
-  return current.kind === "library" ? current.entry.name : current.name;
+  if (current.kind === "library") return current.entry.name;
+  if (current.kind === "file") return current.name;
+  return t("skin.preview.profile");
 });
 const animationOptions = computed(() =>
   SKIN_ANIMATIONS.map((value) => ({ value, label: t(`skin.animation.${value}`) })),
@@ -118,6 +130,33 @@ function selectEntry(entry: SkinEntry) {
   preview.value = { kind: "library", entry };
   variant.value = entry.variant;
   if (!urls.value[entry.id]) message.error(t("skin.preview.unreadable"));
+}
+
+async function previewProfileSkin(skin: ProfileSkin) {
+  try {
+    const url = pngObjectUrl(await skinTexture({ url: skin.url }));
+    viewerError.value = null;
+    setOwnedUrl(url);
+    preview.value = { kind: "profile", skin };
+    variant.value = skin.variant;
+  } catch (err) {
+    showError(err);
+  }
+}
+
+function onActiveSkin(skin: ProfileSkin | null) {
+  if (skin && preview.value === null) void previewProfileSkin(skin);
+}
+
+async function onCape(url: string | null) {
+  if (capeUrl.value) URL.revokeObjectURL(capeUrl.value);
+  capeUrl.value = null;
+  if (!url) return;
+  try {
+    capeUrl.value = pngObjectUrl(await skinTexture({ url }));
+  } catch (err) {
+    showError(err);
+  }
 }
 
 async function previewFile(path: string) {
@@ -181,6 +220,7 @@ let unmounted = false;
 
 onMounted(async () => {
   void loadLibrary();
+  accounts.ensureLoaded().catch(showError);
   try {
     const unlisten = await getCurrentWebview().onDragDropEvent(({ payload }) => {
       if (payload.type === "enter" || payload.type === "over") dragging.value = true;
@@ -203,6 +243,7 @@ onBeforeUnmount(() => {
   unmounted = true;
   unlistenDrop?.();
   setOwnedUrl(null);
+  if (capeUrl.value) URL.revokeObjectURL(capeUrl.value);
   Object.values(urls.value).forEach((url) => URL.revokeObjectURL(url));
 });
 </script>
@@ -221,6 +262,7 @@ onBeforeUnmount(() => {
             <SkinViewer
               :skin="skinUrl"
               :variant="variant"
+              :cape="showCape ? capeUrl : null"
               :animation="animation"
               :auto-rotate="autoRotate"
               @error="(kind) => (viewerError = kind)"
@@ -264,13 +306,23 @@ onBeforeUnmount(() => {
             />
           </div>
           <div class="control">
-            <span class="label">{{ t("skin.preview.autoRotate") }}</span>
+            <span class="label">{{ t("skin.preview.cape") }}</span>
+            <NSwitch v-model:value="showCape" size="small" :disabled="!capeUrl" />
+            <span class="label spaced">{{ t("skin.preview.autoRotate") }}</span>
             <NSwitch v-model:value="autoRotate" size="small" />
           </div>
         </div>
       </section>
 
       <div class="side">
+        <AccountSkinPanel
+          :account="accounts.current"
+          :selected="selected"
+          @preview-skin="previewProfileSkin"
+          @active-skin="onActiveSkin"
+          @cape="onCape"
+        />
+
         <section class="library">
           <div class="library-header">
             <h2 class="section-title">{{ t("skin.library.title") }}</h2>
@@ -391,6 +443,10 @@ onBeforeUnmount(() => {
 .label {
   min-width: 40px;
   color: var(--tmcl-text-secondary);
+}
+
+.label.spaced {
+  margin-left: 16px;
 }
 
 .animation-select {
