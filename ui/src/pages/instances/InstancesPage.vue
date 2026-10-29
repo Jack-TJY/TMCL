@@ -166,6 +166,9 @@ function onAction(instance: InstanceSummary, action: CardAction) {
     case "details":
       detail.value = instance;
       break;
+    case "resources":
+      void router.push({ name: "instance-resources", params: { id: instance.id } });
+      break;
     case "open":
       instanceOpenDir({ id: instance.id }).catch(showError);
       break;

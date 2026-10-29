@@ -7,6 +7,7 @@ import AccountsPage from "./pages/accounts/AccountsPage.vue";
 import DownloadPage from "./pages/download/DownloadPage.vue";
 import HomePage from "./pages/home/HomePage.vue";
 import InstancesPage from "./pages/instances/InstancesPage.vue";
+import ResourcesPage from "./pages/resources/ResourcesPage.vue";
 import SettingsPage from "./pages/settings/SettingsPage.vue";
 import SkinPage from "./pages/skin/SkinPage.vue";
 import SyncPage from "./pages/sync/SyncPage.vue";
@@ -49,6 +50,12 @@ const routes: RouteRecordRaw[] = [
     name: "instances",
     component: InstancesPage,
     meta: { titleKey: "shell.nav.instances" },
+  },
+  {
+    path: "/instances/:id/resources",
+    name: "instance-resources",
+    component: ResourcesPage,
+    meta: { titleKey: "resources.title" },
   },
   {
     path: "/multiplayer",

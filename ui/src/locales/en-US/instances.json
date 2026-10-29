@@ -34,7 +34,8 @@
     "duplicate": "Duplicate",
     "export": "Export",
     "delete": "Delete",
-    "importMods": "Import mods"
+    "importMods": "Import mods",
+    "resources": "Resources"
   },
   "detail": {
     "loadFailed": "Couldn't load the instance config",

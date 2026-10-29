@@ -34,7 +34,8 @@
     "duplicate": "复制",
     "export": "导出",
     "delete": "删除",
-    "importMods": "导入 Mod"
+    "importMods": "导入 Mod",
+    "resources": "资源管理"
   },
   "detail": {
     "loadFailed": "无法读取实例配置",

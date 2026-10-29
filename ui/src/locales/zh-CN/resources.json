@@ -1,0 +1,33 @@
+{
+  "title": "资源管理",
+  "back": "返回实例",
+  "loadFailed": "无法读取实例",
+  "kind": {
+    "mod": "Mod",
+    "resourcepack": "资源包",
+    "shader": "光影",
+    "datapack": "数据包"
+  },
+  "world": {
+    "label": "存档",
+    "placeholder": "选择要安装数据包的存档",
+    "empty": "这个实例还没有存档，进入游戏创建一个世界后再来安装数据包"
+  },
+  "installed": {
+    "filter": "按名称过滤",
+    "refresh": "刷新",
+    "empty": "还没有安装这类资源",
+    "noMatch": "没有匹配的资源",
+    "loadFailed": "无法读取已安装的资源",
+    "lookupFailed": "无法从 Modrinth 识别来源，已按文件名显示",
+    "unknownSource": "本地文件",
+    "count": "共 {count} 个，已启用 {enabled} 个",
+    "enable": "启用",
+    "disable": "禁用",
+    "delete": "删除",
+    "deleteTitle": "删除“{name}”？",
+    "deleteContent": "文件 {file} 会被直接删除，不进入回收站。",
+    "deleted": "已删除“{name}”",
+    "cancel": "取消"
+  }
+}
