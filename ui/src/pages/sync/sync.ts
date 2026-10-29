@@ -57,11 +57,17 @@ export function rowsToOptions(rows: EditorRow[]): SyncOption[] | null {
   return rows.map((row) => ({ key: row.key.trim(), value: row.value }));
 }
 
-/** 按键或值筛选行（忽略大小写）。 */
-export function filterRows(rows: EditorRow[], query: string): EditorRow[] {
+/** 按键、值或显示名称筛选行（忽略大小写）。 */
+export function filterRows(
+  rows: EditorRow[],
+  query: string,
+  labelOf: (key: string) => string | null = () => null,
+): EditorRow[] {
   const q = query.trim().toLowerCase();
   if (!q) return rows;
-  return rows.filter((r) => r.key.toLowerCase().includes(q) || r.value.toLowerCase().includes(q));
+  return rows.filter((r) =>
+    [r.key, r.value, labelOf(r.key.trim()) ?? ""].some((s) => s.toLowerCase().includes(q)),
+  );
 }
 
 /** 可作为来源或目标的实例：排除损坏的实例。 */

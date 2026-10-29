@@ -50,6 +50,7 @@ describe("editor rows", () => {
     ]);
     expect(filterRows(rows, " KEYBOARD ").map((r) => r.key)).toEqual(["key_key.forward"]);
     expect(filterRows(rows, "")).toHaveLength(2);
+    expect(filterRows(rows, "视场", (k) => (k === "fov" ? "视场角" : null))).toHaveLength(1);
   });
 });
 
