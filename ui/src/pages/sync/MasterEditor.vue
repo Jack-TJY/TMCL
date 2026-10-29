@@ -1,12 +1,7 @@
 <script setup lang="ts">
-// 手动编辑主配置：逐行修改键与值、增删行，可载入大版本模板；保存时整体替换主配置（来源实例清空）。
-// 只在部分版本存在的选项标出适用版本。
-import {
-  Add20Regular,
-  Delete20Regular,
-  DocumentCopy20Regular,
-  Search20Regular,
-} from "@vicons/fluent";
+// 手动编辑主配置：按游戏中的样子用开关、下拉、滑块和按键录入修改选项，未收录的选项退回键值输入；
+// 可添加、删除选项并载入大版本模板。保存时整体替换主配置（来源实例清空）。只在部分版本存在的选项标出适用版本。
+import { Delete20Regular, DocumentCopy20Regular, Search20Regular } from "@vicons/fluent";
 import {
   NButton,
   NDropdown,
@@ -15,6 +10,7 @@ import {
   NInput,
   NModal,
   NScrollbar,
+  NSelect,
   NTag,
   useDialog,
   useMessage,
@@ -26,7 +22,9 @@ import { syncSaveMaster } from "../../api/sync";
 import type { SyncOption } from "../../bindings/SyncOption";
 import type { SyncProfile } from "../../bindings/SyncProfile";
 import { formatError } from "../../i18n";
-import { optionLabel, valueLabel } from "./options";
+import { defaultValue, KNOWN_SETTINGS } from "./controls";
+import OptionControl from "./OptionControl.vue";
+import { optionLabel } from "./options";
 import {
   filterRows,
   MAX_OPTIONS,
@@ -69,10 +67,24 @@ const visible = computed(() => filterRows(rows.value, query.value, (key) => opti
 const parsed = computed(() => rowsToOptions(rows.value));
 const tooMany = computed(() => rows.value.length > MAX_OPTIONS);
 
-function addRow() {
+const CUSTOM = "\u0000custom";
+const addOptions = computed(() => {
+  const used = new Set(rows.value.map((r) => r.key.trim()));
+  return [
+    { value: CUSTOM, label: t("sync.editor.custom") },
+    ...KNOWN_SETTINGS.filter((key) => !used.has(key))
+      .map((key) => ({ value: key, label: optionLabel(key, tr) ?? key }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+  ];
+});
+
+function addRow(key: string) {
   query.value = "";
-  rows.value.push(newRow());
+  rows.value.push(key === CUSTOM ? newRow() : newRow(key, defaultValue(key)));
 }
+
+/** 未收录或尚未填写键的行显示键输入框。 */
+const isCustom = (row: EditorRow) => optionLabel(row.key.trim(), tr) === null;
 
 function removeRow(id: number) {
   rows.value = rows.value.filter((r) => r.id !== id);
@@ -144,12 +156,14 @@ async function save() {
           ><NIcon><Search20Regular /></NIcon
         ></template>
       </NInput>
-      <NButton secondary @click="addRow">
-        <template #icon
-          ><NIcon><Add20Regular /></NIcon
-        ></template>
-        {{ t("sync.editor.add") }}
-      </NButton>
+      <NSelect
+        class="add"
+        :value="null"
+        filterable
+        :options="addOptions"
+        :placeholder="t('sync.editor.add')"
+        @update:value="addRow"
+      />
       <NDropdown trigger="click" :options="templateOptions" @select="loadTemplate">
         <NButton secondary>
           <template #icon
@@ -162,36 +176,29 @@ async function save() {
     <NScrollbar style="max-height: 50vh">
       <NEmpty v-if="visible.length === 0" class="empty" :description="t('sync.editor.empty')" />
       <div v-for="row in visible" :key="row.id" class="row">
-        <div class="label">
-          <span class="label-text">{{
-            optionLabel(row.key.trim(), tr) ?? t("sync.editor.unknown")
-          }}</span>
-          <NTag
-            v-if="spanOf(row.key)"
-            size="tiny"
-            :bordered="false"
-            :title="t('sync.version.range', { range: spanOf(row.key) })"
-          >
-            {{ spanOf(row.key) }}
-          </NTag>
-        </div>
         <NInput
+          v-if="isCustom(row)"
           v-model:value="row.key"
           class="key"
           size="small"
           :placeholder="t('sync.editor.key')"
           :status="issues.get(row.id) ? 'error' : undefined"
         />
-        <NInput
-          v-model:value="row.value"
-          class="value"
-          size="small"
-          :placeholder="t('sync.editor.value')"
-        >
-          <template v-if="valueLabel(row.key.trim(), row.value, tr)" #suffix>
-            <span class="value-label">{{ valueLabel(row.key.trim(), row.value, tr) }}</span>
-          </template>
-        </NInput>
+        <div v-else class="label" :title="row.key">
+          <div class="label-line">
+            <span class="label-text">{{ optionLabel(row.key.trim(), tr) }}</span>
+            <NTag
+              v-if="spanOf(row.key)"
+              size="tiny"
+              :bordered="false"
+              :title="t('sync.version.range', { range: spanOf(row.key) })"
+            >
+              {{ spanOf(row.key) }}
+            </NTag>
+          </div>
+          <div class="raw">{{ row.key }}</div>
+        </div>
+        <OptionControl v-model:value="row.value" :option-key="row.key.trim()" />
         <NButton
           quaternary
           size="small"
@@ -239,28 +246,41 @@ async function save() {
 
 .row {
   display: grid;
-  grid-template-columns: 3fr 3fr 3fr auto;
-  gap: 6px;
+  grid-template-columns: 2fr 3fr auto;
+  gap: 12px;
   align-items: center;
-  padding: 3px 0;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tmcl-stroke);
 }
 
 .label {
+  min-width: 0;
+}
+
+.label-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 0;
+}
+
+.raw {
+  overflow: hidden;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 11px;
+  color: var(--tmcl-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add {
+  width: 220px;
+  flex-shrink: 0;
 }
 
 .label-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.value-label {
-  font-size: 12px;
-  color: var(--tmcl-text-secondary);
 }
 
 .key :deep(input) {
