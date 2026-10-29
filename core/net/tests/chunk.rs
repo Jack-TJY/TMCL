@@ -250,3 +250,37 @@ async fn online_client_jar_is_downloaded_in_chunks() {
     assert_eq!(outcome, Outcome::Downloaded(target.size.unwrap()));
     assert_eq!(file_names(dir.path()), vec!["client.jar"]);
 }
+
+#[tokio::test]
+async fn server_rejecting_range_with_404_falls_back_to_single_stream() {
+    // edge.forgecdn.net 对 Range 请求返回 404，对普通 GET 返回 200。
+    let data = body(2500);
+    let server = TestServer::start(HashMap::from([("/big", data.clone())])).await;
+    server.fail("/big", [Fault::Status(404)]);
+    let dir = tempfile::tempdir().unwrap();
+    engine(4)
+        .download_one(&item(&server, dir.path(), &data), &TaskCtx::noop("test"))
+        .await
+        .unwrap();
+    assert_eq!(std::fs::read(dir.path().join("big.jar")).unwrap(), data);
+    assert_eq!(server.hits(), 2);
+    assert_eq!(ranges(&server), vec![String::new(), "bytes=0-0".to_owned()]);
+}
+
+#[tokio::test]
+async fn resume_rejected_with_404_restarts_from_zero() {
+    let data = body(800);
+    let server = TestServer::start(HashMap::from([("/big", data.clone())])).await;
+    // 第一次断在 300 字节，续传的 Range 请求被拒（404），然后完整重下。
+    server.fail("/big", [Fault::Truncate(300), Fault::Status(404)]);
+    let dir = tempfile::tempdir().unwrap();
+    engine(1)
+        .download_one(&item(&server, dir.path(), &data), &TaskCtx::noop("test"))
+        .await
+        .unwrap();
+    assert_eq!(std::fs::read(dir.path().join("big.jar")).unwrap(), data);
+    assert_eq!(
+        ranges(&server),
+        vec![String::new(), String::new(), "bytes=300-".to_owned()]
+    );
+}
