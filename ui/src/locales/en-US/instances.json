@@ -83,7 +83,15 @@
     "noEntries": "The game folder is empty; only the instance config will be exported.",
     "dest": "Save to",
     "confirm": "Export",
-    "started": "Exporting \"{name}\". Track progress in the task center."
+    "started": "Exporting \"{name}\". Track progress in the task center.",
+    "format": "Format",
+    "tmclpack": "TMCL instance pack (.tmclpack)",
+    "mrpack": "Modrinth modpack (.mrpack)",
+    "packName": "Modpack name",
+    "packVersion": "Version",
+    "summary": "Summary",
+    "summaryPlaceholder": "Optional",
+    "mrpackHint": "Mods, resource packs and shaders found on Modrinth are saved as download links; everything else is packed as is. Needs an internet connection."
   },
   "import": {
     "action": "Import",

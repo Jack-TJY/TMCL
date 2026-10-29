@@ -10,7 +10,8 @@
     "instance_export": "导出实例",
     "instance_import": "导入实例",
     "launch": "启动游戏",
-    "loader_install": "安装加载器"
+    "loader_install": "安装加载器",
+    "resources_modpack_export": "导出整合包"
   },
   "stage": {
     "version_json": "版本信息",
@@ -25,7 +26,10 @@
     "loader_profile": "加载器信息",
     "loader_installer": "加载器安装器",
     "loader_libraries": "加载器依赖库",
-    "loader_processors": "处理加载器文件"
+    "loader_processors": "处理加载器文件",
+    "modpack_hash": "计算文件哈希",
+    "modpack_lookup": "在 Modrinth 查找",
+    "modpack_export": "打包"
   },
   "status": {
     "waiting": "准备中…",

@@ -10,7 +10,9 @@ import {
   groupSkipped,
   joinPath,
   mostRecent,
+  defaultInclude,
   packFileName,
+  withPackExtension,
   parseArgs,
   sortInstances,
 } from "./instances";
@@ -87,6 +89,20 @@ describe("names and paths", () => {
   it("makes a safe pack file name", () => {
     expect(packFileName('a/b:c*"d')).toBe("a_b_c__d.tmclpack");
     expect(packFileName("  ")).toBe("instance.tmclpack");
+    expect(packFileName("生存", "mrpack")).toBe("生存.mrpack");
+  });
+
+  it("swaps the pack extension", () => {
+    expect(withPackExtension("C:\\out\\a.tmclpack", "mrpack")).toBe("C:\\out\\a.mrpack");
+    expect(withPackExtension("/out/a.MRPACK", "tmclpack")).toBe("/out/a.tmclpack");
+    expect(withPackExtension("/out/a", "mrpack")).toBe("/out/a.mrpack");
+    expect(withPackExtension("", "mrpack")).toBe("");
+  });
+
+  it("leaves saves out of modpacks by default", () => {
+    const entries = ["config", "logs", "mods", "saves", "screenshots"];
+    expect(defaultInclude(entries, "tmclpack")).toEqual(["config", "mods", "saves"]);
+    expect(defaultInclude(entries, "mrpack")).toEqual(["config", "mods"]);
   });
 
   it("joins with the directory's separator", () => {
