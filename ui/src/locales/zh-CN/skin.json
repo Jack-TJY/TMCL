@@ -35,7 +35,8 @@
     "empty": "皮肤库是空的，导入或拖入 PNG 皮肤",
     "import": "导入皮肤",
     "add": "加入皮肤库",
-    "imported": "已加入皮肤库：{name}"
+    "imported": "已加入皮肤库：{name}",
+    "alreadyIn": "已在皮肤库中：{name}"
   },
   "edit": {
     "title": "编辑皮肤",
