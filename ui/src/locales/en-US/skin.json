@@ -1,0 +1,48 @@
+{
+  "cancel": "Cancel",
+  "model": {
+    "label": "Model",
+    "classic": "Steve (wide arms)",
+    "slim": "Alex (slim arms)",
+    "steve": "Steve",
+    "alex": "Alex"
+  },
+  "animation": {
+    "label": "Pose",
+    "idle": "Idle",
+    "walk": "Walk",
+    "run": "Run",
+    "wave": "Wave",
+    "none": "Still"
+  },
+  "preview": {
+    "empty": "Select or drop a skin to preview it",
+    "autoRotate": "Auto-rotate",
+    "webgl": "Can't create the 3D view (WebGL unavailable). Update your graphics driver or system WebView and try again.",
+    "loadFailed": "Couldn't load the skin image",
+    "unreadable": "Couldn't read this skin's image. Refresh or import it again."
+  },
+  "drop": {
+    "hint": "Release to preview",
+    "tip": "You can also drop a PNG onto the window",
+    "notPng": "Drop a skin image in PNG format"
+  },
+  "library": {
+    "title": "Skin library",
+    "empty": "Your skin library is empty. Import or drop a PNG skin.",
+    "import": "Import skin",
+    "add": "Add to library",
+    "imported": "Added to library: {name}"
+  },
+  "edit": {
+    "title": "Edit skin",
+    "name": "Name",
+    "confirm": "Save"
+  },
+  "remove": {
+    "action": "Delete",
+    "title": "Delete skin {name}?",
+    "content": "This only removes it from the local library. The skin your account uses is not affected.",
+    "confirm": "Delete"
+  }
+}

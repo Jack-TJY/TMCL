@@ -1,0 +1,48 @@
+{
+  "cancel": "取消",
+  "model": {
+    "label": "模型",
+    "classic": "Steve（粗手臂）",
+    "slim": "Alex（细手臂）",
+    "steve": "Steve",
+    "alex": "Alex"
+  },
+  "animation": {
+    "label": "动作",
+    "idle": "站立",
+    "walk": "走路",
+    "run": "奔跑",
+    "wave": "挥手",
+    "none": "静止"
+  },
+  "preview": {
+    "empty": "选择或拖入一个皮肤开始预览",
+    "autoRotate": "自动旋转",
+    "webgl": "无法创建 3D 画面（WebGL 不可用），请更新显卡驱动或系统 WebView 后重试",
+    "loadFailed": "无法加载皮肤图片",
+    "unreadable": "无法读取这个皮肤的图片，请刷新或重新导入"
+  },
+  "drop": {
+    "hint": "松开即可预览",
+    "tip": "也可以把 PNG 拖进窗口预览",
+    "notPng": "请拖入 PNG 格式的皮肤图片"
+  },
+  "library": {
+    "title": "皮肤库",
+    "empty": "皮肤库是空的，导入或拖入 PNG 皮肤",
+    "import": "导入皮肤",
+    "add": "加入皮肤库",
+    "imported": "已加入皮肤库：{name}"
+  },
+  "edit": {
+    "title": "编辑皮肤",
+    "name": "名称",
+    "confirm": "保存"
+  },
+  "remove": {
+    "action": "删除",
+    "title": "删除皮肤 {name}？",
+    "content": "只会从本地皮肤库删除，不影响账号正在使用的皮肤。",
+    "confirm": "删除"
+  }
+}
