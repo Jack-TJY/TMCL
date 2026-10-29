@@ -33,7 +33,7 @@ use crate::commands::resources::{
     ResourceUpdateList, ResourceVersionList, ResourceWorldList, ResourcesDirArgs,
     ResourcesImportArgs, ResourcesInstallArgs, ResourcesModpackExportArgs,
     ResourcesModpackInspectArgs, ResourcesModpackInstallArgs, ResourcesModpackSearchArgs,
-    ResourcesModpackVersionsArgs, ResourcesRemoveArgs, ResourcesSearchArgs,
+    ResourcesModpackVersionsArgs, ResourcesRemoveArgs, ResourcesSearchAnyArgs, ResourcesSearchArgs,
     ResourcesSetEnabledArgs, ResourcesSetEnabledResult, ResourcesUpdateArgs, ResourcesVersionsArgs,
     ResourcesWorldsArgs,
 };
@@ -131,6 +131,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ResourcesModpackVersionsArgs::export_all(&cfg)?;
     ResourcesRemoveArgs::export_all(&cfg)?;
     ResourcesSearchArgs::export_all(&cfg)?;
+    ResourcesSearchAnyArgs::export_all(&cfg)?;
     ResourcesSetEnabledArgs::export_all(&cfg)?;
     ResourcesSetEnabledResult::export_all(&cfg)?;
     ResourcesUpdateArgs::export_all(&cfg)?;

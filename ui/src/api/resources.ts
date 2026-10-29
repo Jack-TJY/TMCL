@@ -15,6 +15,7 @@ import type { ResourcesModpackInstallArgs } from "../bindings/ResourcesModpackIn
 import type { ResourcesModpackSearchArgs } from "../bindings/ResourcesModpackSearchArgs";
 import type { ResourcesModpackVersionsArgs } from "../bindings/ResourcesModpackVersionsArgs";
 import type { ResourcesRemoveArgs } from "../bindings/ResourcesRemoveArgs";
+import type { ResourcesSearchAnyArgs } from "../bindings/ResourcesSearchAnyArgs";
 import type { ResourcesSearchArgs } from "../bindings/ResourcesSearchArgs";
 import type { ResourcesSetEnabledArgs } from "../bindings/ResourcesSetEnabledArgs";
 import type { ResourcesSetEnabledResult } from "../bindings/ResourcesSetEnabledResult";
@@ -62,6 +63,11 @@ export const RESOURCES_MODPACK_INSTALL_KIND = "resources_modpack_install";
 /** 按实例的游戏版本与加载器搜索 Modrinth。 */
 export function resourcesSearch(args: ResourcesSearchArgs): Promise<ResourcePage> {
   return invoke<ResourcePage>("resources_search", { args });
+}
+
+/** 不按实例过滤，搜索全部资源。 */
+export function resourcesSearchAny(args: ResourcesSearchAnyArgs): Promise<ResourcePage> {
+  return invoke<ResourcePage>("resources_search_any", { args });
 }
 
 /** 项目适用于该实例的版本，新版本在前。 */

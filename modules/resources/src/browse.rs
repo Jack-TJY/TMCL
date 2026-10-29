@@ -141,6 +141,8 @@ pub struct ResourceHit {
     pub follows: u64,
     /// 分类（含加载器名）。
     pub categories: Vec<String>,
+    /// 支持的游戏版本。
+    pub game_versions: Vec<String>,
     /// 最近更新时间（RFC 3339）。
     pub date_modified: String,
 }
@@ -157,6 +159,7 @@ impl From<SearchHit> for ResourceHit {
             downloads: hit.downloads,
             follows: hit.follows,
             categories: hit.categories,
+            game_versions: hit.versions,
             date_modified: hit.date_modified,
         }
     }
@@ -257,6 +260,40 @@ pub async fn search(
         project_type: Some(kind.project_type()),
         game_versions: vec![target.game_version.clone()],
         loaders: target.loaders(kind),
+        categories: Vec::new(),
+        index: query.sort.into(),
+        offset: query.offset,
+        limit: if query.limit == 0 {
+            DEFAULT_LIMIT
+        } else {
+            query.limit
+        },
+    };
+    let response = client.search(&search, ctx).await?;
+    Ok(ResourcePage {
+        hits: response.hits.into_iter().map(Into::into).collect(),
+        offset: response.offset,
+        limit: response.limit,
+        total_hits: response.total_hits,
+    })
+}
+
+/// 不按实例过滤，搜索全部 `kind` 类资源（数据包仍只要 `datapack` 加载器的项目）。
+pub async fn search_any(
+    client: &ModrinthClient,
+    kind: ResourceKind,
+    query: &BrowseQuery,
+    ctx: &TaskCtx,
+) -> AppResult<ResourcePage> {
+    let loaders = match kind {
+        ResourceKind::Datapack => vec!["datapack".to_owned()],
+        _ => Vec::new(),
+    };
+    let search = SearchQuery {
+        query: query.query.trim().to_owned(),
+        project_type: Some(kind.project_type()),
+        game_versions: Vec::new(),
+        loaders,
         categories: Vec::new(),
         index: query.sort.into(),
         offset: query.offset,

@@ -41,6 +41,10 @@ follows: number,
  */
 categories: Array<string>, 
 /**
+ * 支持的游戏版本。
+ */
+game_versions: Array<string>, 
+/**
  * 最近更新时间（RFC 3339）。
  */
 date_modified: string, };

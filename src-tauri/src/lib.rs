@@ -72,6 +72,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_modpack_versions,
         commands::resources::resources_remove,
         commands::resources::resources_search,
+        commands::resources::resources_search_any,
         commands::resources::resources_set_enabled,
         commands::resources::resources_update,
         commands::resources::resources_versions,
@@ -1291,7 +1292,8 @@ fov:0.0
         let project = json!({ "id": "P", "slug": "p", "project_type": "mod", "title": "Mod A",
             "client_side": "required", "server_side": "optional", "license": { "id": "MIT" } });
         let hit = json!({ "project_id": "P", "project_type": "mod", "slug": "p", "title": "Mod A",
-            "client_side": "required", "server_side": "optional", "downloads": 5 });
+            "client_side": "required", "server_side": "optional", "downloads": 5,
+            "versions": ["1.20.1"] });
         let facets = r#"[["project_type:mod"],["versions:1.20.1"],["categories:fabric"]]"#;
         let filter = [
             ("loaders", r#"["fabric"]"#),
@@ -1321,6 +1323,18 @@ fov:0.0
                     &[
                         ("query", "sod"),
                         ("facets", facets),
+                        ("index", "relevance"),
+                        ("limit", "20"),
+                    ],
+                ),
+                json!({ "hits": [hit], "offset": 0, "limit": 20, "total_hits": 1 }),
+            ),
+            (
+                modrinth_target(
+                    "/v2/search",
+                    &[
+                        ("query", "sod"),
+                        ("facets", r#"[["project_type:mod"]]"#),
                         ("index", "relevance"),
                         ("limit", "20"),
                     ],
@@ -1360,6 +1374,10 @@ fov:0.0
         let body = json!({ "args": { "instance_id": id, "kind": "mod", "project_id": "Q" } });
         let list = invoke(&webview, "resources_versions", body).unwrap();
         assert_eq!(list["versions"], json!([]));
+
+        let body = json!({ "args": { "kind": "mod", "query": "sod" } });
+        let page = invoke(&webview, "resources_search_any", body).unwrap();
+        assert_eq!(page["hits"][0]["game_versions"], json!(["1.20.1"]));
 
         let body = json!({ "args": { "instance_id": "missing", "kind": "mod", "query": "" } });
         let err: AppError =
