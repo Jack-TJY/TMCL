@@ -65,6 +65,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_install,
         commands::resources::resources_install_plan,
         commands::resources::resources_installed,
+        commands::resources::resources_modpack_export,
         commands::resources::resources_modpack_inspect,
         commands::resources::resources_modpack_install,
         commands::resources::resources_modpack_search,
@@ -1555,6 +1556,35 @@ fov:0.0
             assert_eq!(finished.error.unwrap().code, code);
         }
         assert_eq!(instance_ids(&webview).len(), 2);
+    }
+
+    #[test]
+    fn resources_modpack_export_over_ipc() {
+        let (app, webview, _server, dir, config) = resources_app();
+        let finished_rx = finished_events(&app);
+        let id = config["id"].clone();
+        let game = DataPaths::at(dir.path().join("data")).instance_game_dir(id.as_str().unwrap());
+        std::fs::create_dir_all(game.join("mods")).unwrap();
+        std::fs::create_dir_all(game.join("saves/w")).unwrap();
+        std::fs::write(game.join("mods/local.jar"), b"local").unwrap();
+        std::fs::write(game.join("saves/w/level.dat"), b"dat").unwrap();
+
+        let dest = dir.path().join("out.mrpack");
+        let body = json!({ "args": { "instance_id": id, "dest": dest, "include": ["mods"],
+            "name": " ", "version": "2.0" } });
+        let finished = run_task(&webview, &finished_rx, "resources_modpack_export", body);
+        assert_eq!(finished.state, TaskState::Succeeded);
+        let body = json!({ "args": { "path": dest } });
+        let info = invoke(&webview, "resources_modpack_inspect", body).unwrap();
+        assert_eq!(info["name"], config["name"]);
+        assert_eq!(info["version"], "2.0");
+        assert_eq!(info["game_version"], config["game_version"]);
+
+        let body = json!({ "args": { "instance_id": "missing", "dest": dest, "include": [] } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "resources_modpack_export", body).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
     }
 
     #[test]

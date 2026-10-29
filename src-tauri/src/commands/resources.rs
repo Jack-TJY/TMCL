@@ -1,5 +1,6 @@
 //! `resources_*` 命令：按实例搜索 Modrinth 资源、列出版本、生成安装计划并安装；
-//! 管理已安装资源（列表、从本地导入、启用/禁用、删除、检查更新与更新）；搜索整合包并安装为新实例。
+//! 管理已安装资源（列表、从本地导入、启用/禁用、删除、检查更新与更新）；搜索整合包并安装为新实例，
+//! 把实例导出为整合包。
 
 use std::path::PathBuf;
 
@@ -9,13 +10,13 @@ use tmcl_common::{AppError, AppResult, TaskCtx};
 use tmcl_instance::InstanceStore;
 use tmcl_loader::LoaderInstaller;
 use tmcl_resources::browse::{self, BrowseQuery};
-use tmcl_resources::modpack::source;
+use tmcl_resources::modpack::{export, source};
 use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::update;
 use tmcl_resources::{
-    InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackInfo, ModpackInstaller,
-    ModpackSource, ResourceImportResult, ResourceInstaller, ResourceKind, ResourceManager,
-    ResourcePage, ResourceSort, ResourceUpdate, ResourceVersion,
+    InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackExport, ModpackInfo,
+    ModpackInstaller, ModpackSource, ResourceImportResult, ResourceInstaller, ResourceKind,
+    ResourceManager, ResourcePage, ResourceSort, ResourceUpdate, ResourceVersion,
 };
 use ts_rs::TS;
 
@@ -30,6 +31,9 @@ pub const RESOURCES_UPDATE_KIND: &str = "resources_update";
 
 /// 整合包安装任务的种类名。
 pub const RESOURCES_MODPACK_INSTALL_KIND: &str = "resources_modpack_install";
+
+/// 整合包导出任务的种类名。
+pub const RESOURCES_MODPACK_EXPORT_KIND: &str = "resources_modpack_export";
 
 /// `resources_search` 的参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
@@ -256,6 +260,29 @@ pub struct ResourcesModpackInstallArgs {
     pub name: Option<String>,
 }
 
+/// `resources_modpack_export` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesModpackExportArgs {
+    /// 要导出的实例。
+    pub instance_id: String,
+    /// 目标 `.mrpack` 的绝对路径。
+    pub dest: String,
+    /// 要包含的 `game/` 顶层条目名（见 `instance_game_entries`）。
+    pub include: Vec<String>,
+    /// 整合包名称；省略或为空时使用实例名称。
+    #[serde(default)]
+    #[ts(optional)]
+    pub name: Option<String>,
+    /// 整合包版本号；省略或为空时为 `1.0.0`。
+    #[serde(default)]
+    #[ts(optional)]
+    pub version: Option<String>,
+    /// 简介。
+    #[serde(default)]
+    #[ts(optional)]
+    pub summary: Option<String>,
+}
+
 /// 按实例的游戏版本与加载器搜索资源。
 #[tauri::command]
 pub async fn resources_search(
@@ -479,6 +506,40 @@ pub async fn resources_modpack_install<R: Runtime>(
             result.map(drop)
         },
     ))
+}
+
+/// 把实例导出为 `.mrpack`，立即返回任务 ID。
+#[tauri::command]
+pub async fn resources_modpack_export<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    args: ResourcesModpackExportArgs,
+) -> Result<TaskStarted, AppError> {
+    let config = state.with_db(|paths, db| InstanceStore::new(paths, db).get(&args.instance_id))?;
+    let game_dir = state.data()?.instance_game_dir(&config.id);
+    let client = state.modrinth()?.clone();
+    let pack = ModpackExport {
+        name: non_empty(args.name).unwrap_or(config.name),
+        version: non_empty(args.version).unwrap_or_else(|| "1.0.0".to_owned()),
+        summary: non_empty(args.summary),
+        game_version: config.game_version,
+        loader: config.loader,
+        include: args.include,
+    };
+    let dest = PathBuf::from(args.dest);
+    Ok(spawn_task(
+        &app,
+        RESOURCES_MODPACK_EXPORT_KIND,
+        move |ctx| async move {
+            export::export(&client, &game_dir, &dest, &pack, &ctx)
+                .await
+                .map(drop)
+        },
+    ))
+}
+
+fn non_empty(value: Option<String>) -> Option<String> {
+    value.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty())
 }
 
 /// 新实例的 Java 为自动，因此加载器安装器使用默认的 [`tmcl_loader::JavaChoice::Auto`]。
