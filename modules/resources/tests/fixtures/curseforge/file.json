@@ -1,0 +1,42 @@
+{
+  "data": {
+    "dependencies": [
+      {
+        "modId": 1689768,
+        "relationType": 3
+      },
+      {
+        "modId": 1700987,
+        "relationType": 2
+      }
+    ],
+    "displayName": "15.74.0.232 for Forge 1.20.1",
+    "downloadUrl": "https://edge.forgecdn.net/files/9352/806/jei-1.20.1-forge-15.74.0.232.jar",
+    "fileDate": "2026-10-28T14:10:29.947Z",
+    "fileFingerprint": 741545197,
+    "fileLength": 4759629,
+    "fileName": "jei-1.20.1-forge-15.74.0.232.jar",
+    "fileStatus": 4,
+    "gameId": 432,
+    "gameVersions": [
+      "Client",
+      "1.20.1",
+      "Forge",
+      "Server"
+    ],
+    "hashes": [
+      {
+        "algo": 1,
+        "value": "7e095c4c5b95a478002df0822975920a4201263e"
+      },
+      {
+        "algo": 2,
+        "value": "97cb94d02ae1af465d81be81520ff880"
+      }
+    ],
+    "id": 9352806,
+    "isAvailable": true,
+    "modId": 238222,
+    "releaseType": 2
+  }
+}

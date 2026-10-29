@@ -1,0 +1,298 @@
+{
+  "data": [
+    {
+      "allowModDistribution": true,
+      "authors": [
+        {
+          "avatarUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/8e639965-5093-4193-a59f-1553380724c0-profile_image-150x150.png",
+          "id": 36387323,
+          "name": "ATMTeam",
+          "url": "https://www.curseforge.com/members/atmteam",
+          "userTierInfo": {
+            "downloadsThreshold": 250000000,
+            "tierLevel": 5
+          }
+        }
+      ],
+      "categories": [
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T17:06:29.69Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/486/635596815896417213.png",
+          "id": 4476,
+          "isClass": false,
+          "name": "Exploration",
+          "parentCategoryId": 4471,
+          "slug": "exploration",
+          "url": "https://www.curseforge.com/minecraft/modpacks/exploration"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T15:34:00.357Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/472/635596760403562826.png",
+          "id": 4482,
+          "isClass": false,
+          "name": "Extra Large",
+          "parentCategoryId": 4471,
+          "slug": "extra-large",
+          "url": "https://www.curseforge.com/minecraft/modpacks/extra-large"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T15:34:17.873Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/474/635596760578719019.png",
+          "id": 4473,
+          "isClass": false,
+          "name": "Magic",
+          "parentCategoryId": 4471,
+          "slug": "magic",
+          "url": "https://www.curseforge.com/minecraft/modpacks/magic"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T15:35:53.467Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/479/635596761534662757.png",
+          "id": 4472,
+          "isClass": false,
+          "name": "Tech",
+          "parentCategoryId": 4471,
+          "slug": "tech",
+          "url": "https://www.curseforge.com/minecraft/modpacks/tech"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T17:06:53.797Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/487/635596816137981263.png",
+          "id": 4478,
+          "isClass": false,
+          "name": "Quests",
+          "parentCategoryId": 4471,
+          "slug": "quests",
+          "url": "https://www.curseforge.com/minecraft/modpacks/quests"
+        }
+      ],
+      "classId": 4471,
+      "dateCreated": "2024-06-25T09:47:22.51Z",
+      "dateModified": "2026-10-17T18:16:07.29Z",
+      "dateReleased": "2026-10-15T11:36:41.197Z",
+      "downloadCount": 22659711,
+      "gameId": 432,
+      "id": 925200,
+      "isAvailable": true,
+      "isFeatured": false,
+      "latestFilesIndexes": [
+        {
+          "fileId": 9190157,
+          "filename": "All the Mods 10-8.3.zip",
+          "gameVersion": "1.21.1",
+          "gameVersionTypeId": 77784,
+          "modLoader": 6,
+          "releaseType": 1
+        }
+      ],
+      "links": {
+        "issuesUrl": "https://github.com/AllTheMods/ATM-10/issues/",
+        "sourceUrl": "https://github.com/AllTheMods/ATM-10",
+        "websiteUrl": "https://www.curseforge.com/minecraft/modpacks/all-the-mods-10",
+        "wikiUrl": ""
+      },
+      "logo": {
+        "description": "",
+        "id": 1182438,
+        "modId": 925200,
+        "thumbnailUrl": "https://media.forgecdn.net/avatars/thumbnails/1182/438/256/256/638755918649288941.png",
+        "title": "638755918649288941.png",
+        "url": "https://media.forgecdn.net/avatars/1182/438/638755918649288941.png"
+      },
+      "mainFileId": 9190157,
+      "name": "All the Mods 10 - ATM10",
+      "primaryCategoryId": 4476,
+      "serverAffiliation": {
+        "affiliationLink": "https://www.akliz.net/allthemods",
+        "affiliationService": 2,
+        "customImageUrl": "https://media.forgecdn.net/banner/console-affiliation-banners/banner_1998e837-094c-4427-8edb-f900cec2f0c1.png",
+        "hasDiscount": false,
+        "isDefaultBanner": false,
+        "isEnabled": true
+      },
+      "slug": "all-the-mods-10",
+      "status": 4,
+      "summary": "The top pack of 2026 with around 500 mods! Tons of quests and a proper endgame. "
+    },
+    {
+      "allowModDistribution": true,
+      "authors": [
+        {
+          "avatarUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/61680d6a-0c46-4cf8-8f17-a4973167f087-profile_image-150x150.png",
+          "id": 101865785,
+          "name": "TqLxQuanZ",
+          "url": "https://www.curseforge.com/members/tqlxquanz",
+          "userTierInfo": {
+            "downloadsThreshold": 10000000,
+            "tierLevel": 4
+          }
+        }
+      ],
+      "categories": [
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-10T21:12:37.56Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/313/635591779575605594.png",
+          "id": 4483,
+          "isClass": false,
+          "name": "Combat / PvP",
+          "parentCategoryId": 4471,
+          "slug": "combat-pvp",
+          "url": "https://www.curseforge.com/minecraft/modpacks/combat-pvp"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T15:58:24.98Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/480/635596775049811800.png",
+          "id": 4475,
+          "isClass": false,
+          "name": "Adventure and RPG",
+          "parentCategoryId": 4471,
+          "slug": "adventure-and-rpg",
+          "url": "https://www.curseforge.com/minecraft/modpacks/adventure-and-rpg"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T17:06:29.69Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/486/635596815896417213.png",
+          "id": 4476,
+          "isClass": false,
+          "name": "Exploration",
+          "parentCategoryId": 4471,
+          "slug": "exploration",
+          "url": "https://www.curseforge.com/minecraft/modpacks/exploration"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T16:28:03.85Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/481/635596792838491141.png",
+          "id": 4484,
+          "isClass": false,
+          "name": "Multiplayer",
+          "parentCategoryId": 4471,
+          "slug": "multiplayer",
+          "url": "https://www.curseforge.com/minecraft/modpacks/multiplayer"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T15:34:10.467Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/473/635596760504656528.png",
+          "id": 4479,
+          "isClass": false,
+          "name": "Hardcore",
+          "parentCategoryId": 4471,
+          "slug": "hardcore",
+          "url": "https://www.curseforge.com/minecraft/modpacks/hardcore"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T15:35:53.467Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/479/635596761534662757.png",
+          "id": 4472,
+          "isClass": false,
+          "name": "Tech",
+          "parentCategoryId": 4471,
+          "slug": "tech",
+          "url": "https://www.curseforge.com/minecraft/modpacks/tech"
+        },
+        {
+          "classId": 4471,
+          "dateModified": "2015-02-16T17:06:53.797Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/14/487/635596816137981263.png",
+          "id": 4478,
+          "isClass": false,
+          "name": "Quests",
+          "parentCategoryId": 4471,
+          "slug": "quests",
+          "url": "https://www.curseforge.com/minecraft/modpacks/quests"
+        }
+      ],
+      "classId": 4471,
+      "dateCreated": "2021-06-08T09:46:38.813Z",
+      "dateModified": "2026-10-06T19:41:18.03Z",
+      "dateReleased": "2026-07-17T04:04:39.777Z",
+      "downloadCount": 9895262,
+      "gameId": 432,
+      "id": 490660,
+      "isAvailable": true,
+      "isFeatured": false,
+      "latestFilesIndexes": [
+        {
+          "fileId": 8448903,
+          "filename": "DeceasedCraft_Beta_DH_Edition-5.10.17.zip",
+          "gameVersion": "1.20.1",
+          "gameVersionTypeId": 75125,
+          "modLoader": 1,
+          "releaseType": 3
+        },
+        {
+          "fileId": 8448820,
+          "filename": "DeceasedCraft_Beta-5.10.17.zip",
+          "gameVersion": "1.20.1",
+          "gameVersionTypeId": 75125,
+          "modLoader": 1,
+          "releaseType": 1
+        },
+        {
+          "fileId": 5525524,
+          "filename": "DeceasedCraft-5.5.5.zip",
+          "gameVersion": "1.18.2",
+          "gameVersionTypeId": 73250,
+          "modLoader": 1,
+          "releaseType": 1
+        }
+      ],
+      "links": {
+        "issuesUrl": "https://github.com/TqLxQuanZ/DeceasedCraft_OpenBeta/issues",
+        "sourceUrl": null,
+        "websiteUrl": "https://www.curseforge.com/minecraft/modpacks/deceasedcraft",
+        "wikiUrl": "https://deceasedcraft.wiki.gg/wiki/Main_Page"
+      },
+      "logo": {
+        "description": "",
+        "id": 1577605,
+        "modId": 490660,
+        "thumbnailUrl": "https://media.forgecdn.net/avatars/thumbnails/1577/605/256/256/639022081315858417.png",
+        "title": "639022081315858417.png",
+        "url": "https://media.forgecdn.net/avatars/1577/605/639022081315858417.png"
+      },
+      "mainFileId": 8448820,
+      "name": "DeceasedCraft - Urban Zombie Apocalypse",
+      "primaryCategoryId": 4476,
+      "serverAffiliation": {
+        "affiliationLink": "https://www.kinetichosting.com/modpacks/deceasedcraft/order",
+        "affiliationService": 2,
+        "customImageUrl": "https://media.forgecdn.net/banner/console-affiliation-banners/banner_99fbe195-ba65-416b-846e-463561c0c7ad.png",
+        "hasDiscount": false,
+        "isDefaultBanner": false,
+        "isEnabled": true
+      },
+      "slug": "deceasedcraft",
+      "status": 4,
+      "summary": "Explore, loot and shoot your way through cities overrun by the infected in this zombie apocalypse modpack. Master the te"
+    }
+  ],
+  "pagination": {
+    "index": 0,
+    "pageSize": 2,
+    "resultCount": 2,
+    "totalCount": 10000
+  }
+}

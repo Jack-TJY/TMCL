@@ -1,0 +1,106 @@
+{
+  "data": {
+    "allowModDistribution": true,
+    "authors": [
+      {
+        "avatarUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/ce4a8a5fe354959b-profile_image-150x150.png",
+        "id": 17072262,
+        "name": "mezz",
+        "url": "https://www.curseforge.com/members/mezz",
+        "userTierInfo": {
+          "downloadsThreshold": 500000000,
+          "tierLevel": 6
+        }
+      }
+    ],
+    "categories": [
+      {
+        "classId": 6,
+        "dateModified": "2014-05-08T17:42:23.74Z",
+        "gameId": 432,
+        "iconUrl": "https://media.forgecdn.net/avatars/6/38/635351497437388438.png",
+        "id": 423,
+        "isClass": false,
+        "name": "Map and Information",
+        "parentCategoryId": 6,
+        "slug": "map-information",
+        "url": "https://www.curseforge.com/minecraft/mc-mods/map-information"
+      },
+      {
+        "classId": 6,
+        "dateModified": "2014-05-23T03:21:44.06Z",
+        "gameId": 432,
+        "iconUrl": "https://media.forgecdn.net/avatars/6/36/635351496947765531.png",
+        "id": 421,
+        "isClass": false,
+        "name": "API and Library",
+        "parentCategoryId": 6,
+        "slug": "library-api",
+        "url": "https://www.curseforge.com/minecraft/mc-mods/library-api"
+      }
+    ],
+    "classId": 6,
+    "dateCreated": "2015-11-23T23:00:41.923Z",
+    "dateModified": "2026-10-29T14:53:05.777Z",
+    "dateReleased": "2026-10-29T14:49:05.583Z",
+    "downloadCount": 641625833,
+    "gameId": 432,
+    "id": 238222,
+    "isAvailable": true,
+    "isFeatured": false,
+    "latestFilesIndexes": [
+      {
+        "fileId": 9362743,
+        "filename": "jei-1.21.11-neoforge-27.54.0.115.jar",
+        "gameVersion": "1.21.11",
+        "gameVersionTypeId": 77784,
+        "modLoader": 6,
+        "releaseType": 2
+      },
+      {
+        "fileId": 9362742,
+        "filename": "jei-1.21.11-fabric-27.54.0.115.jar",
+        "gameVersion": "1.21.11",
+        "gameVersionTypeId": 77784,
+        "modLoader": 4,
+        "releaseType": 2
+      },
+      {
+        "fileId": 9362649,
+        "filename": "jei-26.1.2-neoforge-29.53.0.114.jar",
+        "gameVersion": "26.1",
+        "gameVersionTypeId": 83806,
+        "modLoader": 6,
+        "releaseType": 2
+      },
+      {
+        "fileId": 9362649,
+        "filename": "jei-26.1.2-neoforge-29.53.0.114.jar",
+        "gameVersion": "26.1.1",
+        "gameVersionTypeId": 83806,
+        "modLoader": 6,
+        "releaseType": 2
+      }
+    ],
+    "links": {
+      "issuesUrl": "https://github.com/mezz/JustEnoughItems/issues?q=is%3Aissue",
+      "sourceUrl": "https://github.com/mezz/JustEnoughItems",
+      "websiteUrl": "https://www.curseforge.com/minecraft/mc-mods/jei",
+      "wikiUrl": ""
+    },
+    "logo": {
+      "description": "",
+      "id": 29069,
+      "modId": 238222,
+      "thumbnailUrl": "https://media.forgecdn.net/avatars/thumbnails/29/69/256/256/635838945588716414.jpeg",
+      "title": "635838945588716414.jpeg",
+      "url": "https://media.forgecdn.net/avatars/29/69/635838945588716414.jpeg"
+    },
+    "mainFileId": 9207610,
+    "name": "Just Enough Items (JEI)",
+    "primaryCategoryId": 423,
+    "slug": "jei",
+    "status": 4,
+    "summary": "View Items and Recipes"
+  }
+}
