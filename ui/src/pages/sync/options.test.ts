@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Composer } from "vue-i18n";
 import { i18n } from "../../i18n";
-import { keyLabel, legacyCodeToKey, optionLabel, valueLabel, type Translator } from "./options";
+import {
+  isHiddenOption,
+  keyLabel,
+  legacyCodeToKey,
+  optionLabel,
+  valueLabel,
+  type Translator,
+} from "./options";
 
 const composer = i18n.global as unknown as Composer;
 const tr: Translator = {
@@ -20,6 +27,15 @@ describe("option names", () => {
     expect(optionLabel("key_key.hotbar.3", tr)).toBe("快捷栏 3");
     expect(optionLabel("soundCategory_music", tr)).toBe("音乐");
     expect(optionLabel("modelPart_hat", tr)).toBe("帽子");
+  });
+
+  it("hides options with no in-game setting but keeps bindings", () => {
+    expect(isHiddenOption("tutorialStep", tr)).toBe(true);
+    expect(isHiddenOption("skipMultiplayerWarning", tr)).toBe(true);
+    expect(isHiddenOption("renderDistance", tr)).toBe(false);
+    expect(isHiddenOption("touchscreen", tr)).toBe(false);
+    expect(isHiddenOption("key_examplemod.key.dash", tr)).toBe(false);
+    expect(isHiddenOption("", tr)).toBe(false);
   });
 
   it("returns null for unknown or mod options", () => {

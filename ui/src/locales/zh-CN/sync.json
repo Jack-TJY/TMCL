@@ -155,7 +155,33 @@
     "darkMojangStudiosBackground": "黑白启动画面",
     "hideSplashTexts": "隐藏闪烁标语",
     "operatorItemsTab": "显示管理员物品栏",
-    "backgroundForChatOnly": "仅聊天栏显示文本背景"
+    "backgroundForChatOnly": "仅聊天栏显示文本背景",
+    "touchscreen": "触屏模式",
+    "snooperEnabled": "允许数据收集",
+    "telemetryOptInExtra": "包含可选数据",
+    "narratorHotkey": "旁白快捷键",
+    "japaneseGlyphVariants": "日文字形变体",
+    "rotateWithMinecart": "随矿车转向",
+    "highContrastBlockOutline": "高对比度方块轮廓",
+    "musicFrequency": "音乐频率",
+    "showNowPlayingToast": "显示正在播放的音乐",
+    "streamBytesPerPixel": "直播：画质",
+    "streamMicVolume": "直播：麦克风音量",
+    "streamSystemVolume": "直播：系统音量",
+    "streamKbps": "直播：比特率",
+    "streamFps": "直播：帧率",
+    "streamCompression": "直播：压缩",
+    "streamSendMetadata": "直播：发送元数据",
+    "streamPreferredServer": "直播：首选服务器",
+    "streamChatEnabled": "直播：聊天",
+    "streamChatUserFilter": "直播：聊天用户过滤",
+    "streamMicToggleBehavior": "直播：麦克风模式",
+    "advancedOpengl": "高级 OpenGL",
+    "difficulty": "难度",
+    "clouds": "云（旧版）",
+    "showCape": "显示披风（旧版）",
+    "allowBlockAlternatives": "替代方块",
+    "cloudRange": "云层距离"
   },
   "binding": {
     "attack": "攻击/摧毁",
@@ -344,5 +370,9 @@
     "degrees": "°",
     "chunks": "区块",
     "fps": "FPS"
+  },
+  "hidden": {
+    "showHidden": "显示游戏中没有对应设置的选项（{count} 项）",
+    "hiddenHint": "这些是游戏自己记录的状态（如教程进度、是否跳过提示），在游戏设置界面里找不到。"
   }
 }

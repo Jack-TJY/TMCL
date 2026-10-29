@@ -155,7 +155,33 @@
     "darkMojangStudiosBackground": "Monochrome Logo",
     "hideSplashTexts": "Hide Splash Texts",
     "operatorItemsTab": "Operator Items Tab",
-    "backgroundForChatOnly": "Text Background (Chat Only)"
+    "backgroundForChatOnly": "Text Background (Chat Only)",
+    "touchscreen": "Touchscreen Mode",
+    "snooperEnabled": "Snooper",
+    "telemetryOptInExtra": "Include Optional Data",
+    "narratorHotkey": "Narrator Hotkey",
+    "japaneseGlyphVariants": "Japanese Glyph Variants",
+    "rotateWithMinecart": "Rotate with Minecarts",
+    "highContrastBlockOutline": "High Contrast Block Outline",
+    "musicFrequency": "Music Frequency",
+    "showNowPlayingToast": "Show Music Toast",
+    "streamBytesPerPixel": "Broadcast: Quality",
+    "streamMicVolume": "Broadcast: Microphone Volume",
+    "streamSystemVolume": "Broadcast: System Volume",
+    "streamKbps": "Broadcast: Bitrate",
+    "streamFps": "Broadcast: Framerate",
+    "streamCompression": "Broadcast: Compression",
+    "streamSendMetadata": "Broadcast: Send Metadata",
+    "streamPreferredServer": "Broadcast: Preferred Server",
+    "streamChatEnabled": "Broadcast: Chat",
+    "streamChatUserFilter": "Broadcast: Chat User Filter",
+    "streamMicToggleBehavior": "Broadcast: Microphone Mode",
+    "advancedOpengl": "Advanced OpenGL",
+    "difficulty": "Difficulty",
+    "clouds": "Clouds (legacy)",
+    "showCape": "Show Cape (legacy)",
+    "allowBlockAlternatives": "Alternate Blocks",
+    "cloudRange": "Cloud Distance"
   },
   "binding": {
     "attack": "Attack/Destroy",
@@ -344,5 +370,9 @@
     "degrees": "°",
     "chunks": "chunks",
     "fps": "FPS"
+  },
+  "hidden": {
+    "showHidden": "Show options with no in-game setting ({count})",
+    "hiddenHint": "These are states the game records itself (such as tutorial progress or skipped warnings) and don't appear in the settings screens."
   }
 }

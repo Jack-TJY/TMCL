@@ -1,18 +1,32 @@
 <script setup lang="ts">
 // 预览结果：每个目标实例一项，展开后逐条列出将要修改的选项（原值 → 新值）。
-import { NCollapse, NCollapseItem, NTag } from "naive-ui";
+import { NCheckbox, NCollapse, NCollapseItem, NTag } from "naive-ui";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import type { SyncOptionChange } from "../../bindings/SyncOptionChange";
 import type { SyncPreview } from "../../bindings/SyncPreview";
-import { optionLabel, valueLabel } from "./options";
+import { isHiddenOption, optionLabel, valueLabel } from "./options";
 import { OPTION_SPANS, spanText, supportedOn, usesLegacyKeys } from "./versions";
 
-defineProps<{ preview: SyncPreview; names: Record<string, string> }>();
+const props = defineProps<{ preview: SyncPreview; names: Record<string, string> }>();
 
 const { t, te } = useI18n();
 const tr = { t, te };
+
+// 游戏中没有对应设置的选项默认不列出（仍会同步），勾选后显示。
+const showHidden = ref(false);
+const hiddenCount = computed(
+  () =>
+    props.preview.targets.flatMap((x) => x.changes).filter((c) => isHiddenOption(c.key, tr)).length,
+);
+const shown = (changes: SyncOptionChange[]) =>
+  showHidden.value ? changes : changes.filter((c) => !isHiddenOption(c.key, tr));
 </script>
 
 <template>
+  <NCheckbox v-if="hiddenCount > 0" v-model:checked="showHidden" class="hidden-toggle">
+    {{ t("sync.hidden.showHidden", { count: hiddenCount }) }}
+  </NCheckbox>
   <NCollapse class="preview" display-directive="show">
     <NCollapseItem
       v-for="target in preview.targets"
@@ -40,7 +54,7 @@ const tr = { t, te };
           </tr>
         </thead>
         <tbody>
-          <tr v-for="change in target.changes" :key="change.key">
+          <tr v-for="change in shown(target.changes)" :key="change.key">
             <td>
               <div>{{ optionLabel(change.key, tr) ?? change.key }}</div>
               <div v-if="optionLabel(change.key, tr)" class="mono raw">{{ change.key }}</div>
@@ -87,6 +101,10 @@ const tr = { t, te };
 </template>
 
 <style scoped>
+.hidden-toggle {
+  margin-bottom: 8px;
+}
+
 .target-name {
   font-weight: 600;
 }

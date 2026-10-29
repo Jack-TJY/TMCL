@@ -171,3 +171,12 @@ export function valueLabel(key: string, value: string, tr: Translator): string |
   if (value === "false") return tr.t("sync.value.off");
   return null;
 }
+
+/**
+ * 游戏设置界面中没有对应项的选项（如 `tutorialStep`、`skipMultiplayerWarning` 这类游戏自己记录的状态），
+ * 界面默认隐藏，由用户选择是否显示。按键绑定都能在“控制”中找到，模组按键也不算。
+ */
+export function isHiddenOption(key: string, tr: Translator): boolean {
+  const k = key.trim();
+  return k !== "" && !k.startsWith("key_") && optionLabel(k, tr) === null;
+}
