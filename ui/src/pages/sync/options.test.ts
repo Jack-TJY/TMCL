@@ -4,6 +4,7 @@ import { i18n } from "../../i18n";
 import {
   isHiddenOption,
   keyLabel,
+  modBinding,
   legacyCodeToKey,
   optionLabel,
   valueLabel,
@@ -27,6 +28,17 @@ describe("option names", () => {
     expect(optionLabel("key_key.hotbar.3", tr)).toBe("快捷栏 3");
     expect(optionLabel("soundCategory_music", tr)).toBe("音乐");
     expect(optionLabel("modelPart_hat", tr)).toBe("帽子");
+  });
+
+  it("names newer vanilla bindings and splits mod bindings", () => {
+    expect(optionLabel("key_key.debug.overlay", tr)).toBe("切换调试屏幕");
+    expect(optionLabel("key_key.toggleGui", tr)).toBe("切换界面显示");
+    expect(optionLabel("key_key.jei.showRecipe", tr)).toBeNull();
+    expect(modBinding("key_key.jei.showRecipe")).toEqual({ mod: "jei", name: "Show Recipe" });
+    expect(modBinding("key_key.sodium.toggle_fog")).toEqual({ mod: "sodium", name: "Toggle Fog" });
+    expect(modBinding("key_examplemod.key.dash")).toEqual({ mod: "examplemod", name: "Dash" });
+    expect(modBinding("key_Zoom")).toEqual({ mod: null, name: "Zoom" });
+    expect(modBinding("renderDistance")).toBeNull();
   });
 
   it("hides options with no in-game setting but keeps bindings", () => {

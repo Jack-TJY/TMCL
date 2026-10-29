@@ -30,13 +30,34 @@ export function optionLabel(key: string, tr: Translator): string | null {
     const name = key.slice(BINDING_PREFIX.length);
     const hotbar = name.match(/^hotbar\.(\d)$/);
     if (hotbar) return tr.t("sync.binding.hotbar", { n: hotbar[1] });
-    return name.includes(".") ? null : lookup(tr, `sync.binding.${name}`);
+    // 文案 key 不能含点，`key.debug.overlay` 存为 `debug_overlay`。
+    return lookup(tr, `sync.binding.${name.replaceAll(".", "_")}`);
   }
   if (key.startsWith(SOUND_PREFIX))
     return lookup(tr, `sync.sound.${key.slice(SOUND_PREFIX.length)}`);
   if (key.startsWith(MODEL_PREFIX))
     return lookup(tr, `sync.modelPart.${key.slice(MODEL_PREFIX.length)}`);
   return /^\w+$/.test(key) ? lookup(tr, `sync.option.${key}`) : null;
+}
+
+/**
+ * 没有收录名称的按键绑定（多为模组按键，如 `key_key.jei.showRecipe`）拆成模组名与动作名，
+ * 动作名按驼峰拆开显示（“Show Recipe”）。不是按键绑定时为 `null`。
+ */
+export function modBinding(key: string): { mod: string | null; name: string } | null {
+  if (!key.startsWith("key_")) return null;
+  const parts = key.slice(4).split(".").filter(Boolean);
+  if (parts[0] === "key" && parts.length > 1) parts.shift();
+  if (parts.length === 0) return null;
+  const mod = parts.length > 1 ? parts.shift()! : null;
+  // 也有写成 `key_<模组>.key.<动作>` 的，去掉中间的 `key`。
+  const rest = parts.length > 1 ? parts.filter((p) => p !== "key") : parts;
+  const name = rest
+    .join(" ")
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return { mod, name };
 }
 
 /** 把旧版 LWJGL2 键码转为 1.13 以后的键名；不认识时返回 `null`。 */

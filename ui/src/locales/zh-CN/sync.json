@@ -212,9 +212,35 @@
     "advancements": "进度",
     "streamStartStop": "开始/停止直播",
     "streamPauseUnpause": "暂停/继续直播",
-    "streamCommercials": "播放直播广告",
+    "streamCommercial": "播放直播广告",
     "streamToggleMic": "直播麦克风",
-    "hotbar": "快捷栏 {n}"
+    "hotbar": "快捷栏 {n}",
+    "debug_clearChat": "清除聊天栏",
+    "debug_copyLocation": "复制位置",
+    "debug_copyRecreateCommand": "复制数据",
+    "debug_crash": "调试崩溃",
+    "debug_debugOptions": "调试选项",
+    "debug_dumpDynamicTextures": "导出动态纹理",
+    "debug_dumpVersion": "导出版本信息",
+    "debug_focusPause": "切换失去焦点时暂停",
+    "debug_fpsCharts": "帧率图表",
+    "debug_lightmapTexture": "光照贴图纹理",
+    "debug_modifier": "调试修饰键",
+    "debug_networkCharts": "网络图表",
+    "debug_overlay": "切换调试屏幕",
+    "debug_profiling": "开始/停止性能分析",
+    "debug_profilingChart": "性能分析图表",
+    "debug_reloadChunk": "重新加载区块",
+    "debug_reloadResourcePacks": "重新加载资源包",
+    "debug_showAdvancedTooltips": "显示高级提示框",
+    "debug_showChunkBorders": "显示区块边界",
+    "debug_showHitboxes": "显示碰撞箱",
+    "debug_spectate": "切换旁观",
+    "debug_switchGameMode": "游戏模式切换器",
+    "quickActions": "快捷操作",
+    "spectatorHotbar": "在快捷栏上选择",
+    "toggleGui": "切换界面显示",
+    "toggleSpectatorShaderEffects": "切换旁观者着色器效果"
   },
   "sound": {
     "master": "主音量",
@@ -374,5 +400,6 @@
   "hidden": {
     "showHidden": "显示游戏中没有对应设置的选项（{count} 项）",
     "hiddenHint": "这些是游戏自己记录的状态（如教程进度、是否跳过提示），在游戏设置界面里找不到。"
-  }
+  },
+  "modBinding": "模组"
 }

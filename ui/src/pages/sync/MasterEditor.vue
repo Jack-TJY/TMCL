@@ -25,7 +25,7 @@ import type { SyncProfile } from "../../bindings/SyncProfile";
 import { formatError } from "../../i18n";
 import { defaultValue, KNOWN_SETTINGS } from "./controls";
 import OptionControl from "./OptionControl.vue";
-import { isHiddenOption, optionLabel } from "./options";
+import { isHiddenOption, modBinding, optionLabel } from "./options";
 import {
   filterRows,
   MAX_OPTIONS,
@@ -97,8 +97,13 @@ function addRow(key: string) {
   rows.value.push(row);
 }
 
-/** 未收录或尚未填写键的行显示键输入框。 */
-const isCustom = (row: EditorRow) => optionLabel(row.key.trim(), tr) === null;
+/** 未收录或尚未填写键的行显示键输入框；已有的模组按键按名称显示，刚添加的自定义行一直保持输入框。 */
+const isCustom = (row: EditorRow) =>
+  optionLabel(row.key.trim(), tr) === null &&
+  (added.value.has(row.id) || modBinding(row.key.trim()) === null);
+const labelOf = (key: string) => optionLabel(key.trim(), tr) ?? modBinding(key.trim())?.name;
+const modOf = (key: string) =>
+  optionLabel(key.trim(), tr) === null ? (modBinding(key.trim())?.mod ?? null) : null;
 
 function removeRow(id: number) {
   rows.value = rows.value.filter((r) => r.id !== id);
@@ -206,7 +211,10 @@ async function save() {
         />
         <div v-else class="label" :title="row.key">
           <div class="label-line">
-            <span class="label-text">{{ optionLabel(row.key.trim(), tr) }}</span>
+            <span class="label-text">{{ labelOf(row.key) }}</span>
+            <NTag v-if="modOf(row.key)" size="tiny" type="info" :bordered="false">
+              {{ t("sync.modBinding") }} · {{ modOf(row.key) }}
+            </NTag>
             <NTag
               v-if="spanOf(row.key)"
               size="tiny"
