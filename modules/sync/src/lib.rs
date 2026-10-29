@@ -6,12 +6,17 @@
 //! - [`keymap`]：1.13 以后的键名与 1.12.2 及以前 LWJGL2 键码的双向转换。
 //! - [`profile`]：同步类别与主配置 `<data_root>/sync/master.json`。
 //! - [`apply`]：按类别与目标版本应用主配置，写入前备份，支持撤销。
+//! - [`dataversion`]：从客户端 jar 读取数据版本，首次启动前新建 `options.txt` 时写入。
+//! - [`auto`]：新实例首次启动前自动同步（`<data_root>/sync/auto.json`）。
 
 pub mod apply;
+pub mod auto;
+pub mod dataversion;
 pub mod keymap;
 pub mod options;
 pub mod profile;
 
 pub use apply::{Applied, OptionChange};
+pub use auto::AutoSync;
 pub use options::OptionsFile;
 pub use profile::{Category, SyncOption, SyncProfile};

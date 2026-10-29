@@ -5,9 +5,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use tmcl_common::{AppError, AppResult, ErrorCode};
+use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode};
 use tmcl_instance::InstanceStore;
-use tmcl_sync::{Category, OptionChange, SyncOption, SyncProfile, apply, profile};
+use tmcl_sync::{AutoSync, Category, OptionChange, SyncOption, SyncProfile, apply, auto, profile};
 use ts_rs::TS;
 
 use crate::state::AppState;
@@ -175,7 +175,8 @@ pub async fn sync_apply(
     for (instance_id, (game_dir, game_version)) in resolved {
         std::fs::create_dir_all(&game_dir)
             .map_err(|e| AppError::from(e).with_param("path", game_dir.display()))?;
-        let applied = apply::apply(&game_dir, &game_version, &master, &args.categories)?;
+        let jar = client_jar(state.data()?, &game_version);
+        let applied = apply::apply(&game_dir, &game_version, &jar, &master, &args.categories)?;
         targets.push(SyncTargetApplied {
             instance_id,
             changed: u32::try_from(applied.changed).unwrap_or(u32::MAX),
@@ -195,6 +196,46 @@ pub async fn sync_restore(
     Ok(SyncRestoreResult {
         restored: apply::restore_latest(&game_dir)?.is_some(),
     })
+}
+
+/// 读取新实例自动同步设置。
+#[tauri::command]
+pub async fn sync_get_auto(state: State<'_, AppState>) -> Result<AutoSync, AppError> {
+    Ok(auto::load(state.data()?))
+}
+
+/// 保存新实例自动同步设置，返回保存后的设置。
+#[tauri::command]
+pub async fn sync_set_auto(
+    state: State<'_, AppState>,
+    args: AutoSync,
+) -> Result<AutoSync, AppError> {
+    auto::save(state.data()?, &args)?;
+    Ok(args)
+}
+
+/// 启动前调用：实例从未启动过（没有 `options.txt`）且开启了自动同步时应用主配置。
+/// 失败只记日志，不影响启动。
+pub fn auto_sync_before_launch(paths: &DataPaths, instance_id: &str, game_version: &str) {
+    let game_dir = paths.instance_game_dir(instance_id);
+    let jar = client_jar(paths, game_version);
+    match auto::apply_before_first_launch(paths, &game_dir, game_version, &jar) {
+        Ok(Some(applied)) => {
+            tracing::info!(instance = %instance_id, changed = applied.changed, "首次启动前已自动同步设置");
+        }
+        Ok(None) => {}
+        Err(err) => {
+            tracing::warn!(instance = %instance_id, error = %err, "首次启动前自动同步设置失败");
+        }
+    }
+}
+
+/// 原版客户端 jar：`shared/versions/<版本>/<版本>.jar`，用于读取数据版本。
+fn client_jar(paths: &DataPaths, game_version: &str) -> PathBuf {
+    paths
+        .shared_versions_dir()
+        .join(game_version)
+        .join(format!("{game_version}.jar"))
 }
 
 /// 实例的 `game/` 目录与游戏版本；实例不存在返回 `INSTANCE_NOT_FOUND`。

@@ -31,6 +31,7 @@ import type { SyncCategory } from "../../bindings/SyncCategory";
 import type { SyncPreview } from "../../bindings/SyncPreview";
 import type { SyncProfile } from "../../bindings/SyncProfile";
 import { formatError } from "../../i18n";
+import AutoSyncCard from "./AutoSyncCard.vue";
 import MasterEditor from "./MasterEditor.vue";
 import PreviewList from "./PreviewList.vue";
 import { DEFAULT_CATEGORIES, summarizePreview, SYNC_CATEGORIES, usableInstances } from "./sync";
@@ -248,6 +249,10 @@ function selectAll(all: boolean) {
             </NButton>
           </div>
         </div>
+      </section>
+
+      <section class="block">
+        <AutoSyncCard :has-master="master !== null" />
       </section>
 
       <section class="block">

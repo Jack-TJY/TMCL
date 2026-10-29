@@ -98,10 +98,12 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // sync
         commands::sync::sync_apply,
         commands::sync::sync_capture,
+        commands::sync::sync_get_auto,
         commands::sync::sync_get_master,
         commands::sync::sync_preview,
         commands::sync::sync_restore,
         commands::sync::sync_save_master,
+        commands::sync::sync_set_auto,
         // task
         commands::task::task_cancel,
         commands::task::task_list,
@@ -825,6 +827,13 @@ fov:0.0
             json!({ "args": { "options": bad } }),
         );
         assert_eq!(err.unwrap_err()["code"], "SYNC_MASTER_INVALID");
+
+        let auto = invoke(&webview, "sync_get_auto", json!({})).unwrap();
+        assert_eq!(auto["enabled"], false);
+        let on = json!({ "enabled": true, "categories": ["keys"] });
+        let saved = invoke(&webview, "sync_set_auto", json!({ "args": on })).unwrap();
+        assert_eq!(saved, on);
+        assert_eq!(invoke(&webview, "sync_get_auto", json!({})).unwrap(), on);
     }
 
     fn state_with_memory_secrets(dir: &std::path::Path) -> (AppState, Arc<MemorySecretStore>) {

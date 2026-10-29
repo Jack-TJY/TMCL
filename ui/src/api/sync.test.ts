@@ -6,10 +6,12 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: tauriInvoke }));
 import {
   syncApply,
   syncCapture,
+  syncGetAuto,
   syncGetMaster,
   syncPreview,
   syncRestore,
   syncSaveMaster,
+  syncSetAuto,
 } from "./sync";
 
 describe("sync commands", () => {
@@ -31,6 +33,11 @@ describe("sync commands", () => {
     expect(tauriInvoke).toHaveBeenLastCalledWith("sync_preview", { args: targets });
     await syncApply(targets);
     expect(tauriInvoke).toHaveBeenLastCalledWith("sync_apply", { args: targets });
+    await syncGetAuto();
+    expect(tauriInvoke).toHaveBeenLastCalledWith("sync_get_auto", undefined);
+    const auto = { enabled: true, categories: ["keys" as const] };
+    await syncSetAuto(auto);
+    expect(tauriInvoke).toHaveBeenLastCalledWith("sync_set_auto", { args: auto });
     await syncRestore({ instance_id: "b" });
     expect(tauriInvoke).toHaveBeenLastCalledWith("sync_restore", { args: { instance_id: "b" } });
   });
