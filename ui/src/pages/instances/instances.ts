@@ -1,5 +1,7 @@
 // 实例页的纯函数：搜索、排序、分组与参数文本转换，便于单元测试。
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
+import type { ResourceImportSkip } from "../../bindings/ResourceImportSkip";
+import type { ResourceImportSkipReason } from "../../bindings/ResourceImportSkipReason";
 
 /** 列表排序方式：`recent` 保持后端顺序（最近游玩在前），`name` 按名称。 */
 export const INSTANCE_SORTS = ["recent", "name"] as const;
@@ -111,4 +113,22 @@ export function packFileName(name: string): string {
 export function joinPath(dir: string, file: string): string {
   const sep = dir.includes("\\") ? "\\" : "/";
   return dir.endsWith(sep) ? `${dir}${file}` : `${dir}${sep}${file}`;
+}
+
+/** 装有加载器（Forge、NeoForge、Fabric、Quilt）且能正常读取的实例才能导入 Mod。 */
+export function canImportMods(instance: Pick<InstanceSummary, "loader" | "error">): boolean {
+  return instance.error === null && instance.loader !== null;
+}
+
+/** 把导入时跳过的文件按原因分组，保持出现顺序。 */
+export function groupSkipped(
+  skipped: ResourceImportSkip[],
+): [ResourceImportSkipReason, string[]][] {
+  const groups = new Map<ResourceImportSkipReason, string[]>();
+  for (const s of skipped) {
+    const names = groups.get(s.reason) ?? [];
+    names.push(s.file_name);
+    groups.set(s.reason, names);
+  }
+  return [...groups];
 }

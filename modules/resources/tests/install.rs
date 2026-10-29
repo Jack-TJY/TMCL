@@ -16,7 +16,8 @@ use tmcl_net::{DownloadOptions, Downloader, HttpClient, RetryPolicy};
 use tmcl_resources::browse::{self, BrowseQuery, ResourceSort};
 use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::{
-    InstallRequest, InstanceTarget, ResourceInstaller, ResourceKind, ResourceManager, update,
+    InstallRequest, InstanceTarget, ResourceImportSkipReason, ResourceInstaller, ResourceKind,
+    ResourceManager, update,
 };
 
 const SEARCH: &[u8] = include_bytes!("fixtures/modrinth/search.json");
@@ -510,6 +511,67 @@ async fn enable_disable_and_remove() {
     assert!(!mods.join("a.jar").exists());
     let err = m.remove("a.jar").unwrap_err();
     assert_eq!(err.code, ErrorCode::ResourcesFileNotFound);
+}
+
+#[tokio::test]
+async fn import_copies_files_and_skips_existing_or_unsupported() {
+    let api = MockServer::start(|_, _| Response::status(404)).await;
+    let tmp = tempfile::tempdir().unwrap();
+    let src = tmp.path().join("downloads");
+    std::fs::create_dir_all(&src).unwrap();
+    for (name, body) in [
+        ("new.jar", "new"),
+        ("old.jar", "other"),
+        ("off.jar", "off"),
+        ("pack.jar.disabled", "pack"),
+        ("readme.txt", "r"),
+    ] {
+        std::fs::write(src.join(name), body).unwrap();
+    }
+    let game = tmp.path().join("game");
+    let m = manager(&api, &game);
+    // mods/ 尚不存在：导入时创建。
+    let first = m.import(&[src.join("old.jar")]).unwrap();
+    assert_eq!(first.imported, ["old.jar"]);
+    let mods = game.join("mods");
+    std::fs::write(mods.join("off.jar.disabled"), b"x").unwrap();
+
+    let paths = [
+        src.join("new.jar"),
+        src.join("old.jar"),
+        src.join("off.jar"),
+        src.join("pack.jar.disabled"),
+        src.join("readme.txt"),
+        src.join("missing.jar"),
+        src.join("new.jar"),
+    ];
+    let result = m.import(&paths).unwrap();
+    assert_eq!(result.imported, ["new.jar", "pack.jar"]);
+    let skipped: Vec<(&str, ResourceImportSkipReason)> = result
+        .skipped
+        .iter()
+        .map(|s| (s.file_name.as_str(), s.reason))
+        .collect();
+    assert_eq!(
+        skipped,
+        [
+            ("old.jar", ResourceImportSkipReason::Exists),
+            ("off.jar", ResourceImportSkipReason::Exists),
+            ("readme.txt", ResourceImportSkipReason::Unsupported),
+            ("missing.jar", ResourceImportSkipReason::NotFound),
+            ("new.jar", ResourceImportSkipReason::Exists),
+        ]
+    );
+    assert_eq!(std::fs::read(mods.join("new.jar")).unwrap(), b"new");
+    assert_eq!(std::fs::read(mods.join("pack.jar")).unwrap(), b"pack");
+    assert_eq!(std::fs::read(mods.join("old.jar")).unwrap(), b"other");
+    assert!(src.join("new.jar").is_file(), "源文件保留");
+    let names: Vec<String> = std::fs::read_dir(&mods)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .filter(|n| n.ends_with(".part"))
+        .collect();
+    assert!(names.is_empty());
 }
 
 #[tokio::test]

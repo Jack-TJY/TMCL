@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use tmcl_auth::AccountList;
 use tmcl_common::{AppError, TaskFinished, TaskProgress};
-use tmcl_resources::{InstallPlan, InstalledList, ModpackInfo, ResourcePage};
+use tmcl_resources::{InstallPlan, InstalledList, ModpackInfo, ResourceImportResult, ResourcePage};
 use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo, ReleaseList};
@@ -30,10 +30,10 @@ use crate::commands::layout::{LayoutSaveArgs, LayoutSnapshot};
 use crate::commands::loader::{LoaderInstallArgs, LoaderListArgs, LoaderVersionList};
 use crate::commands::resources::{
     ResourceUpdateList, ResourceVersionList, ResourceWorldList, ResourcesDirArgs,
-    ResourcesInstallArgs, ResourcesModpackInspectArgs, ResourcesModpackInstallArgs,
-    ResourcesModpackSearchArgs, ResourcesModpackVersionsArgs, ResourcesRemoveArgs,
-    ResourcesSearchArgs, ResourcesSetEnabledArgs, ResourcesSetEnabledResult, ResourcesUpdateArgs,
-    ResourcesVersionsArgs, ResourcesWorldsArgs,
+    ResourcesImportArgs, ResourcesInstallArgs, ResourcesModpackInspectArgs,
+    ResourcesModpackInstallArgs, ResourcesModpackSearchArgs, ResourcesModpackVersionsArgs,
+    ResourcesRemoveArgs, ResourcesSearchArgs, ResourcesSetEnabledArgs, ResourcesSetEnabledResult,
+    ResourcesUpdateArgs, ResourcesVersionsArgs, ResourcesWorldsArgs,
 };
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
@@ -113,12 +113,14 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     // resources（ResourceKind、ResourceSort、ResourceVersion 等随之导出）
     InstallPlan::export_all(&cfg)?;
     InstalledList::export_all(&cfg)?;
+    ResourceImportResult::export_all(&cfg)?;
     ModpackInfo::export_all(&cfg)?;
     ResourcePage::export_all(&cfg)?;
     ResourceUpdateList::export_all(&cfg)?;
     ResourceVersionList::export_all(&cfg)?;
     ResourceWorldList::export_all(&cfg)?;
     ResourcesDirArgs::export_all(&cfg)?;
+    ResourcesImportArgs::export_all(&cfg)?;
     ResourcesInstallArgs::export_all(&cfg)?;
     ResourcesModpackInspectArgs::export_all(&cfg)?;
     ResourcesModpackInstallArgs::export_all(&cfg)?;

@@ -24,5 +24,6 @@ pub use deps::{Conflict, InstalledVersion, Resolution, Resolved, UnavailableDepe
 pub use install::{InstallPlan, InstallRequest, PlannedFile, ResourceInstaller};
 pub use modpack::{ModpackInfo, ModpackInstaller, ModpackSource};
 pub use update::{
-    InstalledList, InstalledResource, ResourceManager, ResourceSource, ResourceUpdate,
+    InstalledList, InstalledResource, ResourceImportResult, ResourceImportSkip,
+    ResourceImportSkipReason, ResourceManager, ResourceSource, ResourceUpdate,
 };

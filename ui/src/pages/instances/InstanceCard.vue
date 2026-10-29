@@ -6,6 +6,7 @@ import {
   Edit20Regular,
   FolderOpen20Regular,
   MoreHorizontal20Regular,
+  PuzzlePiece20Regular,
   Settings20Regular,
   Share20Regular,
 } from "@vicons/fluent";
@@ -13,8 +14,10 @@ import { NButton, NDropdown, NIcon, NTag, type DropdownOption } from "naive-ui";
 import { computed, h, type Component } from "vue";
 import { useI18n } from "vue-i18n";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
+import { canImportMods } from "./instances";
 
-export type CardAction = "details" | "open" | "rename" | "duplicate" | "export" | "delete";
+export type CardAction =
+  "details" | "open" | "importMods" | "rename" | "duplicate" | "export" | "delete";
 
 const props = defineProps<{ instance: InstanceSummary }>();
 const emit = defineEmits<{ action: [action: CardAction] }>();
@@ -36,6 +39,9 @@ const menu = computed<DropdownOption[]>(() => {
     : [
         ["details", Settings20Regular],
         ["open", FolderOpen20Regular],
+        ...(canImportMods(props.instance)
+          ? [["importMods", PuzzlePiece20Regular] as [CardAction, Component]]
+          : []),
         ["rename", Edit20Regular],
         ["duplicate", Copy20Regular],
         ["export", Share20Regular],

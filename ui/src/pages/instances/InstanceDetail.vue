@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// 实例详情抽屉：版本、加载器（可更换）、分组、Java、内存、JVM / 游戏参数、窗口；可打开游戏目录。
-import { FolderOpen20Regular } from "@vicons/fluent";
+// 实例详情抽屉：版本、加载器（可更换）、分组、Java、内存、JVM / 游戏参数、窗口；可打开游戏目录，
+// 装有加载器的实例可导入 Mod。
+import { FolderOpen20Regular, PuzzlePiece20Regular } from "@vicons/fluent";
 import {
   NAlert,
   NAutoComplete,
@@ -32,6 +33,7 @@ import LoaderChangeDialog from "../../components/loader-picker/LoaderChangeDialo
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import { formatArgs, parseArgs } from "./instances";
+import { useModImport } from "./modImport";
 
 const MEMORY_MIN_MB = 256;
 const MEMORY_MAX_MB = 32768;
@@ -42,6 +44,7 @@ const emit = defineEmits<{ close: []; saved: []; openDir: [id: string] }>();
 const { t, locale } = useI18n();
 const message = useMessage();
 const tasks = useTasksStore();
+const { importing: importingMods, importMods } = useModImport();
 
 const config = ref<InstanceConfig | null>(null);
 /** 读取或保存后的配置，用于回退被清空的数字框。 */
@@ -316,6 +319,16 @@ async function save() {
               ><NIcon><FolderOpen20Regular /></NIcon
             ></template>
             {{ t("instances.action.open") }}
+          </NButton>
+          <NButton
+            v-if="instance && config?.loader"
+            :loading="importingMods === instance.id"
+            @click="importMods(instance.id)"
+          >
+            <template #icon
+              ><NIcon><PuzzlePiece20Regular /></NIcon
+            ></template>
+            {{ t("instances.action.importMods") }}
           </NButton>
           <div class="spacer" />
           <NButton @click="emit('close')">{{ t("instances.cancel") }}</NButton>

@@ -1,5 +1,7 @@
 //! `resources_*` 命令：按实例搜索 Modrinth 资源、列出版本、生成安装计划并安装；
-//! 管理已安装资源（列表、启用/禁用、删除、检查更新与更新）；搜索整合包并安装为新实例。
+//! 管理已安装资源（列表、从本地导入、启用/禁用、删除、检查更新与更新）；搜索整合包并安装为新实例。
+
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
@@ -12,8 +14,8 @@ use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::update;
 use tmcl_resources::{
     InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackInfo, ModpackInstaller,
-    ModpackSource, ResourceInstaller, ResourceKind, ResourceManager, ResourcePage, ResourceSort,
-    ResourceUpdate, ResourceVersion,
+    ModpackSource, ResourceImportResult, ResourceInstaller, ResourceKind, ResourceManager,
+    ResourcePage, ResourceSort, ResourceUpdate, ResourceVersion,
 };
 use ts_rs::TS;
 
@@ -107,6 +109,21 @@ pub struct ResourcesDirArgs {
     #[serde(default)]
     #[ts(optional)]
     pub world: Option<String>,
+}
+
+/// `resources_import` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesImportArgs {
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 资源种类，决定导入的目录。
+    pub kind: ResourceKind,
+    /// 数据包所在的存档，其他种类忽略。
+    #[serde(default)]
+    #[ts(optional)]
+    pub world: Option<String>,
+    /// 要导入的本地文件的绝对路径，来自文件对话框。
+    pub paths: Vec<String>,
 }
 
 /// `resources_set_enabled` 的参数。
@@ -310,6 +327,17 @@ pub async fn resources_installed(
 ) -> Result<InstalledList, AppError> {
     let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
     manager.list(&TaskCtx::noop("resources_installed")).await
+}
+
+/// 把本地文件复制进实例的资源目录，不覆盖同名文件。
+#[tauri::command]
+pub async fn resources_import(
+    state: State<'_, AppState>,
+    args: ResourcesImportArgs,
+) -> Result<ResourceImportResult, AppError> {
+    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
+    let paths: Vec<PathBuf> = args.paths.iter().map(PathBuf::from).collect();
+    manager.import(&paths)
 }
 
 /// 启用或禁用资源文件（`.disabled` 后缀）。

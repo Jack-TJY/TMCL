@@ -33,7 +33,8 @@
     "rename": "重命名",
     "duplicate": "复制",
     "export": "导出",
-    "delete": "删除"
+    "delete": "删除",
+    "importMods": "导入 Mod"
   },
   "detail": {
     "loadFailed": "无法读取实例配置",
@@ -104,5 +105,13 @@
     "content": "游戏异常退出（退出码 {code}），可查看日志了解原因。",
     "viewLog": "查看日志",
     "close": "关闭"
+  },
+  "mods": {
+    "imported": "已导入 {count} 个 Mod",
+    "skipped": {
+      "exists": "已有同名文件，已跳过：{names}",
+      "unsupported": "不是 .jar 或 .zip 文件，已跳过：{names}",
+      "not_found": "找不到文件，已跳过：{names}"
+    }
   }
 }
