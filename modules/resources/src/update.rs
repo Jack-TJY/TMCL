@@ -1,5 +1,5 @@
-//! 已安装资源的管理：列出（按 SHA1 在 Modrinth 反查来源）、启用/禁用（`.disabled` 后缀）、
-//! 删除、检查更新与更新。
+//! 已安装资源的管理：列出（按 SHA1 在 Modrinth 反查来源）、从本地文件导入、
+//! 启用/禁用（`.disabled` 后缀）、删除、检查更新与更新。
 //!
 //! 更新只替换文件本身：新版本新增的必需前置不会自动安装（可对该版本再走一次安装计划）。
 //! 被禁用的资源也会检查更新，更新后保持禁用。
@@ -74,6 +74,38 @@ pub struct ResourceUpdate {
     pub current_version_number: String,
     /// 可更新到的版本。
     pub latest: ResourceVersion,
+}
+
+/// 导入时跳过文件的原因。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum ResourceImportSkipReason {
+    /// 目录中已有同名文件（含其 `.disabled` 形式）。
+    Exists,
+    /// 不是 `.jar` / `.zip` 文件。
+    Unsupported,
+    /// 文件不存在或不是普通文件。
+    NotFound,
+}
+
+/// 导入时被跳过的一个文件。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct ResourceImportSkip {
+    /// 选中的源文件路径。
+    pub path: String,
+    /// 源文件名。
+    pub file_name: String,
+    /// 跳过的原因。
+    pub reason: ResourceImportSkipReason,
+}
+
+/// 导入的结果。
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+pub struct ResourceImportResult {
+    /// 已复制进目录的文件名，按选择顺序。
+    pub imported: Vec<String>,
+    /// 被跳过的文件。
+    pub skipped: Vec<ResourceImportSkip>,
 }
 
 /// 实例中某一类资源的管理器。
@@ -167,6 +199,52 @@ impl ResourceManager {
                 (hash.to_ascii_lowercase(), source)
             })
             .collect())
+    }
+
+    /// 把本地文件复制进资源目录（目录不存在时创建），保留原文件名；源文件不动。
+    /// 不是 `.jar` / `.zip`、不存在或目录中已有同名文件（含 `.disabled` 形式）的文件被跳过，
+    /// 不覆盖已有文件。带 `.disabled` 的源文件导入后为启用状态。先写临时文件再改名，复制失败不会留下半个文件。
+    pub fn import(&self, paths: &[PathBuf]) -> AppResult<ResourceImportResult> {
+        let mut result = ResourceImportResult::default();
+        for path in paths {
+            let name = file_name(path);
+            let base = name
+                .strip_suffix(DISABLED_SUFFIX)
+                .unwrap_or(&name)
+                .to_owned();
+            let reason = if !path.is_file() {
+                Some(ResourceImportSkipReason::NotFound)
+            } else if !is_resource_file(path) {
+                Some(ResourceImportSkipReason::Unsupported)
+            } else if self.dir.join(&base).exists()
+                || self.dir.join(format!("{base}{DISABLED_SUFFIX}")).exists()
+                || result.imported.contains(&base)
+            {
+                Some(ResourceImportSkipReason::Exists)
+            } else {
+                None
+            };
+            if let Some(reason) = reason {
+                result.skipped.push(ResourceImportSkip {
+                    path: path.display().to_string(),
+                    file_name: name,
+                    reason,
+                });
+                continue;
+            }
+            std::fs::create_dir_all(&self.dir).map_err(|e| io_error(&self.dir, &e))?;
+            let target = self.dir.join(&base);
+            let part = self.dir.join(format!("{base}.part"));
+            let copied = std::fs::copy(path, &part)
+                .and_then(|_| std::fs::rename(&part, &target))
+                .map_err(|e| io_error(path, &e));
+            if let Err(err) = copied {
+                let _ = std::fs::remove_file(&part);
+                return Err(err);
+            }
+            result.imported.push(base);
+        }
+        Ok(result)
     }
 
     /// 启用或禁用资源（增删 `.disabled` 后缀），返回新的文件名；已是目标状态时不做改动。

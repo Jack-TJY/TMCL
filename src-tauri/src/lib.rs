@@ -61,6 +61,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::loader::loader_list,
         // resources
         commands::resources::resources_check_updates,
+        commands::resources::resources_import,
         commands::resources::resources_install,
         commands::resources::resources_install_plan,
         commands::resources::resources_installed,
@@ -1615,6 +1616,31 @@ fov:0.0
         let missing = json!({ "args": { "instance_id": "missing" } });
         let err: AppError =
             serde_json::from_value(invoke(&webview, "resources_worlds", missing).unwrap_err())
+                .unwrap();
+        assert_eq!(err.code, ErrorCode::InstanceNotFound);
+    }
+
+    #[test]
+    fn resources_import_over_ipc() {
+        let (_app, webview, _server, dir, config) = resources_app();
+        let id = config["id"].clone();
+        let game = DataPaths::at(dir.path().join("data")).instance_game_dir(id.as_str().unwrap());
+        let picked = dir.path().join("picked.jar");
+        std::fs::write(&picked, JAR).unwrap();
+        let args = json!({ "args": { "instance_id": id, "kind": "mod",
+            "paths": [picked.display().to_string(), dir.path().join("x.txt").display().to_string()] } });
+
+        let result = invoke(&webview, "resources_import", args.clone()).unwrap();
+        assert_eq!(result["imported"], json!(["picked.jar"]));
+        assert_eq!(result["skipped"][0]["reason"], "not_found");
+        assert_eq!(std::fs::read(game.join("mods/picked.jar")).unwrap(), JAR);
+        let again = invoke(&webview, "resources_import", args).unwrap();
+        assert_eq!(again["imported"], json!([]));
+        assert_eq!(again["skipped"][0]["reason"], "exists");
+
+        let missing = json!({ "args": { "instance_id": "missing", "kind": "mod", "paths": [] } });
+        let err: AppError =
+            serde_json::from_value(invoke(&webview, "resources_import", missing).unwrap_err())
                 .unwrap();
         assert_eq!(err.code, ErrorCode::InstanceNotFound);
     }
