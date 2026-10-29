@@ -1,7 +1,24 @@
 <script setup lang="ts">
-// 手动编辑主配置：逐行修改键与值、增删行，保存时整体替换主配置（来源实例清空）。
-import { Add20Regular, Delete20Regular, Search20Regular } from "@vicons/fluent";
-import { NButton, NEmpty, NIcon, NInput, NModal, NScrollbar, useMessage } from "naive-ui";
+// 手动编辑主配置：逐行修改键与值、增删行，可载入大版本模板；保存时整体替换主配置（来源实例清空）。
+// 只在部分版本存在的选项标出适用版本。
+import {
+  Add20Regular,
+  Delete20Regular,
+  DocumentCopy20Regular,
+  Search20Regular,
+} from "@vicons/fluent";
+import {
+  NButton,
+  NDropdown,
+  NEmpty,
+  NIcon,
+  NInput,
+  NModal,
+  NScrollbar,
+  NTag,
+  useDialog,
+  useMessage,
+} from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { toAppError } from "../../api/invoke";
@@ -19,6 +36,8 @@ import {
   validateRows,
   type EditorRow,
 } from "./sync";
+import { mergeOptions, SYNC_TEMPLATES, templateNoteKey } from "./templates";
+import { OPTION_SPANS, spanText } from "./versions";
 
 const props = defineProps<{ show: boolean; options: SyncOption[] }>();
 const emit = defineEmits<{ close: []; saved: [profile: SyncProfile] }>();
@@ -26,6 +45,7 @@ const emit = defineEmits<{ close: []; saved: [profile: SyncProfile] }>();
 const { t, te } = useI18n();
 const tr = { t, te };
 const message = useMessage();
+const dialog = useDialog();
 
 const rows = ref<EditorRow[]>([]);
 const query = ref("");
@@ -56,6 +76,38 @@ function addRow() {
 
 function removeRow(id: number) {
   rows.value = rows.value.filter((r) => r.id !== id);
+}
+
+const templateOptions = computed(() =>
+  SYNC_TEMPLATES.map((tpl) => ({
+    key: tpl.version,
+    label: `${tpl.version} · ${t(templateNoteKey(tpl.version))}`,
+  })),
+);
+
+function loadTemplate(version: string) {
+  const tpl = SYNC_TEMPLATES.find((x) => x.version === version);
+  if (!tpl) return;
+  const done = (options: SyncOption[]) => {
+    rows.value = toRows(options);
+    query.value = "";
+    message.success(t("sync.template.loaded", { version }));
+  };
+  const current = rows.value.map((r) => ({ key: r.key.trim(), value: r.value }));
+  if (current.length === 0) return done(tpl.options);
+  dialog.info({
+    title: t("sync.template.title", { version }),
+    content: t("sync.template.content", { version, count: tpl.options.length }),
+    positiveText: t("sync.template.merge"),
+    negativeText: t("sync.template.replace"),
+    onPositiveClick: () => done(mergeOptions(current, tpl.options)),
+    onNegativeClick: () => done(tpl.options),
+  });
+}
+
+function spanOf(key: string) {
+  const span = OPTION_SPANS[key.trim()];
+  return span ? spanText(span) : null;
 }
 
 async function save() {
@@ -98,11 +150,31 @@ async function save() {
         ></template>
         {{ t("sync.editor.add") }}
       </NButton>
+      <NDropdown trigger="click" :options="templateOptions" @select="loadTemplate">
+        <NButton secondary>
+          <template #icon
+            ><NIcon><DocumentCopy20Regular /></NIcon
+          ></template>
+          {{ t("sync.template.action") }}
+        </NButton>
+      </NDropdown>
     </div>
-    <NScrollbar class="rows">
+    <NScrollbar style="max-height: 50vh">
       <NEmpty v-if="visible.length === 0" class="empty" :description="t('sync.editor.empty')" />
       <div v-for="row in visible" :key="row.id" class="row">
-        <div class="label">{{ optionLabel(row.key.trim(), tr) ?? t("sync.editor.unknown") }}</div>
+        <div class="label">
+          <span class="label-text">{{
+            optionLabel(row.key.trim(), tr) ?? t("sync.editor.unknown")
+          }}</span>
+          <NTag
+            v-if="spanOf(row.key)"
+            size="tiny"
+            :bordered="false"
+            :title="t('sync.version.range', { range: spanOf(row.key) })"
+          >
+            {{ spanOf(row.key) }}
+          </NTag>
+        </div>
         <NInput
           v-model:value="row.key"
           class="key"
@@ -161,10 +233,6 @@ async function save() {
   margin-bottom: 8px;
 }
 
-.rows {
-  max-height: 50vh;
-}
-
 .empty {
   padding: 24px 0;
 }
@@ -178,6 +246,13 @@ async function save() {
 }
 
 .label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
