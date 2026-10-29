@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
-use tmcl_common::{AppError, AppResult, TaskCtx};
+use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_instance::InstanceStore;
 use tmcl_loader::LoaderInstaller;
 use tmcl_resources::browse::{self, BrowseQuery};
@@ -21,6 +21,7 @@ use tmcl_resources::{
 };
 use ts_rs::TS;
 
+use crate::commands::settings::open_in_file_manager;
 use crate::events::{TaskStarted, spawn_task};
 use crate::state::AppState;
 
@@ -206,6 +207,13 @@ pub struct ResourcesWorldsArgs {
 pub struct ResourceWorldList {
     /// `saves/` 下的存档目录名，按名称排序。
     pub worlds: Vec<String>,
+}
+
+/// `resources_open_page` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesOpenPageArgs {
+    /// 要在浏览器中打开的 CurseForge 网页（如需要手动下载的文件页）。
+    pub url: String,
 }
 
 /// `resources_sources` 的返回值：本次构建可用的资源平台。
@@ -454,6 +462,24 @@ pub async fn resources_worlds(
     })
 }
 
+/// 在系统浏览器中打开 CurseForge 网页，用于手动下载作者禁止第三方分发的文件。
+/// 只接受 `https://www.curseforge.com/` 下的地址，其他地址返回 `COMMON_INTERNAL`（`params.url`）。
+#[tauri::command]
+pub async fn resources_open_page(args: ResourcesOpenPageArgs) -> Result<(), AppError> {
+    if !is_curseforge_page(&args.url) {
+        return Err(AppError::new(ErrorCode::CommonInternal).with_param("url", &args.url));
+    }
+    open_in_file_manager(std::path::Path::new(&args.url))
+}
+
+/// `https://www.curseforge.com/<路径>`，且不含会被 shell 解释的字符。
+fn is_curseforge_page(url: &str) -> bool {
+    url.strip_prefix("https://www.curseforge.com/").is_some()
+        && url
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-._~/:?=%".contains(&b))
+}
+
 /// 本次构建可用的资源平台。
 #[tauri::command]
 pub fn resources_sources(state: State<'_, AppState>) -> ResourceSources {
@@ -632,4 +658,26 @@ fn manager(
     let target = target(state, instance_id)?;
     let game_dir = state.data()?.instance_game_dir(instance_id);
     ResourceManager::new(state.modrinth()?.clone(), target, &game_dir, kind, world)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_curseforge_pages_are_opened() {
+        assert!(is_curseforge_page(
+            "https://www.curseforge.com/minecraft/mc-mods/jei/files/9352806"
+        ));
+        for bad in [
+            "http://www.curseforge.com/minecraft",
+            "https://www.curseforge.com.evil.example/x",
+            "https://evil.example/https://www.curseforge.com/",
+            "https://www.curseforge.com/a&calc",
+            "https://www.curseforge.com/a b",
+            "file:///C:/Windows",
+        ] {
+            assert!(!is_curseforge_page(bad), "{bad}");
+        }
+    }
 }
