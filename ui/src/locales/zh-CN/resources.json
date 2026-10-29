@@ -114,7 +114,7 @@
     "filtered": "只显示适用于 {target} 的资源",
     "unfiltered": "显示全部资源，并标出支持的游戏版本与所需的加载器；安装前需要选择实例",
     "modNoLoader": "“{name}”是原版实例，没有安装 Fabric、Forge 等加载器，不能安装 Mod",
-    "shaderNoLoader": "“{name}”是原版实例，光影需要 Iris（Fabric）或 Oculus（Forge）等 Mod 才能加载",
+    "shaderNoLoader": "“{name}”是原版实例，没有安装 Fabric、Forge 等加载器，无法加载光影（光影需要 Iris、Oculus 等 Mod）",
     "installLoader": "为实例安装加载器",
     "showAll": "不选实例，浏览全部",
     "noneFor": "没有适用于 {target} 的{kind}"

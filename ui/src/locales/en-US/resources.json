@@ -114,7 +114,7 @@
     "filtered": "Showing only resources for {target}",
     "unfiltered": "Showing all resources with supported game versions and required loaders; you pick an instance before installing",
     "modNoLoader": "\"{name}\" is a vanilla instance without Fabric, Forge or another loader, so it can't use mods",
-    "shaderNoLoader": "\"{name}\" is a vanilla instance; shaders need a mod such as Iris (Fabric) or Oculus (Forge)",
+    "shaderNoLoader": "\"{name}\" is a vanilla instance without Fabric, Forge or another loader, so it can't load shaders (they need a mod such as Iris or Oculus)",
     "installLoader": "Install a loader",
     "showAll": "Browse everything",
     "noneFor": "No {kind} found for {target}"

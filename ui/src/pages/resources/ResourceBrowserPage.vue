@@ -2,7 +2,7 @@
 // 资源下载（左侧主导航）：浏览 Mod、资源包与光影，可选一个目标实例。
 // 选了实例时只显示适用于它的资源，不能安装时说明原因；不选实例时显示全部资源并标出
 // 支持的游戏版本与加载器，安装前再选择实例。
-import { NAlert, NButton, NEmpty, NSelect, NTab, NTabs, useMessage } from "naive-ui";
+import { NButton, NEmpty, NSelect, NTab, NTabs, useMessage } from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
@@ -63,14 +63,17 @@ const instanceOptions = computed(() =>
   instances.value.map((i) => ({ label: `${i.name}（${targetText(i)}）`, value: i.id })),
 );
 
-/** 选中的实例装不了这类资源：原版实例不能装 Mod。 */
-const blocked = computed(
-  () => selected.value !== null && kind.value === "mod" && !selected.value.loader,
-);
-/** 原版实例上的光影需要先装加载器与 Iris 等 Mod，只提示不拦截。 */
-const shaderHint = computed(
-  () => selected.value !== null && kind.value === "shader" && !selected.value.loader,
-);
+/**
+ * 选中的实例装不了这类资源时的原因文案 key：原版实例不能装 Mod，也加载不了光影
+ * （光影要靠 Iris / Oculus 等 Mod）。资源包任何实例都能装。
+ */
+const blockedReason = computed(() => {
+  if (!selected.value || selected.value.loader) return null;
+  if (kind.value === "mod") return "resources.global.modNoLoader";
+  if (kind.value === "shader") return "resources.global.shaderNoLoader";
+  return null;
+});
+const blocked = computed(() => blockedReason.value !== null);
 
 const installedIds = ref<ReadonlySet<string>>(new Set());
 async function loadInstalled() {
@@ -156,19 +159,10 @@ watch(
       </NTab>
     </NTabs>
 
-    <NAlert v-if="shaderHint" type="info" class="hint">
-      <div class="hint-body">
-        <span>{{ t("resources.global.shaderNoLoader", { name: selected?.name }) }}</span>
-        <NButton size="small" @click="openLoaderDialog">
-          {{ t("resources.global.installLoader") }}
-        </NButton>
-      </div>
-    </NAlert>
-
     <NEmpty
       v-if="blocked"
       class="blocked"
-      :description="t('resources.global.modNoLoader', { name: selected?.name })"
+      :description="blockedReason ? t(blockedReason, { name: selected?.name }) : ''"
     >
       <template #extra>
         <div class="actions">
@@ -259,17 +253,6 @@ watch(
 
 .kinds {
   margin: 8px 0 12px;
-}
-
-.hint {
-  margin-bottom: 8px;
-}
-
-.hint-body {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .blocked {
