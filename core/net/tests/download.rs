@@ -434,3 +434,40 @@ async fn range_request_returns_partial_content() {
     assert_eq!(response.bytes().await.unwrap().to_vec(), body(100)[10..20]);
     assert_eq!(ranges(&server), vec![Some("bytes=10-19".to_owned())]);
 }
+
+#[tokio::test]
+async fn host_header_is_sent_only_to_matching_host() {
+    let data = body(64);
+    let server =
+        TestServer::start(HashMap::from([("/f", data.clone()), ("/g", data.clone())])).await;
+    let dir = tempfile::tempdir().unwrap();
+    let http = HttpClient::new()
+        .unwrap()
+        .with_host_header("127.0.0.1", "x-api-key", "test-api-key")
+        .unwrap();
+    let engine = Downloader::new(http, DownloadOptions::default());
+    engine
+        .download_one(&item(&server, "/f", dir.path(), &data), &TaskCtx::noop("t"))
+        .await
+        .unwrap();
+    // `localhost` 不是 `127.0.0.1`，不应带上请求头。
+    let other = DownloadItem {
+        url: server.url("/g").replace("127.0.0.1", "localhost"),
+        ..item(&server, "/g", dir.path(), &data)
+    };
+    engine
+        .download_one(&other, &TaskCtx::noop("t"))
+        .await
+        .unwrap();
+
+    let requests = server.requests();
+    let key = |path: &str| {
+        requests
+            .iter()
+            .find(|r| r.path == path)
+            .and_then(|r| r.header("x-api-key"))
+            .map(ToOwned::to_owned)
+    };
+    assert_eq!(key("/f").as_deref(), Some("test-api-key"));
+    assert_eq!(key("/g"), None);
+}

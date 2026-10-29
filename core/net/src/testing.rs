@@ -21,6 +21,18 @@ pub struct Request {
     pub path: String,
     /// `Range` 头的值，例如 `bytes=100-`。
     pub range: Option<String>,
+    /// 全部请求头，名称为小写。
+    pub headers: Vec<(String, String)>,
+}
+
+impl Request {
+    /// 按小写名称取请求头。
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, v)| v.as_str())
+    }
 }
 
 /// 某个路径上注入的故障，每次请求消耗一次。
@@ -145,17 +157,25 @@ async fn serve(mut socket: TcpStream, state: &Mutex<State>) {
     }
     let request = String::from_utf8_lossy(&buf);
     let path = request.split_whitespace().nth(1).unwrap_or("/").to_owned();
-    let range = request.lines().find_map(|line| {
-        let (name, value) = line.split_once(':')?;
-        name.eq_ignore_ascii_case("range")
-            .then(|| value.trim().to_owned())
-    });
+    let headers: Vec<(String, String)> = request
+        .lines()
+        .skip(1)
+        .filter_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            Some((name.trim().to_ascii_lowercase(), value.trim().to_owned()))
+        })
+        .collect();
+    let range = headers
+        .iter()
+        .find(|(name, _)| name == "range")
+        .map(|(_, value)| value.clone());
 
     let (body, fault, honor_range, delay) = {
         let mut state = lock(state);
         state.requests.push(Request {
             path: path.clone(),
             range: range.clone(),
+            headers,
         });
         let fault = state.faults.get_mut(&path).and_then(Vec::pop);
         let honor_range = !state.no_range.contains(&path);
