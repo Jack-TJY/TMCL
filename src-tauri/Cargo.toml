@@ -44,3 +44,4 @@ ts-rs = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 tmcl-net = { path = "../core/net", features = ["test-util"] }
+zip = { workspace = true }
