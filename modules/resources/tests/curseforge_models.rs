@@ -89,7 +89,14 @@ fn file_without_download_url_cannot_be_downloaded() {
     file.download_url = None;
     assert!(file.download_item(Path::new("mods")).is_none());
     file.download_url = Some("http://edge.forgecdn.net/a.jar".into());
-    assert!(file.https_download_url().is_none());
+    assert!(file.usable_download_url().is_some(), "有 SHA1 时接受 http");
+    file.hashes.clear();
+    assert!(
+        file.usable_download_url().is_none(),
+        "没有 SHA1 时只接受 https"
+    );
+    file.download_url = Some("ftp://edge.forgecdn.net/a.jar".into());
+    assert!(file.usable_download_url().is_none());
     file.download_url = Some("https://edge.forgecdn.net/a.jar".into());
     file.file_name = "../evil.jar".into();
     assert!(file.download_item(Path::new("mods")).is_none());

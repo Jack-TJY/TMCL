@@ -217,16 +217,19 @@ impl File {
             .filter(|h| h.len() == 40 && h.bytes().all(|b| b.is_ascii_hexdigit()))
     }
 
-    /// 可直接下载的地址（只接受 https）；作者禁止第三方分发时为 `None`。
-    pub fn https_download_url(&self) -> Option<&str> {
-        self.download_url
-            .as_deref()
-            .filter(|u| u.starts_with("https://"))
+    /// 可直接下载的地址；作者禁止第三方分发时为 `None`。
+    ///
+    /// 有 SHA1 时也接受 http（下载后按 SHA1 校验），否则只接受 https。
+    pub fn usable_download_url(&self) -> Option<&str> {
+        let url = self.download_url.as_deref()?;
+        let ok =
+            url.starts_with("https://") || (url.starts_with("http://") && self.sha1().is_some());
+        ok.then_some(url)
     }
 
     /// 下载到 `dir/<文件名>` 的下载项；不能直接下载或文件名不安全时为 `None`。
     pub fn download_item(&self, dir: &std::path::Path) -> Option<DownloadItem> {
-        let url = self.https_download_url()?;
+        let url = self.usable_download_url()?;
         if !is_safe_file_name(&self.file_name) {
             return None;
         }
