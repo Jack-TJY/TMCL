@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const tauriInvoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke: tauriInvoke }));
 
-import { skinFileRead, skinLibraryList, skinSetCape, skinTexture } from "./skin";
+import {
+  skinFileRead,
+  skinLibraryImportTexture,
+  skinLibraryList,
+  skinSetCape,
+  skinTexture,
+} from "./skin";
 
 describe("skin commands", () => {
   beforeEach(() => {
@@ -26,6 +32,11 @@ describe("skin commands", () => {
     const url = "http://textures.minecraft.net/texture/ab";
     await skinTexture({ url });
     expect(tauriInvoke).toHaveBeenLastCalledWith("skin_texture", { args: { url } });
+    const saveArgs = { url, name: "Steve's skin", variant: "slim" as const };
+    await skinLibraryImportTexture(saveArgs);
+    expect(tauriInvoke).toHaveBeenLastCalledWith("skin_library_import_texture", {
+      args: saveArgs,
+    });
     tauriInvoke.mockResolvedValue({ id: "u", name: "Steve", skins: [], capes: [] });
     await skinSetCape({ account_id: "acc" });
     expect(tauriInvoke).toHaveBeenLastCalledWith("skin_set_cape", { args: { account_id: "acc" } });

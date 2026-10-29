@@ -184,6 +184,12 @@ async function importPath(path: string) {
   }
 }
 
+async function onSavedCurrent(entry: SkinEntry) {
+  await loadLibrary();
+  selectEntry(entries.value.find((e) => e.id === entry.id) ?? entry);
+  message.success(t("skin.library.imported", { name: entry.name }));
+}
+
 async function pickAndImport() {
   const path = await pickFile(PNG_FILTER);
   if (path) await importPath(path);
@@ -321,6 +327,7 @@ onBeforeUnmount(() => {
           @preview-skin="previewProfileSkin"
           @active-skin="onActiveSkin"
           @cape="onCape"
+          @saved="onSavedCurrent"
         />
 
         <section class="library">

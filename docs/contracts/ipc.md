@@ -80,6 +80,7 @@
 | `settings_set_language` | `SettingsSetLanguageArgs { language }` | 无 | 写入界面语言，其他设置不变；`language` 须为由字母、数字、连字符组成的 BCP 47 标签（≤ 35 字符），否则返回 `COMMON_INTERNAL` |
 | `skin_file_read` | `SkinFileArgs { path }` | 二进制（前端为 `ArrayBuffer`） | 读取用户拖入的 PNG 供预览，不加入皮肤库；校验规则同 `skin_library_import`（不是 PNG、尺寸不是 64×64 / 64×32 或超过 1 MB 返回 `SKIN_INVALID_IMAGE`），文件读不到返回 `COMMON_IO`（`params.path`） |
 | `skin_library_import` | `SkinImportArgs { path, name?, variant }` | `SkinEntry { id, name, variant, height, added_at }` | 把用户选中的 PNG 加入本地皮肤库 `skins/`；`variant` 为 `classic` \| `slim`，`name` 省略时用文件名（去掉首尾空白后 1–64 字符，否则 `COMMON_INTERNAL`）；不是 PNG、尺寸不是 64×64 / 64×32 或超过 1 MB 返回 `SKIN_INVALID_IMAGE`；同一张图片（SHA-256 相同）已在库中时返回已有条目 |
+| `skin_library_import_texture` | `SkinImportTextureArgs { url, name, variant }` | `SkinEntry` | 把档案中的皮肤图片下载后加入皮肤库（地址规则与错误同 `skin_texture`），名称规则同 `skin_library_import`；同一张图片已在库中时返回已有条目 |
 | `skin_library_list` | 无 | `SkinLibraryList { skins: SkinEntry[] }` | 本地皮肤库，最近加入的在前；`id` 为 PNG 内容的 SHA-256，`added_at` 为 unix 毫秒 |
 | `skin_library_read` | `SkinIdArgs { id }` | 二进制（前端为 `ArrayBuffer`） | 读取皮肤 PNG；不存在返回 `SKIN_NOT_FOUND` |
 | `skin_library_remove` | `SkinIdArgs { id }` | 无 | 从皮肤库删除皮肤及其图片；不存在返回 `SKIN_NOT_FOUND` |

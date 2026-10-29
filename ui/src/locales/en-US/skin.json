@@ -53,6 +53,8 @@
     "none": "No account yet. Add one on the Accounts page to upload skins to a Microsoft account.",
     "current": "In use",
     "previewCurrent": "Preview",
+    "saveCurrent": "Save to library",
+    "savedName": "{name}'s skin",
     "noSkin": "No skin",
     "cape": "Cape",
     "noCape": "No cape",

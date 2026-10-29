@@ -4,6 +4,7 @@ import type { SkinEntry } from "../bindings/SkinEntry";
 import type { SkinFileArgs } from "../bindings/SkinFileArgs";
 import type { SkinIdArgs } from "../bindings/SkinIdArgs";
 import type { SkinImportArgs } from "../bindings/SkinImportArgs";
+import type { SkinImportTextureArgs } from "../bindings/SkinImportTextureArgs";
 import type { SkinLibraryList } from "../bindings/SkinLibraryList";
 import type { SkinProfile } from "../bindings/SkinProfile";
 import type { SkinSetCapeArgs } from "../bindings/SkinSetCapeArgs";
@@ -26,6 +27,11 @@ export async function skinLibraryList(): Promise<SkinEntry[]> {
 /** 把选中的 PNG 加入皮肤库；同一张图片已在库中时返回已有条目。 */
 export function skinLibraryImport(args: SkinImportArgs): Promise<SkinEntry> {
   return invoke<SkinEntry>("skin_library_import", { args });
+}
+
+/** 把档案中的皮肤下载后加入皮肤库；同一张图片已在库中时返回已有条目。 */
+export function skinLibraryImportTexture(args: SkinImportTextureArgs): Promise<SkinEntry> {
+  return invoke<SkinEntry>("skin_library_import_texture", { args });
 }
 
 /** 读取皮肤库中的图片。 */

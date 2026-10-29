@@ -53,6 +53,8 @@
     "none": "还没有账号。在“账号”页添加后可以把皮肤上传到正版账号。",
     "current": "正在使用",
     "previewCurrent": "预览",
+    "saveCurrent": "存入皮肤库",
+    "savedName": "{name} 的皮肤",
     "noSkin": "没有皮肤",
     "cape": "披风",
     "noCape": "不显示披风",

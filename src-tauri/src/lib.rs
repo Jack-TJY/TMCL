@@ -83,6 +83,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // skin
         commands::skin::skin_file_read,
         commands::skin::skin_library_import,
+        commands::skin::skin_library_import_texture,
         commands::skin::skin_library_list,
         commands::skin::skin_library_read,
         commands::skin::skin_library_remove,
@@ -1727,6 +1728,19 @@ fov:0.0
             InvokeResponseBody::Raw(bytes) => assert_eq!(bytes, skin_png(64, 32)),
             other => panic!("应返回二进制，实际为 {other:?}"),
         }
+        let body = json!({ "args": { "url": url, "name": "Current", "variant": "slim" } });
+        let entry = invoke(&webview, "skin_library_import_texture", body).unwrap();
+        assert_eq!(
+            (&entry["name"], &entry["variant"], &entry["height"]),
+            (&json!("Current"), &json!("slim"), &json!(32))
+        );
+        let list = invoke(&webview, "skin_library_list", json!({})).unwrap();
+        assert_eq!(list["skins"], json!([entry]));
+        let body = json!({ "args": { "url": "http://textures.minecraft.net/texture/0bad", "name": "Bad", "variant": "classic" } });
+        assert_eq!(
+            error_code(invoke(&webview, "skin_library_import_texture", body)),
+            ErrorCode::SkinInvalidImage
+        );
         let body = json!({ "args": { "url": "http://textures.minecraft.net/texture/0bad" } });
         assert_eq!(
             error_code(invoke(&webview, "skin_texture", body)),

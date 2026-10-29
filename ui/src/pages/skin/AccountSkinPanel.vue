@@ -8,6 +8,7 @@ import { useI18n } from "vue-i18n";
 import type { Account } from "../../api/account";
 import { toAppError } from "../../api/invoke";
 import {
+  skinLibraryImportTexture,
   skinOpenSite,
   skinProfile,
   skinSetCape,
@@ -29,6 +30,8 @@ const emit = defineEmits<{
   previewSkin: [skin: ProfileSkin];
   /** 档案读取或修改后，其中正在使用的皮肤。 */
   activeSkin: [skin: ProfileSkin | null];
+  /** 正在使用的皮肤已存入皮肤库。 */
+  saved: [entry: SkinEntry];
   /** 档案中当前显示的披风地址；没有披风时为 `null`。 */
   cape: [url: string | null];
 }>();
@@ -40,6 +43,7 @@ const profile = ref<SkinProfile | null>(null);
 const loading = ref(false);
 const error = ref<AppError | null>(null);
 const busy = ref(false);
+const saving = ref(false);
 
 const activeSkin = computed(() => profile.value?.skins.find((s) => s.active) ?? null);
 const activeCape = computed(() => profile.value?.capes.find((c) => c.active) ?? null);
@@ -112,6 +116,26 @@ function setCape(id: string) {
   );
 }
 
+/** 把正在使用的皮肤存入皮肤库，方便换成别的皮肤后再换回来。 */
+async function saveCurrent() {
+  const account = props.account;
+  const skin = activeSkin.value;
+  if (!account || !skin || saving.value) return;
+  saving.value = true;
+  try {
+    const entry = await skinLibraryImportTexture({
+      url: skin.url,
+      name: t("skin.account.savedName", { name: account.name }),
+      variant: skin.variant,
+    });
+    emit("saved", entry);
+  } catch (err) {
+    message.error(formatError(toAppError(err)));
+  } finally {
+    saving.value = false;
+  }
+}
+
 async function openSite() {
   if (!props.account) return;
   try {
@@ -147,6 +171,15 @@ async function openSite() {
               @click="emit('previewSkin', activeSkin)"
             >
               {{ t("skin.account.previewCurrent") }}
+            </NButton>
+            <NButton
+              v-if="activeSkin"
+              size="small"
+              secondary
+              :loading="saving"
+              @click="saveCurrent"
+            >
+              {{ t("skin.account.saveCurrent") }}
             </NButton>
             <span v-else class="hint">{{ t("skin.account.noSkin") }}</span>
           </div>

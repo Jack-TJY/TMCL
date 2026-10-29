@@ -44,6 +44,15 @@ pub struct SkinImportArgs {
     pub variant: SkinVariant,
 }
 
+/// `skin_library_import_texture` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SkinImportTextureArgs {
+    /// 档案中的皮肤地址（`ProfileSkin.url`）。
+    pub url: String,
+    pub name: String,
+    pub variant: SkinVariant,
+}
+
 /// 以皮肤 ID 为参数的命令参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 pub struct SkinIdArgs {
@@ -138,6 +147,19 @@ pub async fn skin_library_import(
             .unwrap_or_default()
     });
     library(&state)?.add(&bytes, &name, args.variant)
+}
+
+/// 把档案中的皮肤（`textures.minecraft.net`）下载后加入皮肤库，方便以后换回；
+/// 同一张图片已在库中时返回已有条目。
+#[tauri::command]
+pub async fn skin_library_import_texture(
+    state: State<'_, AppState>,
+    args: SkinImportTextureArgs,
+) -> Result<SkinEntry, AppError> {
+    let ctx = TaskCtx::noop("skin");
+    let png =
+        texture::fetch_texture(&HttpClient::new()?, &state.textures_base, &args.url, &ctx).await?;
+    library(&state)?.add(&png, &args.name, args.variant)
 }
 
 /// 读取用户拖入的 PNG 供预览，不加入皮肤库；校验规则同 `skin_library_import`。
