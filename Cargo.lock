@@ -4715,6 +4715,7 @@ dependencies = [
  "tmcl-common",
  "tracing",
  "ts-rs",
+ "zip",
 ]
 
 [[package]]

@@ -334,6 +334,7 @@ async fn start<R: Runtime>(
         command = %prepared.command.redacted(),
         "launching game"
     );
+    super::sync::auto_sync_before_launch(paths, &instance.id, &instance.game_version);
     let process = match spawn(&prepared.command) {
         Ok(process) => process,
         Err(err) => {

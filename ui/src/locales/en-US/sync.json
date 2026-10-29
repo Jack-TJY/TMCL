@@ -332,5 +332,10 @@
       "1_20_1": "Adds Simulation Distance, Chunk Builder, Darkness Pulsing and more",
       "1_21_1": "Popular for current mods"
     }
+  },
+  "auto": {
+    "title": "Auto-sync new instances",
+    "hint": "When on, a newly downloaded instance gets the selected categories of the master profile right before its first launch. Instances that already have game settings, including launched ones and modpacks with their own settings, are left alone.",
+    "noMaster": "There's no master profile yet; this takes effect once you save one."
   }
 }

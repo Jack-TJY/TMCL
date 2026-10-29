@@ -1,5 +1,6 @@
 // `sync_*` 命令封装（PLAN.md M2-09）。
 import type { SyncApplyResult } from "../bindings/SyncApplyResult";
+import type { SyncAutoSettings } from "../bindings/SyncAutoSettings";
 import type { SyncCaptureArgs } from "../bindings/SyncCaptureArgs";
 import type { SyncMaster } from "../bindings/SyncMaster";
 import type { SyncPreview } from "../bindings/SyncPreview";
@@ -38,4 +39,14 @@ export function syncApply(args: SyncTargetsArgs): Promise<SyncApplyResult> {
 /** 用最近一份备份恢复实例的 `options.txt`。 */
 export function syncRestore(args: SyncRestoreArgs): Promise<SyncRestoreResult> {
   return invoke<SyncRestoreResult>("sync_restore", { args });
+}
+
+/** 读取新实例自动同步设置。 */
+export function syncGetAuto(): Promise<SyncAutoSettings> {
+  return invoke<SyncAutoSettings>("sync_get_auto");
+}
+
+/** 保存新实例自动同步设置。 */
+export function syncSetAuto(args: SyncAutoSettings): Promise<SyncAutoSettings> {
+  return invoke<SyncAutoSettings>("sync_set_auto", { args });
 }

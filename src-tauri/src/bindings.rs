@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use tmcl_auth::AccountList;
 use tmcl_common::{AppError, TaskFinished, TaskProgress};
 use tmcl_resources::{InstallPlan, InstalledList, ModpackInfo, ResourceImportResult, ResourcePage};
+use tmcl_sync::AutoSync;
 use ts_rs::{Config, ExportError, TS};
 
 use crate::commands::app::{AppDemoTaskArgs, AppInfo, ReleaseList};
@@ -160,6 +161,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SyncRestoreResult::export_all(&cfg)?;
     SyncSaveMasterArgs::export_all(&cfg)?;
     SyncTargetsArgs::export_all(&cfg)?;
+    AutoSync::export_all(&cfg)?;
     // task
     TaskCancelArgs::export_all(&cfg)?;
     TaskCancelResult::export_all(&cfg)?;

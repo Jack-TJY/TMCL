@@ -19,6 +19,8 @@ use crate::profile::{Category, SyncOption, SyncProfile, category_of};
 
 /// 游戏目录下的选项文件名。
 pub const OPTIONS_FILE: &str = "options.txt";
+/// 数据版本所在的键。
+const VERSION_KEY: &str = "version";
 /// 备份文件名前缀，后接 unix 毫秒。
 pub const BACKUP_PREFIX: &str = "options.txt.tmcl-bak-";
 /// 每个实例保留的备份数。
@@ -127,9 +129,15 @@ pub fn read_existing(game_dir: &Path) -> AppResult<Option<OptionsFile>> {
 }
 
 /// 把主配置的选中类别应用到游戏目录：有修改时先备份原文件，再原子写入。
+///
+/// 1.13 以后的版本，目标文件没有 `version` 行（实例从未启动过）时，按 `client_jar` 补上
+/// 数据版本，避免游戏首次启动时把已是新格式的值当作旧版数据再修复一遍，见 [`dataversion`]。
+///
+/// [`dataversion`]: crate::dataversion
 pub fn apply(
     game_dir: &Path,
     game_version: &str,
+    client_jar: &Path,
     master: &SyncProfile,
     categories: &[Category],
 ) -> AppResult<Applied> {
@@ -147,6 +155,12 @@ pub fn apply(
         Some(_) => Some(backup(game_dir, &path)?),
         None => None,
     };
+    if file.get(VERSION_KEY).is_none()
+        && keymap::format_for_version(game_version) == Some(KeyFormat::Named)
+        && let Some(n) = crate::dataversion::data_version(game_version, client_jar)
+    {
+        file.set(VERSION_KEY, &n.to_string());
+    }
     for change in &changes {
         file.set(&change.key, &change.new);
     }
@@ -260,7 +274,14 @@ mod tests {
         fs::write(old.join(OPTIONS_FILE), LEGACY).unwrap();
 
         let master = profile_from(MODERN, "1.20.1");
-        let applied = apply(&old, "1.12.2", &master, &[Category::Keys]).unwrap();
+        let applied = apply(
+            &old,
+            "1.12.2",
+            &old.join("none.jar"),
+            &master,
+            &[Category::Keys],
+        )
+        .unwrap();
         assert!(applied.changed > 0);
         let legacy = fs::read_to_string(old.join(OPTIONS_FILE)).unwrap();
         assert!(legacy.contains("key_key.forward:200\n"), "{legacy}");
@@ -270,7 +291,14 @@ mod tests {
 
         let back = profile_from(&legacy, "1.12.2");
         fs::write(new.join(OPTIONS_FILE), "version:3465\n").unwrap();
-        apply(&new, "1.20.1", &back, &[Category::Keys]).unwrap();
+        apply(
+            &new,
+            "1.20.1",
+            &new.join("none.jar"),
+            &back,
+            &[Category::Keys],
+        )
+        .unwrap();
         let modern = fs::read_to_string(new.join(OPTIONS_FILE)).unwrap();
         // 1.12.2 独有的按键（如 `key.swapHands`）也会被带回，只比较 1.20.1 原有的按键。
         let mut expected = keys(MODERN);
@@ -314,12 +342,26 @@ mod tests {
         fs::write(game.join(OPTIONS_FILE), LEGACY).unwrap();
         let master = profile_from(MODERN, "1.20.1");
 
-        let first = apply(game, "1.12.2", &master, &[Category::Video]).unwrap();
+        let first = apply(
+            game,
+            "1.12.2",
+            &game.join("none.jar"),
+            &master,
+            &[Category::Video],
+        )
+        .unwrap();
         let backup = first.backup.unwrap();
         assert_eq!(fs::read_to_string(&backup).unwrap(), LEGACY);
         let after_video = fs::read_to_string(game.join(OPTIONS_FILE)).unwrap();
         // 第二次应用相同内容不产生修改与备份。
-        let again = apply(game, "1.12.2", &master, &[Category::Video]).unwrap();
+        let again = apply(
+            game,
+            "1.12.2",
+            &game.join("none.jar"),
+            &master,
+            &[Category::Video],
+        )
+        .unwrap();
         assert_eq!(
             again,
             Applied {
@@ -328,7 +370,7 @@ mod tests {
             }
         );
 
-        apply(game, "1.12.2", &master, ALL).unwrap();
+        apply(game, "1.12.2", &game.join("none.jar"), &master, ALL).unwrap();
         assert_eq!(backups(game).len(), 2);
         assert!(restore_latest(game).unwrap().is_some());
         assert_eq!(
@@ -345,7 +387,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let game = dir.path();
         let mut master = profile_from(MODERN, "1.20.1");
-        let created = apply(game, "1.20.1", &master, &[Category::Video]).unwrap();
+        let created = apply(
+            game,
+            "1.20.1",
+            &game.join("none.jar"),
+            &master,
+            &[Category::Video],
+        )
+        .unwrap();
         assert_eq!(created.backup, None);
         assert!(read_options(game).unwrap().get("renderDistance").is_some());
 
@@ -354,12 +403,58 @@ mod tests {
                 key: "fov".into(),
                 value: format!("0.{i}"),
             });
-            apply(game, "1.20.1", &master, &[Category::Video]).unwrap();
+            apply(
+                game,
+                "1.20.1",
+                &game.join("none.jar"),
+                &master,
+                &[Category::Video],
+            )
+            .unwrap();
         }
         assert_eq!(backups(game).len(), MAX_BACKUPS);
 
         fs::write(game.join(OPTIONS_FILE), [0xff, 0xfe]).unwrap();
-        let err = apply(game, "1.20.1", &master, ALL).unwrap_err();
+        let err = apply(game, "1.20.1", &game.join("none.jar"), &master, ALL).unwrap_err();
         assert_eq!(err.code, ErrorCode::CommonIo);
+    }
+
+    #[test]
+    fn new_file_gets_data_version_for_named_keys() {
+        let dir = tempfile::tempdir().unwrap();
+        let master = SyncProfile {
+            source_instance: None,
+            source_version: None,
+            updated_at: 0,
+            options: vec![SyncOption {
+                key: "key_key.jump".into(),
+                value: "key.keyboard.space".into(),
+            }],
+        };
+        let jar = dir.path().join("none.jar");
+        let modern = dir.path().join("modern");
+        fs::create_dir_all(&modern).unwrap();
+        apply(&modern, "1.13.2", &jar, &master, &[Category::Keys]).unwrap();
+        assert_eq!(
+            fs::read_to_string(modern.join(OPTIONS_FILE)).unwrap(),
+            "version:1631\nkey_key.jump:key.keyboard.space\n"
+        );
+
+        // 旧版本与拿不到数据版本时不写 `version`。
+        let legacy = dir.path().join("legacy");
+        fs::create_dir_all(&legacy).unwrap();
+        apply(&legacy, "1.12.2", &jar, &master, &[Category::Keys]).unwrap();
+        assert_eq!(
+            fs::read_to_string(legacy.join(OPTIONS_FILE)).unwrap(),
+            "key_key.jump:57\n"
+        );
+        let unknown = dir.path().join("unknown");
+        fs::create_dir_all(&unknown).unwrap();
+        apply(&unknown, "1.20.1", &jar, &master, &[Category::Keys]).unwrap();
+        assert!(
+            !fs::read_to_string(unknown.join(OPTIONS_FILE))
+                .unwrap()
+                .contains("version")
+        );
     }
 }
