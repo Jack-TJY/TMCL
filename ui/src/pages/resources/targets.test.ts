@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ResourceHit } from "../../api/resources";
-import { hitLoaders, incompatibility, releaseVersions, versionSummary } from "./targets";
+import {
+  hitLoaders,
+  incompatibility,
+  releaseVersions,
+  suggestedLoader,
+  versionSummary,
+} from "./targets";
 
 function hit(categories: string[], game_versions: string[]): ResourceHit {
   return {
@@ -46,6 +52,14 @@ describe("loaders", () => {
     expect(hitLoaders(h, "mod")).toEqual(["fabric", "quilt"]);
     expect(hitLoaders(h, "shader")).toEqual(["iris"]);
     expect(hitLoaders(h, "resourcepack")).toEqual([]);
+  });
+
+  it("suggests a loader for a new instance", () => {
+    expect(suggestedLoader(hit(["forge", "fabric"], []), "mod")).toBe("fabric");
+    expect(suggestedLoader(hit(["forge"], []), "mod")).toBe("forge");
+    expect(suggestedLoader(hit(["iris", "optifine"], []), "shader")).toBe("fabric");
+    expect(suggestedLoader(hit(["optifine"], []), "shader")).toBeNull();
+    expect(suggestedLoader(hit([], []), "resourcepack")).toBeNull();
   });
 });
 

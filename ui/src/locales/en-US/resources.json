@@ -121,11 +121,23 @@
   },
   "pick": {
     "title": "Install \"{name}\" to",
-    "none": "You don't have any instances yet; create one on the Download page",
-    "noCompatible": "No compatible instance",
+    "none": "You don't have any instances yet",
+    "noCompatible": "No compatible instance; you can create one for it",
     "version": "Doesn't support {version}",
     "noLoader": "Vanilla instances can't use mods",
     "loader": "Requires {loaders}",
+    "create": "Create instance",
     "next": "Next"
+  },
+  "create": {
+    "title": "New instance for \"{name}\"",
+    "intro": "Game files and the loader are downloaded after creation, then installation continues automatically.",
+    "name": "Instance name",
+    "gameVersion": "Game version",
+    "loader": "Loader",
+    "needsLoader": "Mods need a loader",
+    "confirm": "Create and download",
+    "started": "Downloading \"{name}\"; installation continues when it finishes",
+    "ready": "\"{name}\" is ready; continuing to install \"{title}\""
   }
 }

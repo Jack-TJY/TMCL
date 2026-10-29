@@ -121,11 +121,23 @@
   },
   "pick": {
     "title": "把“{name}”安装到",
-    "none": "还没有任何实例，先到“下载”页创建一个",
-    "noCompatible": "没有兼容的实例",
+    "none": "还没有任何实例",
+    "noCompatible": "没有兼容的实例，可以为它新建一个",
     "version": "不支持 {version}",
     "noLoader": "原版实例不能装 Mod",
     "loader": "需要 {loaders}",
+    "create": "一键新建实例",
     "next": "下一步"
+  },
+  "create": {
+    "title": "为“{name}”新建实例",
+    "intro": "创建后会下载游戏文件与加载器，完成后自动继续安装。",
+    "name": "实例名称",
+    "gameVersion": "游戏版本",
+    "loader": "加载器",
+    "needsLoader": "Mod 需要选择一个加载器",
+    "confirm": "创建并下载",
+    "started": "已开始下载“{name}”，完成后会继续安装",
+    "ready": "“{name}”已就绪，继续安装“{title}”"
   }
 }
