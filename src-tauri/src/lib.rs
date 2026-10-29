@@ -64,6 +64,10 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_install,
         commands::resources::resources_install_plan,
         commands::resources::resources_installed,
+        commands::resources::resources_modpack_inspect,
+        commands::resources::resources_modpack_install,
+        commands::resources::resources_modpack_search,
+        commands::resources::resources_modpack_versions,
         commands::resources::resources_remove,
         commands::resources::resources_search,
         commands::resources::resources_set_enabled,
@@ -1399,6 +1403,145 @@ fov:0.0
             serde_json::from_value(invoke(&webview, "resources_install", unknown).unwrap_err())
                 .unwrap();
         assert_eq!(err.code, ErrorCode::InstanceNotFound);
+    }
+
+    /// 一个原版 `fake` 整合包（一个 mod + overrides），打包成 zip 字节。
+    fn modpack_bytes(mod_url: &str, mod_sha1: &str) -> Vec<u8> {
+        use std::io::Write;
+        let index = json!({ "formatVersion": 1, "game": "minecraft", "versionId": "1.0",
+            "name": "Pack A", "dependencies": { "minecraft": "fake" },
+            "files": [{ "path": "mods/a.jar", "hashes": { "sha1": mod_sha1 },
+                "downloads": [mod_url], "fileSize": JAR.len() }] });
+        let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default();
+        zip.start_file("modrinth.index.json", options).unwrap();
+        zip.write_all(index.to_string().as_bytes()).unwrap();
+        zip.start_file("overrides/config/a.toml", options).unwrap();
+        zip.write_all(b"x = 1").unwrap();
+        zip.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn resources_modpack_search_inspect_and_install_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let sha1 = |body: &[u8]| {
+            let probe = dir.path().join("probe");
+            std::fs::write(&probe, body).unwrap();
+            tauri::async_runtime::block_on(tmcl_net::sha1_file(&probe)).unwrap()
+        };
+        let server =
+            tauri::async_runtime::block_on(TestServer::start([("/cdn/a.jar", JAR.to_vec())]));
+        let pack = modpack_bytes(&server.url("/cdn/a.jar"), &sha1(JAR));
+        server.route("/cdn/pack.mrpack", pack.clone());
+        let file_ref = |path: &str, body: &[u8]| {
+            server.route(path, body.to_vec());
+            json!({ "sha1": sha1(body), "size": body.len(), "url": server.url(path) })
+        };
+        let mut index_ref = file_ref("/game/index.json", br#"{"objects": {}}"#);
+        index_ref["id"] = json!("fake-index");
+        let version_json = json!({ "id": "fake", "type": "release", "mainClass": "Main",
+            "arguments": { "game": [], "jvm": [] }, "assetIndex": index_ref,
+            "assets": "fake-index", "libraries": [],
+            "downloads": { "client": file_ref("/game/client.jar", b"client") } });
+        let entry = file_ref("/game/fake.json", version_json.to_string().as_bytes());
+        let manifest = json!({ "latest": { "release": "fake", "snapshot": "fake" },
+            "versions": [{ "id": "fake", "type": "release", "url": entry["url"],
+                "time": "", "releaseTime": "", "sha1": entry["sha1"] }] });
+        server.route("/game/manifest.json", manifest.to_string().into_bytes());
+
+        let version = json!({ "id": "mp1", "project_id": "MP", "name": "1.0",
+            "version_number": "1.0", "version_type": "release", "game_versions": ["fake"],
+            "date_published": "2024-01-01T00:00:00Z", "loaders": ["fabric"], "dependencies": [],
+            "files": [{ "hashes": { "sha1": sha1(&pack) }, "url": server.url("/cdn/pack.mrpack"),
+                "filename": "Pack A 1.0.mrpack", "primary": true, "size": pack.len() }] });
+        let hit = json!({ "project_id": "MP", "project_type": "modpack", "slug": "pack-a",
+            "title": "Pack A", "client_side": "required", "server_side": "optional" });
+        for (path, body) in [
+            ("/v2/version/mp1".to_owned(), version.clone()),
+            (
+                modrinth_target("/v2/project/MP/version", &[]),
+                json!([version]),
+            ),
+            (
+                modrinth_target(
+                    "/v2/search",
+                    &[
+                        ("query", "pack"),
+                        ("facets", r#"[["project_type:modpack"]]"#),
+                        ("index", "downloads"),
+                        ("limit", "20"),
+                    ],
+                ),
+                json!({ "hits": [hit], "offset": 0, "limit": 20, "total_hits": 1 }),
+            ),
+        ] {
+            server.route(path, body.to_string().into_bytes());
+        }
+        let data = DataPaths::at(dir.path().join("data"));
+        let mut state = AppState::with_data(Ok(data.clone()));
+        state.modrinth = tmcl_resources::modrinth::ModrinthClient::with_base(
+            &tmcl_net::HttpClient::new().unwrap(),
+            &server.url("/v2"),
+        );
+        state.game.manifest_url = server.url("/game/manifest.json");
+        let (app, webview) = mock_app_with(state);
+        let finished_rx = finished_events(&app);
+
+        let body = json!({ "args": { "query": "pack", "sort": "downloads" } });
+        let page = invoke(&webview, "resources_modpack_search", body).unwrap();
+        assert_eq!(page["hits"][0]["project_id"], "MP");
+        let body = json!({ "args": { "project_id": "MP" } });
+        let list = invoke(&webview, "resources_modpack_versions", body).unwrap();
+        assert_eq!(list["versions"][0]["id"], "mp1");
+
+        let local = dir.path().join("local.mrpack");
+        std::fs::write(&local, &pack).unwrap();
+        let body = json!({ "args": { "path": local } });
+        let info = invoke(&webview, "resources_modpack_inspect", body).unwrap();
+        assert_eq!(info["name"], "Pack A");
+        assert_eq!(info["game_version"], "fake");
+        assert_eq!(info["loader"], Value::Null);
+        assert_eq!(info["file_count"], 1);
+
+        let body = json!({ "args": { "source": { "kind": "modrinth", "version_id": "mp1" } } });
+        let finished = run_task(&webview, &finished_rx, "resources_modpack_install", body);
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+        let list = invoke(&webview, "instance_list", json!({})).unwrap();
+        assert_eq!(list["instances"][0]["name"], "Pack A");
+        let id = list["instances"][0]["id"].as_str().unwrap().to_owned();
+        let game = data.instance_game_dir(&id);
+        assert_eq!(std::fs::read(game.join("mods/a.jar")).unwrap(), JAR);
+        assert!(game.join("config/a.toml").is_file());
+        let cache = data.cache_dir().join("modpacks");
+        assert_eq!(std::fs::read_dir(&cache).unwrap().count(), 0);
+
+        let body = json!({ "args": { "source": { "kind": "file", "path": local },
+            "name": "Local" } });
+        let finished = run_task(&webview, &finished_rx, "resources_modpack_install", body);
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+        assert!(local.is_file());
+
+        std::fs::write(&local, b"not a zip").unwrap();
+        for (source, code) in [
+            (
+                json!({ "kind": "file", "path": local }),
+                ErrorCode::ResourcesModpackInvalid,
+            ),
+            (
+                json!({ "kind": "url", "url": "ftp://x/a.mrpack" }),
+                ErrorCode::ResourcesModpackInvalid,
+            ),
+            (
+                json!({ "kind": "modrinth", "version_id": "missing" }),
+                ErrorCode::ResourcesVersionNotFound,
+            ),
+        ] {
+            let body = json!({ "args": { "source": source } });
+            let finished = run_task(&webview, &finished_rx, "resources_modpack_install", body);
+            assert_eq!(finished.state, TaskState::Failed);
+            assert_eq!(finished.error.unwrap().code, code);
+        }
+        assert_eq!(instance_ids(&webview).len(), 2);
     }
 
     #[test]

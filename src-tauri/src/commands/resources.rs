@@ -1,16 +1,19 @@
 //! `resources_*` 命令：按实例搜索 Modrinth 资源、列出版本、生成安装计划并安装；
-//! 管理已安装资源（列表、启用/禁用、删除、检查更新与更新）。
+//! 管理已安装资源（列表、启用/禁用、删除、检查更新与更新）；搜索整合包并安装为新实例。
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
 use tmcl_common::{AppError, AppResult, TaskCtx};
 use tmcl_instance::InstanceStore;
+use tmcl_loader::LoaderInstaller;
 use tmcl_resources::browse::{self, BrowseQuery};
+use tmcl_resources::modpack::source;
 use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::update;
 use tmcl_resources::{
-    InstallPlan, InstallRequest, InstalledList, InstanceTarget, ResourceInstaller, ResourceKind,
-    ResourceManager, ResourcePage, ResourceSort, ResourceUpdate, ResourceVersion,
+    InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackInfo, ModpackInstaller,
+    ModpackSource, ResourceInstaller, ResourceKind, ResourceManager, ResourcePage, ResourceSort,
+    ResourceUpdate, ResourceVersion,
 };
 use ts_rs::TS;
 
@@ -22,6 +25,9 @@ pub const RESOURCES_INSTALL_KIND: &str = "resources_install";
 
 /// 资源更新任务的种类名。
 pub const RESOURCES_UPDATE_KIND: &str = "resources_update";
+
+/// 整合包安装任务的种类名。
+pub const RESOURCES_MODPACK_INSTALL_KIND: &str = "resources_modpack_install";
 
 /// `resources_search` 的参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
@@ -180,6 +186,59 @@ pub struct ResourceWorldList {
     pub worlds: Vec<String>,
 }
 
+/// `resources_modpack_search` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesModpackSearchArgs {
+    /// 关键词，可为空。
+    #[serde(default)]
+    pub query: String,
+    /// 只要支持该游戏版本的整合包；省略表示不限。
+    #[serde(default)]
+    #[ts(optional)]
+    pub game_version: Option<String>,
+    /// 排序方式，默认相关度。
+    #[serde(default)]
+    #[ts(optional)]
+    pub sort: Option<ResourceSort>,
+    /// 跳过的条数。
+    #[serde(default)]
+    #[ts(optional)]
+    pub offset: Option<u32>,
+    /// 每页条数，默认 20，最多 100。
+    #[serde(default)]
+    #[ts(optional)]
+    pub limit: Option<u32>,
+}
+
+/// `resources_modpack_versions` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesModpackVersionsArgs {
+    /// Modrinth 整合包项目 ID。
+    pub project_id: String,
+    /// 只要支持该游戏版本的版本；省略表示不限。
+    #[serde(default)]
+    #[ts(optional)]
+    pub game_version: Option<String>,
+}
+
+/// `resources_modpack_inspect` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesModpackInspectArgs {
+    /// 本地 `.mrpack` 文件的绝对路径。
+    pub path: String,
+}
+
+/// `resources_modpack_install` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesModpackInstallArgs {
+    /// 整合包来源。
+    pub source: ModpackSource,
+    /// 新实例名称；省略或为空时使用整合包名称。
+    #[serde(default)]
+    #[ts(optional)]
+    pub name: Option<String>,
+}
+
 /// 按实例的游戏版本与加载器搜索资源。
 #[tauri::command]
 pub async fn resources_search(
@@ -318,6 +377,88 @@ pub async fn resources_worlds(
     Ok(ResourceWorldList {
         worlds: update::worlds(&game_dir)?,
     })
+}
+
+/// 在 Modrinth 搜索整合包。
+#[tauri::command]
+pub async fn resources_modpack_search(
+    state: State<'_, AppState>,
+    args: ResourcesModpackSearchArgs,
+) -> Result<ResourcePage, AppError> {
+    let query = BrowseQuery {
+        query: args.query,
+        sort: args.sort.unwrap_or_default(),
+        offset: args.offset.unwrap_or_default(),
+        limit: args.limit.unwrap_or_default(),
+    };
+    let ctx = TaskCtx::noop("resources_modpack_search");
+    source::search(
+        state.modrinth()?,
+        args.game_version.as_deref(),
+        &query,
+        &ctx,
+    )
+    .await
+}
+
+/// 列出整合包项目的版本。
+#[tauri::command]
+pub async fn resources_modpack_versions(
+    state: State<'_, AppState>,
+    args: ResourcesModpackVersionsArgs,
+) -> Result<ResourceVersionList, AppError> {
+    let ctx = TaskCtx::noop("resources_modpack_versions");
+    let versions = source::versions(
+        state.modrinth()?,
+        &args.project_id,
+        args.game_version.as_deref(),
+        &ctx,
+    )
+    .await?;
+    Ok(ResourceVersionList { versions })
+}
+
+/// 读取并校验本地 `.mrpack`，返回概要，不写文件。
+#[tauri::command]
+pub async fn resources_modpack_inspect(
+    state: State<'_, AppState>,
+    args: ResourcesModpackInspectArgs,
+) -> Result<ModpackInfo, AppError> {
+    let installer = modpack_installer(&state)?;
+    Ok(installer.inspect(args.path.as_ref()).await?.info)
+}
+
+/// 把整合包安装为新实例，立即返回任务 ID；失败或取消时不留下新实例。
+#[tauri::command]
+pub async fn resources_modpack_install<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    args: ResourcesModpackInstallArgs,
+) -> Result<TaskStarted, AppError> {
+    let installer = modpack_installer(&state)?;
+    let client = state.modrinth()?.clone();
+    let downloader = state.downloader()?;
+    let cache_dir = state.data()?.cache_dir().join("modpacks");
+    Ok(spawn_task(
+        &app,
+        RESOURCES_MODPACK_INSTALL_KIND,
+        move |ctx| async move {
+            let pack = source::fetch(&args.source, &client, &downloader, &cache_dir, &ctx).await?;
+            let result = installer
+                .install(&pack.path, args.name.as_deref(), &ctx)
+                .await;
+            pack.cleanup();
+            result.map(drop)
+        },
+    ))
+}
+
+/// 新实例的 Java 为自动，因此加载器安装器使用默认的 [`tmcl_loader::JavaChoice::Auto`]。
+fn modpack_installer(state: &AppState) -> AppResult<ModpackInstaller> {
+    let loader = LoaderInstaller::new(state.downloader()?, state.data()?.clone())
+        .with_endpoints(state.loader.clone())
+        .with_game_options(state.game.clone());
+    Ok(ModpackInstaller::new(loader, state.game.clone()))
 }
 
 /// 读取实例的游戏版本与加载器；实例不存在返回 `INSTANCE_NOT_FOUND`。

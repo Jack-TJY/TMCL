@@ -22,7 +22,7 @@ pub use browse::{
 };
 pub use deps::{Conflict, InstalledVersion, Resolution, Resolved, UnavailableDependency};
 pub use install::{InstallPlan, InstallRequest, PlannedFile, ResourceInstaller};
-pub use modpack::{ModpackInfo, ModpackInstaller};
+pub use modpack::{ModpackInfo, ModpackInstaller, ModpackSource};
 pub use update::{
     InstalledList, InstalledResource, ResourceManager, ResourceSource, ResourceUpdate,
 };
