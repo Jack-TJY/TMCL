@@ -2,11 +2,16 @@
   "title": "资源管理",
   "back": "返回实例",
   "loadFailed": "无法读取实例",
+  "credit": "数据来自 Modrinth",
   "kind": {
     "mod": "Mod",
     "resourcepack": "资源包",
     "shader": "光影",
     "datapack": "数据包"
+  },
+  "view": {
+    "installed": "已安装",
+    "browse": "浏览与安装"
   },
   "world": {
     "label": "存档",
@@ -29,5 +34,48 @@
     "deleteContent": "文件 {file} 会被直接删除，不进入回收站。",
     "deleted": "已删除“{name}”",
     "cancel": "取消"
+  },
+  "browse": {
+    "search": "搜索 Modrinth",
+    "sort": {
+      "relevance": "相关度",
+      "downloads": "下载量",
+      "follows": "关注数",
+      "newest": "最新发布",
+      "updated": "最近更新"
+    },
+    "empty": "没有找到适用于此实例的资源",
+    "failed": "搜索失败",
+    "retry": "重试",
+    "by": "作者 {author}",
+    "downloads": "{count} 次下载",
+    "install": "安装",
+    "installed": "已安装"
+  },
+  "install": {
+    "title": "安装“{name}”",
+    "version": "版本",
+    "noVersions": "没有适用于此实例游戏版本与加载器的版本",
+    "loadFailed": "无法读取版本列表",
+    "planning": "正在检查前置与冲突…",
+    "planFailed": "无法生成安装计划",
+    "files": "将下载 {count} 个文件，共 {size}",
+    "dependency": "前置",
+    "requiredBy": "{name} 需要",
+    "replaces": "替换 {file}",
+    "conflicts": "存在不兼容的资源，不能安装",
+    "conflict": "{title} 与 {with} 不兼容",
+    "conflictInstalled": "{title} 与已安装的 {with} 不兼容",
+    "unavailable": "缺少前置，不能安装",
+    "unavailableItem": "{required} 需要的 {title} 没有适用于此实例的版本",
+    "unknownProject": "未知项目",
+    "cancel": "取消",
+    "confirm": "安装",
+    "started": "正在安装“{name}”，可在任务中心查看进度"
+  },
+  "channel": {
+    "release": "正式版",
+    "beta": "Beta",
+    "alpha": "Alpha"
   }
 }

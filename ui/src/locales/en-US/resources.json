@@ -2,11 +2,16 @@
   "title": "Resources",
   "back": "Back to instances",
   "loadFailed": "Couldn't read the instance",
+  "credit": "Data from Modrinth",
   "kind": {
     "mod": "Mods",
     "resourcepack": "Resource packs",
     "shader": "Shaders",
     "datapack": "Data packs"
+  },
+  "view": {
+    "installed": "Installed",
+    "browse": "Browse & install"
   },
   "world": {
     "label": "World",
@@ -29,5 +34,48 @@
     "deleteContent": "The file {file} will be deleted permanently, not moved to the recycle bin.",
     "deleted": "Deleted \"{name}\"",
     "cancel": "Cancel"
+  },
+  "browse": {
+    "search": "Search Modrinth",
+    "sort": {
+      "relevance": "Relevance",
+      "downloads": "Downloads",
+      "follows": "Follows",
+      "newest": "Newest",
+      "updated": "Recently updated"
+    },
+    "empty": "Nothing found for this instance",
+    "failed": "Search failed",
+    "retry": "Retry",
+    "by": "by {author}",
+    "downloads": "{count} downloads",
+    "install": "Install",
+    "installed": "Installed"
+  },
+  "install": {
+    "title": "Install \"{name}\"",
+    "version": "Version",
+    "noVersions": "No version supports this instance's game version and loader",
+    "loadFailed": "Couldn't load versions",
+    "planning": "Checking dependencies and conflicts…",
+    "planFailed": "Couldn't build the install plan",
+    "files": "{count} file(s) to download, {size} in total",
+    "dependency": "Dependency",
+    "requiredBy": "Required by {name}",
+    "replaces": "Replaces {file}",
+    "conflicts": "Incompatible resources found, can't install",
+    "conflict": "{title} is incompatible with {with}",
+    "conflictInstalled": "{title} is incompatible with the installed {with}",
+    "unavailable": "Missing dependencies, can't install",
+    "unavailableItem": "{title}, required by {required}, has no version for this instance",
+    "unknownProject": "Unknown project",
+    "cancel": "Cancel",
+    "confirm": "Install",
+    "started": "Installing \"{name}\". Check the task center for progress"
+  },
+  "channel": {
+    "release": "Release",
+    "beta": "Beta",
+    "alpha": "Alpha"
   }
 }

@@ -1,8 +1,19 @@
 <script setup lang="ts">
 // 实例的资源管理（PLAN.md M2-06）：按种类（Mod、资源包、光影、数据包）分页签，
-// 每类可查看已安装的资源并启用/禁用/删除。数据包按存档管理。
+// 每类可查看已安装（启用/禁用/删除）或浏览 Modrinth 并安装。数据包按存档管理。
 import { ArrowLeft20Regular } from "@vicons/fluent";
-import { NAlert, NButton, NEmpty, NIcon, NSelect, NSpin, NTab, NTabs } from "naive-ui";
+import {
+  NAlert,
+  NButton,
+  NEmpty,
+  NIcon,
+  NRadioButton,
+  NRadioGroup,
+  NSelect,
+  NSpin,
+  NTab,
+  NTabs,
+} from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
@@ -12,29 +23,39 @@ import {
   resourcesInstalled,
   resourcesWorlds,
   type InstalledList,
+  type ResourceHit,
   type ResourceKind,
 } from "../../api/resources";
 import type { AppError } from "../../bindings/AppError";
 import type { InstanceConfig } from "../../bindings/InstanceConfig";
+import type { TaskId } from "../../bindings/TaskId";
 import { formatError } from "../../i18n";
+import { useTasksStore } from "../../stores/tasks";
+import BrowsePanel from "./BrowsePanel.vue";
+import InstallDialog from "./InstallDialog.vue";
 import InstalledPanel from "./InstalledPanel.vue";
 import { kindsFor } from "./resources";
+
+type View = "installed" | "browse";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const tasks = useTasksStore();
 
 const instanceId = computed(() => String(route.params.id ?? ""));
 const instance = ref<InstanceConfig | null>(null);
 const loadError = ref<AppError | null>(null);
 
 const kind = ref<ResourceKind>("mod");
+const view = ref<View>("installed");
 const worlds = ref<string[]>([]);
 const world = ref<string | null>(null);
 
 const installed = ref<InstalledList | null>(null);
 const installedLoading = ref(false);
 const installedError = ref<AppError | null>(null);
+const installing = ref<ResourceHit | null>(null);
 
 const kinds = computed(() => kindsFor(instance.value?.loader ?? null));
 const needsWorld = computed(() => kind.value === "datapack");
@@ -93,6 +114,24 @@ watch([kind, world], () => {
   void loadInstalled();
 });
 
+const installedIds = computed(
+  () =>
+    new Set(
+      (installed.value?.resources ?? []).flatMap((r) => (r.source ? [r.source.project_id] : [])),
+    ),
+);
+
+/** 本页发起的安装任务；成功后重新读取已安装列表。 */
+const started = ref<TaskId[]>([]);
+watch(
+  () => started.value.map((id) => tasks.entries.find((e) => e.task_id === id)?.status ?? "running"),
+  (statuses) => {
+    if (statuses.every((s) => s === "running")) return;
+    if (statuses.some((s) => s === "succeeded")) void loadInstalled();
+    started.value = started.value.filter((_, i) => statuses[i] === "running");
+  },
+);
+
 const worldOptions = computed(() => worlds.value.map((w) => ({ label: w, value: w })));
 const title = computed(() =>
   instance.value ? `${t("resources.title")} · ${instance.value.name}` : t("resources.title"),
@@ -127,6 +166,10 @@ const title = computed(() =>
               {{ t(`resources.kind.${k}`) }}
             </NTab>
           </NTabs>
+          <NRadioGroup v-model:value="view" size="small">
+            <NRadioButton value="installed">{{ t("resources.view.installed") }}</NRadioButton>
+            <NRadioButton value="browse">{{ t("resources.view.browse") }}</NRadioButton>
+          </NRadioGroup>
         </div>
 
         <div v-if="needsWorld" class="world">
@@ -141,7 +184,7 @@ const title = computed(() =>
 
         <NEmpty v-if="!ready" class="empty" :description="t('resources.world.empty')" />
         <InstalledPanel
-          v-else
+          v-else-if="view === 'installed'"
           class="panel"
           :instance-id="instanceId"
           :kind="kind"
@@ -151,8 +194,27 @@ const title = computed(() =>
           :error="installedError"
           @reload="loadInstalled"
         />
+        <BrowsePanel
+          v-else
+          class="panel"
+          :instance-id="instanceId"
+          :kind="kind"
+          :installed-ids="installedIds"
+          @install="(hit: ResourceHit) => (installing = hit)"
+        />
       </template>
     </NSpin>
+
+    <InstallDialog
+      v-if="instance"
+      :hit="installing"
+      :instance-id="instanceId"
+      :instance-name="instance.name"
+      :kind="kind"
+      :world="world"
+      @close="installing = null"
+      @started="(id: TaskId) => started.push(id)"
+    />
   </div>
 </template>
 
