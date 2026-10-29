@@ -9,7 +9,8 @@
     "accounts": "Accounts",
     "skin": "Skins",
     "multiplayer": "Multiplayer",
-    "settings": "Settings"
+    "settings": "Settings",
+    "sync": "Sync"
   },
   "window": {
     "minimize": "Minimize",

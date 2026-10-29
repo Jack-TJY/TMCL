@@ -1,0 +1,80 @@
+{
+  "title": "设置同步",
+  "loadFailed": "读取实例或主配置失败",
+  "retry": "重试",
+  "cancel": "取消",
+  "categories": "同步类别",
+  "category": {
+    "keys": "按键",
+    "video": "视频",
+    "audio": "音频",
+    "language": "语言",
+    "other": "其他"
+  },
+  "master": {
+    "title": "主配置",
+    "none": "还没有主配置，请从实例采集或手动编辑",
+    "source": "来源",
+    "manual": "手动编辑",
+    "options": "选项数",
+    "updated": "更新时间",
+    "pickSource": "选择来源实例",
+    "capture": "从实例采集",
+    "edit": "手动编辑",
+    "captured": "已从 {name} 采集主配置",
+    "overwriteTitle": "覆盖主配置？",
+    "overwriteContent": "采集会用所选实例的游戏设置替换当前主配置，手动编辑的内容将丢失。"
+  },
+  "targets": {
+    "title": "目标实例",
+    "all": "全选",
+    "none": "清空",
+    "empty": "还没有可用的实例",
+    "isSource": "主配置来源"
+  },
+  "preview": {
+    "action": "预览差异",
+    "summary": "将修改 {targets} 个实例中的 {changes} 项设置",
+    "noChanges": "所选实例与主配置一致，无需修改",
+    "changes": "{count} 项修改",
+    "unchanged": "无需修改",
+    "category": "类别",
+    "old": "原值",
+    "new": "新值",
+    "missing": "（无）"
+  },
+  "apply": {
+    "action": "执行同步",
+    "title": "执行同步？",
+    "content": "将修改 {targets} 个实例中的 {changes} 项设置。修改前会自动备份，之后可在实例旁撤销。",
+    "confirm": "同步",
+    "done": "已同步 {count} 个实例"
+  },
+  "restore": {
+    "action": "撤销",
+    "title": "撤销 {name} 的最近一次同步？",
+    "content": "将用最近一份备份覆盖该实例的游戏设置。再次撤销会恢复更早的一份备份。",
+    "confirm": "撤销",
+    "done": "已恢复 {name} 的游戏设置",
+    "none": "{name} 没有可恢复的备份"
+  },
+  "editor": {
+    "title": "编辑主配置",
+    "hint": "使用 1.13 以后的格式填写，例如按键写作 key_key.jump = key.keyboard.space。同步到旧版本时会自动转换。",
+    "search": "搜索键或值",
+    "add": "添加",
+    "remove": "删除",
+    "key": "键",
+    "value": "值",
+    "empty": "没有选项",
+    "count": "{count} / {max} 项",
+    "save": "保存",
+    "saved": "主配置已保存",
+    "issue": {
+      "empty": "键不能为空",
+      "colon": "键不能包含冒号",
+      "newline": "值不能换行",
+      "duplicate": "键重复"
+    }
+  }
+}

@@ -9,7 +9,8 @@
     "accounts": "账号",
     "skin": "皮肤",
     "multiplayer": "联机",
-    "settings": "设置"
+    "settings": "设置",
+    "sync": "同步"
   },
   "window": {
     "minimize": "最小化",
