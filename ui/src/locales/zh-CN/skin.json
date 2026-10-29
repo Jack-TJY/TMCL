@@ -1,5 +1,6 @@
 {
   "cancel": "取消",
+  "retry": "重试",
   "model": {
     "label": "模型",
     "classic": "Steve（粗手臂）",
@@ -17,6 +18,8 @@
   },
   "preview": {
     "empty": "选择或拖入一个皮肤开始预览",
+    "profile": "账号当前皮肤",
+    "cape": "披风",
     "autoRotate": "自动旋转",
     "webgl": "无法创建 3D 画面（WebGL 不可用），请更新显卡驱动或系统 WebView 后重试",
     "loadFailed": "无法加载皮肤图片",
@@ -44,5 +47,21 @@
     "title": "删除皮肤 {name}？",
     "content": "只会从本地皮肤库删除，不影响账号正在使用的皮肤。",
     "confirm": "删除"
+  },
+  "account": {
+    "title": "当前账号",
+    "none": "还没有账号。在“账号”页添加后可以把皮肤上传到正版账号。",
+    "current": "正在使用",
+    "previewCurrent": "预览",
+    "noSkin": "没有皮肤",
+    "cape": "披风",
+    "noCape": "不显示披风",
+    "upload": "把“{name}”设为正版皮肤",
+    "selectFirst": "先在皮肤库中选择一个皮肤",
+    "uploaded": "已把 {name} 设为正版皮肤，进入游戏后生效",
+    "capeChanged": "披风已更新",
+    "authlib": "外置登录账号的皮肤在皮肤站上管理。",
+    "openSite": "打开皮肤站",
+    "offline": "离线账号没有在线皮肤，只能在本地预览。"
   }
 }
