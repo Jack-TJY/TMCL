@@ -8,6 +8,7 @@ import DownloadPage from "./pages/download/DownloadPage.vue";
 import HomePage from "./pages/home/HomePage.vue";
 import InstancesPage from "./pages/instances/InstancesPage.vue";
 import SettingsPage from "./pages/settings/SettingsPage.vue";
+import SkinPage from "./pages/skin/SkinPage.vue";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -59,6 +60,12 @@ const routes: RouteRecordRaw[] = [
     name: "settings",
     component: SettingsPage,
     meta: { titleKey: "shell.nav.settings" },
+  },
+  {
+    path: "/skin",
+    name: "skin",
+    component: SkinPage,
+    meta: { titleKey: "shell.nav.skin" },
   },
   { path: "/:pathMatch(.*)*", redirect: "/home" },
 ];

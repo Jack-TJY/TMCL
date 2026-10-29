@@ -1,5 +1,7 @@
-// 左侧导航项（PLAN.md M1-11）：首页 / 实例 / 下载 / 账号 / 联机 / 设置。
+// 左侧导航项（PLAN.md M1-11）：首页 / 实例 / 下载 / 账号 / 皮肤 / 联机 / 设置。
 import {
+  Accessibility24Filled,
+  Accessibility24Regular,
   ArrowDownload24Filled,
   ArrowDownload24Regular,
   Cube24Filled,
@@ -41,6 +43,7 @@ export const MAIN_NAV: NavItem[] = [
   item("instances", Cube24Regular, Cube24Filled),
   item("download", ArrowDownload24Regular, ArrowDownload24Filled),
   item("accounts", Person24Regular, Person24Filled),
+  item("skin", Accessibility24Regular, Accessibility24Filled),
   ...(MULTIPLAYER_ENABLED
     ? [item("multiplayer", PeopleCommunity24Regular, PeopleCommunity24Filled)]
     : []),
