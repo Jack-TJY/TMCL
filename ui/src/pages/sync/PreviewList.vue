@@ -3,10 +3,12 @@
 import { NCollapse, NCollapseItem, NTag } from "naive-ui";
 import { useI18n } from "vue-i18n";
 import type { SyncPreview } from "../../bindings/SyncPreview";
+import { optionLabel, valueLabel } from "./options";
 
 defineProps<{ preview: SyncPreview; names: Record<string, string> }>();
 
-const { t } = useI18n();
+const { t, te } = useI18n();
+const tr = { t, te };
 </script>
 
 <template>
@@ -30,7 +32,7 @@ const { t } = useI18n();
       <table class="changes">
         <thead>
           <tr>
-            <th>{{ t("sync.editor.key") }}</th>
+            <th>{{ t("sync.preview.option") }}</th>
             <th>{{ t("sync.preview.category") }}</th>
             <th>{{ t("sync.preview.old") }}</th>
             <th>{{ t("sync.preview.new") }}</th>
@@ -38,12 +40,18 @@ const { t } = useI18n();
         </thead>
         <tbody>
           <tr v-for="change in target.changes" :key="change.key">
-            <td class="mono">{{ change.key }}</td>
-            <td>{{ t(`sync.category.${change.category}`) }}</td>
-            <td class="mono" :class="change.old === null ? 'muted' : 'old'">
-              {{ change.old ?? t("sync.preview.missing") }}
+            <td>
+              <div>{{ optionLabel(change.key, tr) ?? change.key }}</div>
+              <div v-if="optionLabel(change.key, tr)" class="mono raw">{{ change.key }}</div>
             </td>
-            <td class="mono">{{ change.new }}</td>
+            <td>{{ t(`sync.category.${change.category}`) }}</td>
+            <td v-if="change.old === null" class="muted">
+              {{ t("sync.preview.missing") }}
+            </td>
+            <td v-else class="old" :title="change.old">
+              {{ valueLabel(change.key, change.old, tr) ?? change.old }}
+            </td>
+            <td :title="change.new">{{ valueLabel(change.key, change.new, tr) ?? change.new }}</td>
           </tr>
         </tbody>
       </table>
@@ -83,6 +91,11 @@ const { t } = useI18n();
 
 .mono {
   font-family: Consolas, "Cascadia Mono", monospace;
+}
+
+.raw {
+  font-size: 12px;
+  color: var(--tmcl-text-secondary);
 }
 
 .muted {

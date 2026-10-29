@@ -9,6 +9,7 @@ import { syncSaveMaster } from "../../api/sync";
 import type { SyncOption } from "../../bindings/SyncOption";
 import type { SyncProfile } from "../../bindings/SyncProfile";
 import { formatError } from "../../i18n";
+import { optionLabel, valueLabel } from "./options";
 import {
   filterRows,
   MAX_OPTIONS,
@@ -22,7 +23,8 @@ import {
 const props = defineProps<{ show: boolean; options: SyncOption[] }>();
 const emit = defineEmits<{ close: []; saved: [profile: SyncProfile] }>();
 
-const { t } = useI18n();
+const { t, te } = useI18n();
+const tr = { t, te };
 const message = useMessage();
 
 const rows = ref<EditorRow[]>([]);
@@ -43,7 +45,7 @@ const issues = computed(() => {
   const list = validateRows(rows.value);
   return new Map(rows.value.map((row, i) => [row.id, list[i]]));
 });
-const visible = computed(() => filterRows(rows.value, query.value));
+const visible = computed(() => filterRows(rows.value, query.value, (key) => optionLabel(key, tr)));
 const parsed = computed(() => rowsToOptions(rows.value));
 const tooMany = computed(() => rows.value.length > MAX_OPTIONS);
 
@@ -77,7 +79,7 @@ async function save() {
   <NModal
     :show="show"
     preset="card"
-    style="width: 720px; max-width: 90vw"
+    style="width: 860px; max-width: 90vw"
     :title="t('sync.editor.title')"
     :mask-closable="!busy"
     :closable="!busy"
@@ -100,6 +102,7 @@ async function save() {
     <NScrollbar class="rows">
       <NEmpty v-if="visible.length === 0" class="empty" :description="t('sync.editor.empty')" />
       <div v-for="row in visible" :key="row.id" class="row">
+        <div class="label">{{ optionLabel(row.key.trim(), tr) ?? t("sync.editor.unknown") }}</div>
         <NInput
           v-model:value="row.key"
           class="key"
@@ -112,7 +115,11 @@ async function save() {
           class="value"
           size="small"
           :placeholder="t('sync.editor.value')"
-        />
+        >
+          <template v-if="valueLabel(row.key.trim(), row.value, tr)" #suffix>
+            <span class="value-label">{{ valueLabel(row.key.trim(), row.value, tr) }}</span>
+          </template>
+        </NInput>
         <NButton
           quaternary
           size="small"
@@ -164,10 +171,21 @@ async function save() {
 
 .row {
   display: grid;
-  grid-template-columns: 2fr 3fr auto;
+  grid-template-columns: 3fr 3fr 3fr auto;
   gap: 6px;
   align-items: center;
   padding: 3px 0;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value-label {
+  font-size: 12px;
+  color: var(--tmcl-text-secondary);
 }
 
 .key :deep(input) {
