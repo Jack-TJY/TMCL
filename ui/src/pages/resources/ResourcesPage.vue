@@ -1,7 +1,13 @@
 <script setup lang="ts">
 // 实例的资源管理（PLAN.md M2-06）：按种类（Mod、资源包、光影、数据包）分页签，
-// 每类可查看已安装（启用/禁用/删除）或浏览 Modrinth 并安装。数据包按存档管理。
-import { ArrowLeft20Regular } from "@vicons/fluent";
+// 每类可查看已安装（启用/禁用/删除、检查更新与更新、从本地导入）或浏览 Modrinth 并安装。
+// 数据包按存档管理。
+import {
+  ArrowDownload20Regular,
+  ArrowImport20Regular,
+  ArrowLeft20Regular,
+  ArrowSync20Regular,
+} from "@vicons/fluent";
 import {
   NAlert,
   NButton,
@@ -23,6 +29,7 @@ import {
   resourcesInstalled,
   resourcesWorlds,
   type InstalledList,
+  type InstalledResource,
   type ResourceHit,
   type ResourceKind,
 } from "../../api/resources";
@@ -33,8 +40,11 @@ import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import BrowsePanel from "./BrowsePanel.vue";
 import InstallDialog from "./InstallDialog.vue";
+import ChannelTag from "./ChannelTag.vue";
 import InstalledPanel from "./InstalledPanel.vue";
+import { useModImport } from "../instances/modImport";
 import { kindsFor } from "./resources";
+import { useResourceUpdates } from "./updates";
 
 type View = "installed" | "browse";
 
@@ -109,8 +119,28 @@ async function loadInstalled() {
   }
 }
 
+const updateTarget = computed(() =>
+  instance.value && ready.value
+    ? {
+        instanceId: instanceId.value,
+        instanceName: instance.value.name,
+        kind: kind.value,
+        world: world.value,
+      }
+    : null,
+);
+const {
+  updates,
+  checking,
+  check: checkUpdates,
+  update,
+  reset: resetUpdates,
+} = useResourceUpdates(updateTarget);
+const { importing, importMods } = useModImport();
+
 watch([kind, world], () => {
   installed.value = null;
+  resetUpdates();
   void loadInstalled();
 });
 
@@ -121,16 +151,34 @@ const installedIds = computed(
     ),
 );
 
-/** 本页发起的安装任务；成功后重新读取已安装列表。 */
+/** 本页发起的安装与更新任务；成功后重新读取已安装列表，更新结果需重新检查。 */
 const started = ref<TaskId[]>([]);
 watch(
   () => started.value.map((id) => tasks.entries.find((e) => e.task_id === id)?.status ?? "running"),
   (statuses) => {
     if (statuses.every((s) => s === "running")) return;
-    if (statuses.some((s) => s === "succeeded")) void loadInstalled();
+    if (statuses.some((s) => s === "succeeded")) {
+      updates.value = null;
+      void loadInstalled();
+    }
     started.value = started.value.filter((_, i) => statuses[i] === "running");
   },
 );
+
+async function startUpdate(fileNames?: string[]) {
+  const id = await update(fileNames);
+  if (id) started.value.push(id);
+}
+
+async function importLocal() {
+  if (await importMods(instanceId.value, kind.value, world.value ?? undefined)) {
+    void loadInstalled();
+  }
+}
+
+function updateFor(resource: InstalledResource) {
+  return updates.value?.get(resource.file_name) ?? null;
+}
 
 const worldOptions = computed(() => worlds.value.map((w) => ({ label: w, value: w })));
 const title = computed(() =>
@@ -193,7 +241,53 @@ const title = computed(() =>
           :loading="installedLoading"
           :error="installedError"
           @reload="loadInstalled"
-        />
+        >
+          <template #actions>
+            <NButton :loading="importing === instanceId" @click="importLocal">
+              <template #icon
+                ><NIcon><ArrowImport20Regular /></NIcon
+              ></template>
+              {{ t("resources.import") }}
+            </NButton>
+            <NButton
+              :loading="checking"
+              :disabled="!installed?.resources.length"
+              @click="checkUpdates"
+            >
+              <template #icon
+                ><NIcon><ArrowSync20Regular /></NIcon
+              ></template>
+              {{ t("resources.updates.check") }}
+            </NButton>
+            <NButton v-if="updates?.size" type="primary" @click="startUpdate()">
+              <template #icon
+                ><NIcon><ArrowDownload20Regular /></NIcon
+              ></template>
+              {{ t("resources.updates.all", { count: updates.size }) }}
+            </NButton>
+          </template>
+          <template v-if="updates && updates.size === 0" #notice>
+            <div class="up-to-date">{{ t("resources.updates.none") }}</div>
+          </template>
+          <template #row="{ resource }">
+            <div v-if="updateFor(resource)" class="update">
+              <span class="update-version">
+                {{
+                  t("resources.updates.to", { version: updateFor(resource)?.latest.version_number })
+                }}
+              </span>
+              <ChannelTag :channel="updateFor(resource)!.latest.channel" />
+              <NButton
+                size="small"
+                type="primary"
+                secondary
+                @click="startUpdate([resource.file_name])"
+              >
+                {{ t("resources.updates.update") }}
+              </NButton>
+            </div>
+          </template>
+        </InstalledPanel>
         <BrowsePanel
           v-else
           class="panel"
@@ -280,5 +374,21 @@ const title = computed(() =>
 
 .empty {
   padding: 48px 0;
+}
+
+.up-to-date {
+  font-size: 13px;
+  color: var(--tmcl-text-secondary);
+}
+
+.update {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-version {
+  font-size: 12px;
+  color: var(--tmcl-accent);
 }
 </style>

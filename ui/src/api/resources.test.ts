@@ -4,14 +4,20 @@ const tauriInvoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke: tauriInvoke }));
 
 import {
+  resourcesCheckUpdates,
   resourcesImport,
   resourcesInstall,
   resourcesInstalled,
   resourcesInstallPlan,
   resourcesModpackExport,
+  resourcesModpackInspect,
+  resourcesModpackInstall,
+  resourcesModpackSearch,
+  resourcesModpackVersions,
   resourcesRemove,
   resourcesSearch,
   resourcesSetEnabled,
+  resourcesUpdate,
   resourcesVersions,
   resourcesWorlds,
 } from "./resources";
@@ -70,5 +76,28 @@ describe("resources commands", () => {
         enabled: false,
       }),
     ).toBe("a.jar.disabled");
+  });
+
+  it("covers updates and modpacks", async () => {
+    const dir = { instance_id: "a", kind: "mod" as const };
+    tauriInvoke.mockResolvedValueOnce({ updates: [{ file_name: "a.jar" }] });
+    expect(await resourcesCheckUpdates(dir)).toEqual([{ file_name: "a.jar" }]);
+    expect(tauriInvoke).toHaveBeenLastCalledWith("resources_check_updates", { args: dir });
+    const update = { ...dir, file_names: ["a.jar"] };
+    await resourcesUpdate(update);
+    expect(tauriInvoke).toHaveBeenLastCalledWith("resources_update", { args: update });
+    await resourcesModpackSearch({ query: "x" });
+    expect(tauriInvoke).toHaveBeenLastCalledWith("resources_modpack_search", {
+      args: { query: "x" },
+    });
+    tauriInvoke.mockResolvedValueOnce({ versions: [] });
+    expect(await resourcesModpackVersions({ project_id: "p" })).toEqual([]);
+    await resourcesModpackInspect({ path: "/a.mrpack" });
+    expect(tauriInvoke).toHaveBeenLastCalledWith("resources_modpack_inspect", {
+      args: { path: "/a.mrpack" },
+    });
+    const install = { source: { kind: "modrinth" as const, version_id: "v" }, name: "Pack" };
+    await resourcesModpackInstall(install);
+    expect(tauriInvoke).toHaveBeenLastCalledWith("resources_modpack_install", { args: install });
   });
 });
