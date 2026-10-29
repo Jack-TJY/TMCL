@@ -7,6 +7,7 @@ import AccountsPage from "./pages/accounts/AccountsPage.vue";
 import DownloadPage from "./pages/download/DownloadPage.vue";
 import HomePage from "./pages/home/HomePage.vue";
 import InstancesPage from "./pages/instances/InstancesPage.vue";
+import ResourceBrowserPage from "./pages/resources/ResourceBrowserPage.vue";
 import ResourcesPage from "./pages/resources/ResourcesPage.vue";
 import SettingsPage from "./pages/settings/SettingsPage.vue";
 import SkinPage from "./pages/skin/SkinPage.vue";
@@ -62,6 +63,12 @@ const routes: RouteRecordRaw[] = [
     name: "multiplayer",
     component: PlaceholderPage,
     meta: { titleKey: "shell.nav.multiplayer" },
+  },
+  {
+    path: "/resources",
+    name: "resources",
+    component: ResourceBrowserPage,
+    meta: { titleKey: "shell.nav.resources" },
   },
   {
     path: "/settings",
