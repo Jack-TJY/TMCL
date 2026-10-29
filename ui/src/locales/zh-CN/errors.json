@@ -56,6 +56,8 @@
   "RESOURCES_DEPENDENCY_UNAVAILABLE": "找不到适用于此实例的前置 {project}",
   "RESOURCES_FILE_NOT_FOUND": "找不到资源文件 {file}，请刷新列表",
   "RESOURCES_INCOMPATIBLE": "{project} 与 {with} 不兼容，已取消安装",
+  "RESOURCES_MODPACK_INVALID": "整合包文件已损坏或格式不正确",
+  "RESOURCES_MODPACK_UNSUPPORTED": "不支持此整合包：{name}",
   "RESOURCES_VERSION_NOT_FOUND": "找不到资源版本 {version}",
   "RESOURCES_WORLD_NOT_FOUND": "找不到存档 {world}",
   "SKIN_INVALID_IMAGE": "皮肤必须是 64×64 或 64×32 像素的 PNG 图片",

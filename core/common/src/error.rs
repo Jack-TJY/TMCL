@@ -131,6 +131,10 @@ pub enum ErrorCode {
     ResourcesFileNotFound,
     /// 要安装的资源与已安装或同批安装的资源不兼容（`incompatible` 依赖）。
     ResourcesIncompatible,
+    /// 整合包文件无效：不是 zip、缺少或损坏 `modrinth.index.json`，或其中的文件路径、哈希、下载地址非法。
+    ResourcesModpackInvalid,
+    /// 整合包的格式版本、游戏或依赖（加载器）不受支持。
+    ResourcesModpackUnsupported,
     /// Modrinth 上找不到要安装的版本，或该版本没有文件。
     ResourcesVersionNotFound,
     /// 数据包要安装到的存档不存在或名称非法。
@@ -208,6 +212,8 @@ impl ErrorCode {
             Self::ResourcesDependencyUnavailable => "RESOURCES_DEPENDENCY_UNAVAILABLE",
             Self::ResourcesFileNotFound => "RESOURCES_FILE_NOT_FOUND",
             Self::ResourcesIncompatible => "RESOURCES_INCOMPATIBLE",
+            Self::ResourcesModpackInvalid => "RESOURCES_MODPACK_INVALID",
+            Self::ResourcesModpackUnsupported => "RESOURCES_MODPACK_UNSUPPORTED",
             Self::ResourcesVersionNotFound => "RESOURCES_VERSION_NOT_FOUND",
             Self::ResourcesWorldNotFound => "RESOURCES_WORLD_NOT_FOUND",
             Self::SkinInvalidImage => "SKIN_INVALID_IMAGE",
@@ -355,6 +361,8 @@ mod tests {
             ErrorCode::ResourcesDependencyUnavailable,
             ErrorCode::ResourcesFileNotFound,
             ErrorCode::ResourcesIncompatible,
+            ErrorCode::ResourcesModpackInvalid,
+            ErrorCode::ResourcesModpackUnsupported,
             ErrorCode::ResourcesVersionNotFound,
             ErrorCode::ResourcesWorldNotFound,
             ErrorCode::SkinInvalidImage,
