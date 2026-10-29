@@ -33,9 +33,9 @@ use crate::commands::resources::{
     ResourceSources, ResourceUpdateList, ResourceVersionList, ResourceWorldList, ResourcesDirArgs,
     ResourcesImportArgs, ResourcesInstallArgs, ResourcesModpackExportArgs,
     ResourcesModpackInspectArgs, ResourcesModpackInstallArgs, ResourcesModpackSearchArgs,
-    ResourcesModpackVersionsArgs, ResourcesRemoveArgs, ResourcesSearchAnyArgs, ResourcesSearchArgs,
-    ResourcesSetEnabledArgs, ResourcesSetEnabledResult, ResourcesUpdateArgs, ResourcesVersionsArgs,
-    ResourcesWorldsArgs,
+    ResourcesModpackVersionsArgs, ResourcesOpenPageArgs, ResourcesRemoveArgs,
+    ResourcesSearchAnyArgs, ResourcesSearchArgs, ResourcesSetEnabledArgs,
+    ResourcesSetEnabledResult, ResourcesUpdateArgs, ResourcesVersionsArgs, ResourcesWorldsArgs,
 };
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
@@ -130,6 +130,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ResourcesModpackInstallArgs::export_all(&cfg)?;
     ResourcesModpackSearchArgs::export_all(&cfg)?;
     ResourcesModpackVersionsArgs::export_all(&cfg)?;
+    ResourcesOpenPageArgs::export_all(&cfg)?;
     ResourcesRemoveArgs::export_all(&cfg)?;
     ResourcesSearchArgs::export_all(&cfg)?;
     ResourcesSearchAnyArgs::export_all(&cfg)?;
