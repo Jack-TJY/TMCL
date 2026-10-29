@@ -61,9 +61,9 @@
   },
   "editor": {
     "title": "Edit master profile",
-    "hint": "Use the 1.13+ format, e.g. key bindings as key_key.jump = key.keyboard.space. Values are converted automatically for older versions.",
+    "hint": "Adjust settings like in the game: toggle switches, pick from lists, enter numbers, and click a binding then press the new key. Use \"Custom option\" for unlisted keys. Values are converted automatically for older versions.",
     "search": "Search names, keys or values",
-    "add": "Add",
+    "add": "Add option…",
     "remove": "Remove",
     "key": "Key",
     "value": "Value",
@@ -77,7 +77,8 @@
       "newline": "Value can't contain line breaks",
       "duplicate": "Duplicate key"
     },
-    "unknown": "Unrecognized option"
+    "custom": "Custom option (enter key name)",
+    "pressKey": "Press a key or mouse button… (Esc = none)"
   },
   "option": {
     "renderDistance": "Render Distance",
@@ -337,5 +338,11 @@
     "title": "Auto-sync new instances",
     "hint": "When on, a newly downloaded instance gets the selected categories of the master profile right before its first launch. Instances that already have game settings, including launched ones and modpacks with their own settings, are left alone.",
     "noMaster": "There's no master profile yet; this takes effect once you save one."
+  },
+  "unit": {
+    "percent": "%",
+    "degrees": "°",
+    "chunks": "chunks",
+    "fps": "FPS"
   }
 }

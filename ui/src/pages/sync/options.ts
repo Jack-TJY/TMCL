@@ -94,7 +94,7 @@ export function keyLabel(value: string, tr: Translator): string | null {
 }
 
 /** 自带名称的语言，与 LOCALE_NAMES 一样不进入翻译文件。 */
-const LANGUAGES: Record<string, string> = {
+export const LANGUAGES: Record<string, string> = {
   de_de: "Deutsch",
   en_gb: "English (UK)",
   en_us: "English (US)",
