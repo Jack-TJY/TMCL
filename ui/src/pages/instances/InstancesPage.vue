@@ -6,6 +6,7 @@ import {
   Add20Regular,
   ArrowClockwise20Regular,
   ArrowImport20Regular,
+  BoxMultiple20Regular,
   Search20Regular,
 } from "@vicons/fluent";
 import {
@@ -30,6 +31,7 @@ import type { TaskId } from "../../bindings/TaskId";
 import GameLogWindow from "../../components/game-log/GameLogWindow.vue";
 import { useGameSessions } from "../../components/game-log/sessions";
 import { formatError } from "../../i18n";
+import ModpackDialog from "../resources/ModpackDialog.vue";
 import { useTasksStore } from "../../stores/tasks";
 import ExportDialog from "./ExportDialog.vue";
 import ImportDialog from "./ImportDialog.vue";
@@ -66,6 +68,7 @@ const detail = ref<InstanceSummary | null>(null);
 const naming = ref<{ mode: "rename" | "duplicate"; instance: InstanceSummary } | null>(null);
 const exporting = ref<InstanceSummary | null>(null);
 const importing = ref(false);
+const installingModpack = ref(false);
 const { importMods } = useModImport();
 /** 打开日志窗口的实例 ID；也可经 `?log=<id>` 打开（崩溃提示在其他页面时跳转过来）。 */
 const logFor = ref<string | null>(null);
@@ -213,6 +216,12 @@ function onAction(instance: InstanceSummary, action: CardAction) {
         ></template>
         {{ t("instances.import.action") }}
       </NButton>
+      <NButton secondary @click="installingModpack = true">
+        <template #icon
+          ><NIcon><BoxMultiple20Regular /></NIcon
+        ></template>
+        {{ t("resources.modpack.action") }}
+      </NButton>
       <LaunchButton
         v-if="recent"
         :instance="recent"
@@ -288,6 +297,11 @@ function onAction(instance: InstanceSummary, action: CardAction) {
     <ExportDialog :instance="exporting" @close="exporting = null" />
     <GameLogWindow :instance-id="logFor" @close="closeLog" />
     <ImportDialog :show="importing" @close="importing = false" @started="reloadAfter" />
+    <ModpackDialog
+      :show="installingModpack"
+      @close="installingModpack = false"
+      @started="reloadAfter"
+    />
   </div>
 </template>
 

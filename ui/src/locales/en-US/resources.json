@@ -77,5 +77,29 @@
     "release": "Release",
     "beta": "Beta",
     "alpha": "Alpha"
+  },
+  "import": "Import local files",
+  "imported": "Imported {count} file(s)",
+  "updates": {
+    "check": "Check for updates",
+    "all": "Update all ({count})",
+    "none": "Everything is up to date",
+    "to": "Update to {version}",
+    "update": "Update",
+    "started": "Updating {count} resource(s). Check the task center for progress"
+  },
+  "modpack": {
+    "title": "Install modpack",
+    "file": "Local file",
+    "search": "Search Modrinth modpacks",
+    "change": "Choose another",
+    "supports": "Game versions {versions} · Loaders {loaders}",
+    "choose": "Choose .mrpack file…",
+    "none": "No file chosen",
+    "invalid": "Couldn't read the modpack",
+    "name": "Modpack",
+    "download": "Download",
+    "started": "Installing modpack \"{name}\". It will appear in the instance list when done",
+    "action": "Install modpack"
   }
 }
