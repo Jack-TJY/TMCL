@@ -475,7 +475,7 @@ fn json_array(values: &[String]) -> String {
     serde_json::json!(values).to_string()
 }
 
-fn parse_json<T: DeserializeOwned>(bytes: &[u8], url: &str) -> AppResult<T> {
+pub(crate) fn parse_json<T: DeserializeOwned>(bytes: &[u8], url: &str) -> AppResult<T> {
     serde_json::from_slice(bytes).map_err(|e| {
         AppError::new(ErrorCode::CommonJson)
             .with_param("url", url)
@@ -483,20 +483,20 @@ fn parse_json<T: DeserializeOwned>(bytes: &[u8], url: &str) -> AppResult<T> {
     })
 }
 
-fn status_error(url: &str, status: StatusCode) -> AppError {
+pub(crate) fn status_error(url: &str, status: StatusCode) -> AppError {
     AppError::new(ErrorCode::NetHttpStatus)
         .with_param("url", url)
         .with_param("status", status.as_u16())
 }
 
-fn timeout_error(url: &str, stage: &str, limit: Duration) -> AppError {
+pub(crate) fn timeout_error(url: &str, stage: &str, limit: Duration) -> AppError {
     AppError::new(ErrorCode::NetTimeout)
         .with_param("url", url)
         .with_detail(format!("{stage}超过 {} 秒", limit.as_secs_f64()))
 }
 
 /// 与 `tmcl_net` 相同的 `reqwest` 错误映射。
-fn map_reqwest_error(url: &str, err: &reqwest::Error) -> AppError {
+pub(crate) fn map_reqwest_error(url: &str, err: &reqwest::Error) -> AppError {
     let code = if err.is_timeout() {
         ErrorCode::NetTimeout
     } else if err.is_connect() {

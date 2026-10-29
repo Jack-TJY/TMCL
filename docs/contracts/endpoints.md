@@ -27,6 +27,13 @@
 | Modrinth API v2 | `https://api.modrinth.com/v2` | 搜索 `/search`、项目 `/project/{id}`、`/projects`、版本 `/project/{id}/version`、`/version/{id}`、`/versions`、依赖 `/project/{id}/dependencies`、按哈希查询 `/version_file/{hash}`、`POST /version_files`、`POST /version_files/update`。`User-Agent` 必须为 `Jack-TJY/TMCL/<版本>`；速率限制 300 次/分钟，读 `X-Ratelimit-Limit/Remaining/Reset`，429 时等待后重试 | 2026-10-24 实测 200，响应头含 `X-Ratelimit-Limit: 300` |
 | Modrinth 文件 CDN | `https://cdn.modrinth.com/data/<project_id>/versions/<version_id>/<filename>` | 由版本的 `files[].url` 给出，不在代码中拼接；按 `hashes.sha1` 与 `size` 校验 | 2026-10-24 下载 Sodium mc1.20.1-0.5.13-fabric 并校验 SHA1 成功 |
 
+## resources · CurseForge（M2-02）
+
+| 用途 | 地址 | 说明 | 核实 |
+| --- | --- | --- | --- |
+| CurseForge API v1 | `https://api.curseforge.com/v1` | 搜索 `/mods/search`、项目 `/mods/{id}`、`POST /mods`、文件 `/mods/{id}/files`、`/mods/{modId}/files/{fileId}`、`POST /mods/files`、按指纹查询 `POST /fingerprints/432`。请求头 `x-api-key`（构建期注入，见 AGENTS.md §11）；`User-Agent` 与 Modrinth 相同。按第三方 API 条款，响应不缓存到磁盘 | 2026-10-30 实测 200 |
+| CurseForge 文件 CDN | `https://edge.forgecdn.net/files/<a>/<b>/<filename>` | 由文件的 `downloadUrl` 给出，不在代码中拼接；对 `forgecdn.net` 的请求同样带 `x-api-key`（CurseForge 2025 年起要求）；按 `hashes`（algo 1 = SHA1）与 `fileLength` 校验。`downloadUrl` 为空表示作者禁止第三方分发，只能打开 `<websiteUrl>/files/<fileId>` 让用户手动下载 | 2026-10-30 下载 jei-1.20.1-forge-15.74.0.232.jar，SHA1 与指纹（MurmurHash2）都一致 |
+
 ## auth（M1-08）
 
 | 用途 | 地址 | 说明 | 核实 |
