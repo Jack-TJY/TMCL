@@ -103,10 +103,30 @@ export function copyName(name: string, existing: string[]): string {
   }
 }
 
+/** 导出格式：TMCL 实例包，或 Modrinth 整合包。 */
+export type PackFormat = "tmclpack" | "mrpack";
+
+/** 默认不勾选的条目：日志与缓存通常没有分享价值；整合包还不带存档。 */
+const UNCHECKED: Record<PackFormat, readonly string[]> = {
+  tmclpack: ["logs", "crash-reports", ".cache", "screenshots"],
+  mrpack: ["logs", "crash-reports", ".cache", "screenshots", "saves"],
+};
+
+/** 导出时默认勾选的 `game/` 条目。 */
+export function defaultInclude(entries: string[], format: PackFormat): string[] {
+  return entries.filter((e) => !UNCHECKED[format].includes(e));
+}
+
 /** 导出文件名：去掉文件名中不允许的字符。 */
-export function packFileName(name: string): string {
+export function packFileName(name: string, format: PackFormat = "tmclpack"): string {
   const safe = name.replace(/[\\/:*?"<>|]/g, "_").trim();
-  return `${safe || "instance"}.tmclpack`;
+  return `${safe || "instance"}.${format}`;
+}
+
+/** 把路径的 `.tmclpack` / `.mrpack` 扩展名换成 `format` 的；没有这两种扩展名时追加。 */
+export function withPackExtension(path: string, format: PackFormat): string {
+  const base = path.replace(/\.(tmclpack|mrpack)$/i, "");
+  return base ? `${base}.${format}` : base;
 }
 
 /** 在目录后拼接文件名，沿用目录中的路径分隔符。 */

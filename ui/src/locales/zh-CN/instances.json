@@ -83,7 +83,15 @@
     "noEntries": "游戏目录为空，只导出实例配置",
     "dest": "保存到",
     "confirm": "导出",
-    "started": "正在导出“{name}”，可在任务中心查看进度"
+    "started": "正在导出“{name}”，可在任务中心查看进度",
+    "format": "格式",
+    "tmclpack": "TMCL 实例包（.tmclpack）",
+    "mrpack": "Modrinth 整合包（.mrpack）",
+    "packName": "整合包名称",
+    "packVersion": "版本",
+    "summary": "简介",
+    "summaryPlaceholder": "可选",
+    "mrpackHint": "能在 Modrinth 上找到的 mod、资源包和光影只写下载链接，其余文件直接打包。需要联网。"
   },
   "import": {
     "action": "导入",
