@@ -13,6 +13,13 @@ export async function pickFile(filters: FileFilter[]): Promise<string | null> {
   return typeof picked === "string" ? picked : null;
 }
 
+/** 选择一个或多个已有文件；取消时为空数组。 */
+export async function pickFiles(filters: FileFilter[]): Promise<string[]> {
+  const picked = await open({ multiple: true, directory: false, filters });
+  if (Array.isArray(picked)) return picked;
+  return typeof picked === "string" ? [picked] : [];
+}
+
 /** 选择保存位置；`defaultPath` 为建议的完整路径或文件名，取消时为 `null`。 */
 export async function pickSavePath(
   filters: FileFilter[],

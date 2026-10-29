@@ -36,6 +36,7 @@ import ImportDialog from "./ImportDialog.vue";
 import InstanceCard, { type CardAction } from "./InstanceCard.vue";
 import InstanceDetail from "./InstanceDetail.vue";
 import LaunchButton from "./LaunchButton.vue";
+import { useModImport } from "./modImport";
 import {
   filterInstances,
   groupInstances,
@@ -65,6 +66,7 @@ const detail = ref<InstanceSummary | null>(null);
 const naming = ref<{ mode: "rename" | "duplicate"; instance: InstanceSummary } | null>(null);
 const exporting = ref<InstanceSummary | null>(null);
 const importing = ref(false);
+const { importMods } = useModImport();
 /** 打开日志窗口的实例 ID；也可经 `?log=<id>` 打开（崩溃提示在其他页面时跳转过来）。 */
 const logFor = ref<string | null>(null);
 
@@ -166,6 +168,9 @@ function onAction(instance: InstanceSummary, action: CardAction) {
       break;
     case "open":
       instanceOpenDir({ id: instance.id }).catch(showError);
+      break;
+    case "importMods":
+      void importMods(instance.id);
       break;
     case "rename":
     case "duplicate":

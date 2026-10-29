@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import {
+  canImportMods,
   copyName,
   filterInstances,
   formatArgs,
   groupInstances,
   groupNames,
+  groupSkipped,
   joinPath,
   mostRecent,
   packFileName,
@@ -90,5 +92,39 @@ describe("names and paths", () => {
   it("joins with the directory's separator", () => {
     expect(joinPath("C:\\TMCL\\tmcl-data", "a.tmclpack")).toBe("C:\\TMCL\\tmcl-data\\a.tmclpack");
     expect(joinPath("/opt/tmcl-data/", "a.tmclpack")).toBe("/opt/tmcl-data/a.tmclpack");
+  });
+});
+
+describe("mod import", () => {
+  it("is offered only for readable instances with a loader", () => {
+    const fabric = { kind: "fabric" as const, version: "0.16.5" };
+    expect(canImportMods(instance("a", { loader: fabric }))).toBe(true);
+    expect(canImportMods(instance("b"))).toBe(false);
+    expect(
+      canImportMods(
+        instance("c", {
+          loader: fabric,
+          error: { code: "COMMON_IO", params: {}, detail: null } as never,
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("groups skipped files by reason in order", () => {
+    const skip = (file_name: string, reason: "exists" | "unsupported" | "not_found") => ({
+      path: `/x/${file_name}`,
+      file_name,
+      reason,
+    });
+    expect(
+      groupSkipped([
+        skip("a.jar", "exists"),
+        skip("b.txt", "unsupported"),
+        skip("c.jar", "exists"),
+      ]),
+    ).toEqual([
+      ["exists", ["a.jar", "c.jar"]],
+      ["unsupported", ["b.txt"]],
+    ]);
   });
 });
