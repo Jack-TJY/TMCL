@@ -14,6 +14,7 @@ import type { ResourcesModpackInspectArgs } from "../bindings/ResourcesModpackIn
 import type { ResourcesModpackInstallArgs } from "../bindings/ResourcesModpackInstallArgs";
 import type { ResourcesModpackSearchArgs } from "../bindings/ResourcesModpackSearchArgs";
 import type { ResourcesModpackVersionsArgs } from "../bindings/ResourcesModpackVersionsArgs";
+import type { ResourcesOpenPageArgs } from "../bindings/ResourcesOpenPageArgs";
 import type { ResourcesRemoveArgs } from "../bindings/ResourcesRemoveArgs";
 import type { ResourcesSearchArgs } from "../bindings/ResourcesSearchArgs";
 import type { ResourcesSetEnabledArgs } from "../bindings/ResourcesSetEnabledArgs";
@@ -21,6 +22,7 @@ import type { ResourcesSetEnabledResult } from "../bindings/ResourcesSetEnabledR
 import type { ResourcesUpdateArgs } from "../bindings/ResourcesUpdateArgs";
 import type { ResourcesVersionsArgs } from "../bindings/ResourcesVersionsArgs";
 import type { ResourcesWorldsArgs } from "../bindings/ResourcesWorldsArgs";
+import type { ResourceSources } from "../bindings/ResourceSources";
 import type { ResourceVersion } from "../bindings/ResourceVersion";
 import type { ResourceVersionList } from "../bindings/ResourceVersionList";
 import type { ResourceWorldList } from "../bindings/ResourceWorldList";
@@ -41,6 +43,7 @@ export type {
   ResourceUpdate,
   ResourceVersion,
 };
+export type { ManualDownload } from "../bindings/ManualDownload";
 export type { ModpackSource } from "../bindings/ModpackSource";
 export type { Conflict } from "../bindings/Conflict";
 export type { InstalledResource } from "../bindings/InstalledResource";
@@ -49,6 +52,7 @@ export type { ResourceChannel } from "../bindings/ResourceChannel";
 export type { ResourceHit } from "../bindings/ResourceHit";
 export type { ResourceImportSkipReason } from "../bindings/ResourceImportSkipReason";
 export type { ResourceKind } from "../bindings/ResourceKind";
+export type { ResourcePlatform } from "../bindings/ResourcePlatform";
 export type { ResourceSort } from "../bindings/ResourceSort";
 export type { UnavailableDependency } from "../bindings/UnavailableDependency";
 
@@ -119,7 +123,17 @@ export function resourcesUpdate(args: ResourcesUpdateArgs): Promise<TaskStarted>
   return invoke<TaskStarted>("resources_update", { args });
 }
 
-/** 在 Modrinth 搜索整合包。 */
+/** 本次构建可用的资源平台；没有 CurseForge Key 时 `curseforge` 为 `false`，界面应隐藏。 */
+export function resourcesSources(): Promise<ResourceSources> {
+  return invoke<ResourceSources>("resources_sources");
+}
+
+/** 在系统浏览器中打开 CurseForge 网页（手动下载禁止第三方分发的文件）。 */
+export function resourcesOpenPage(args: ResourcesOpenPageArgs): Promise<void> {
+  return invoke<void>("resources_open_page", { args });
+}
+
+/** 在 Modrinth 或 CurseForge 搜索整合包。 */
 export function resourcesModpackSearch(args: ResourcesModpackSearchArgs): Promise<ResourcePage> {
   return invoke<ResourcePage>("resources_modpack_search", { args });
 }
@@ -131,7 +145,7 @@ export async function resourcesModpackVersions(
   return (await invoke<ResourceVersionList>("resources_modpack_versions", { args })).versions;
 }
 
-/** 读取并校验本地 `.mrpack`，返回概要。 */
+/** 读取并校验本地整合包（`.mrpack` 或 CurseForge zip），返回概要。 */
 export function resourcesModpackInspect(args: ResourcesModpackInspectArgs): Promise<ModpackInfo> {
   return invoke<ModpackInfo>("resources_modpack_inspect", { args });
 }

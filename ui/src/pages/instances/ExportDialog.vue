@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// 导出实例为 .tmclpack 或 Modrinth 整合包（.mrpack）：选择要包含的 game/ 条目并填写目标文件路径，
+// 导出实例为 .tmclpack、Modrinth 整合包（.mrpack）或 CurseForge 整合包（.zip，构建带 CurseForge
+// Key 时才显示）：选择要包含的 game/ 条目并填写目标文件路径，
 // 导出任务进入任务中心。目标路径默认放在数据目录下，可直接编辑或用系统“另存为”对话框选择。
-// 整合包还要填写名称、版本与简介；能在 Modrinth 找到的 mod 由后端写成下载链接。
+// 整合包还要填写名称、版本与简介；能在 Modrinth / CurseForge 找到的 mod 由后端写成下载链接。
 import {
   NButton,
   NCheckbox,
@@ -22,7 +23,11 @@ import { useI18n } from "vue-i18n";
 import { pickSavePath } from "../../api/dialog";
 import { INSTANCE_TASK_KINDS, instanceExport, instanceGameEntries } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
-import { RESOURCES_TASK_KINDS, resourcesModpackExport } from "../../api/resources";
+import {
+  RESOURCES_TASK_KINDS,
+  resourcesModpackExport,
+  resourcesSources,
+} from "../../api/resources";
 import { settingsGet } from "../../api/settings";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import { formatError } from "../../i18n";
@@ -38,6 +43,7 @@ import {
 const PACK_FILTERS: Record<PackFormat, { name: string; extensions: string[] }[]> = {
   tmclpack: [{ name: "TMCL", extensions: ["tmclpack"] }],
   mrpack: [{ name: "Modrinth", extensions: ["mrpack"] }],
+  curseforge: [{ name: "CurseForge", extensions: ["zip"] }],
 };
 
 const props = defineProps<{ instance: InstanceSummary | null }>();
@@ -56,7 +62,11 @@ const packName = ref("");
 const packVersion = ref("1.0.0");
 const summary = ref("");
 
-const isModpack = computed(() => format.value === "mrpack");
+const isModpack = computed(() => format.value !== "tmclpack");
+const curseforge = ref(false);
+resourcesSources()
+  .then((sources) => (curseforge.value = sources.curseforge))
+  .catch(() => (curseforge.value = false));
 
 /** 切换格式时换掉目标扩展名，并按新格式重置默认勾选。 */
 watch(format, (next) => {
@@ -111,6 +121,7 @@ async function confirm() {
         name: packName.value.trim(),
         version: packVersion.value.trim(),
         summary: summary.value.trim(),
+        format: format.value === "curseforge" ? ("curseforge" as const) : ("mrpack" as const),
       };
       await tasks.start({
         kind: RESOURCES_TASK_KINDS.modpackExport,
@@ -151,6 +162,9 @@ async function confirm() {
           <NRadioGroup v-model:value="format" size="small">
             <NRadioButton value="tmclpack">{{ t("instances.export.tmclpack") }}</NRadioButton>
             <NRadioButton value="mrpack">{{ t("instances.export.mrpack") }}</NRadioButton>
+            <NRadioButton v-if="curseforge" value="curseforge">{{
+              t("instances.export.curseforge")
+            }}</NRadioButton>
           </NRadioGroup>
         </NFormItem>
         <template v-if="isModpack">
@@ -186,7 +200,10 @@ async function confirm() {
                 />
               </div>
             </NCheckboxGroup>
-            <p v-if="isModpack" class="hint">{{ t("instances.export.mrpackHint") }}</p>
+            <p v-if="format === 'mrpack'" class="hint">{{ t("instances.export.mrpackHint") }}</p>
+            <p v-else-if="format === 'curseforge'" class="hint">
+              {{ t("instances.export.curseforgeHint") }}
+            </p>
           </div>
         </NFormItem>
         <NFormItem :label="t('instances.export.dest')">
