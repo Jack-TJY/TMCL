@@ -275,7 +275,7 @@ async fn online_search_and_cdn_download() {
     let file = &files.data[0];
     let cdn = curseforge::with_cdn_key(&http).unwrap();
     let bytes = cdn
-        .get_bytes(file.https_download_url().unwrap(), &ctx)
+        .get_bytes(file.usable_download_url().unwrap(), &ctx)
         .await
         .unwrap();
     assert_eq!(fingerprint::of_bytes(&bytes), file.file_fingerprint);
