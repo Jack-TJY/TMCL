@@ -292,3 +292,73 @@ async fn zip_without_any_index_is_invalid() {
     let err = env.installer.inspect(&env.pack).await.unwrap_err();
     assert_eq!(err.code, ErrorCode::ResourcesModpackInvalid);
 }
+
+#[tokio::test]
+#[ignore = "联网：需要带 CurseForge API Key 构建，会下载一个整合包"]
+async fn online_fetch_and_inspect_popular_pack() {
+    use tmcl_resources::curseforge::{self, ClassId, FileFilter, SearchQuery};
+    use tmcl_resources::modpack::source::{self, ModpackSource};
+    use tmcl_resources::modrinth::ModrinthClient;
+
+    if !curseforge::is_available() {
+        eprintln!("本次构建没有 CurseForge API Key，跳过");
+        return;
+    }
+    let http = HttpClient::new().unwrap();
+    let client = CurseForgeClient::from_build(&http).unwrap().unwrap();
+    let ctx = TaskCtx::noop("online");
+    let query = SearchQuery {
+        class_id: Some(ClassId::Modpacks),
+        game_version: Some("1.20.1".into()),
+        limit: 1,
+        ..SearchQuery::new("")
+    };
+    let pack = client.search(&query, &ctx).await.unwrap().data.remove(0);
+    let files = client
+        .project_files(
+            pack.id,
+            &FileFilter {
+                limit: 1,
+                ..FileFilter::default()
+            },
+            &ctx,
+        )
+        .await
+        .unwrap();
+    let file = &files.data[0];
+    let dir = tempfile::tempdir().unwrap();
+    let downloader = Downloader::new(
+        curseforge::with_cdn_key(&http).unwrap(),
+        DownloadOptions::default(),
+    );
+    let fetched = source::fetch(
+        &ModpackSource::Curseforge {
+            project_id: pack.id,
+            file_id: file.id,
+        },
+        &ModrinthClient::new(&http).unwrap(),
+        Some(&client),
+        &downloader,
+        dir.path(),
+        &ctx,
+    )
+    .await
+    .unwrap();
+    let paths = DataPaths::at(dir.path().join("data"));
+    let installer = ModpackInstaller::new(
+        LoaderInstaller::new(downloader, paths),
+        InstallOptions::default(),
+    )
+    .with_curseforge(Some(client));
+    let prepared = installer.inspect(&fetched.path).await.unwrap();
+    eprintln!(
+        "{} {}: {} files, {} manual, loader {:?}",
+        pack.name,
+        prepared.info.version,
+        prepared.info.file_count,
+        prepared.info.manual_downloads.len(),
+        prepared.info.loader
+    );
+    assert_eq!(prepared.info.format, ModpackFormat::Curseforge);
+    assert!(prepared.info.file_count > 0);
+}

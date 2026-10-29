@@ -64,5 +64,7 @@
   "SKIN_NOT_FOUND": "This skin is not in the library, please refresh the list",
   "SYNC_MASTER_INVALID": "The settings sync master profile is invalid. Capture or edit it again",
   "SYNC_NO_MASTER": "No settings sync master profile yet. Capture one from an instance or edit it first",
-  "SYNC_SOURCE_NO_OPTIONS": "Instance {id} has no game settings yet. Launch the game once first"
+  "SYNC_SOURCE_NO_OPTIONS": "Instance {id} has no game settings yet. Launch the game once first",
+  "RESOURCES_CURSEFORGE_DISABLED": "CurseForge is not enabled in this build",
+  "RESOURCES_MANUAL_DOWNLOAD": "The author of {name} does not allow third-party downloads, please download it from the CurseForge page"
 }

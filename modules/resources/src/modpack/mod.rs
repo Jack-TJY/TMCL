@@ -16,4 +16,4 @@ pub use curseforge::ManualDownload;
 pub use export::{ExportSummary, ModpackExport};
 pub use install::{ModpackInstaller, PreparedPack};
 pub use mrpack::{ModpackFormat, ModpackInfo, Mrpack, PackFile};
-pub use source::{FetchedPack, ModpackSource};
+pub use source::{FetchedPack, ModpackSource, ResourcePlatform};
