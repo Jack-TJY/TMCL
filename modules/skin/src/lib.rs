@@ -5,12 +5,14 @@
 //! - [`mojang`]：正版账号的皮肤与披风（`api.minecraftservices.com`）。
 //! - [`yggdrasil`]：外置登录账号的皮肤站地址。
 //! - [`library`]：本地皮肤库 `<data_root>/skins/` 与 PNG 校验。
+//! - [`texture`]：下载档案中的皮肤与披风图片（`textures.minecraft.net`）。
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 pub mod library;
 pub mod mojang;
+pub mod texture;
 pub mod yggdrasil;
 
 pub use library::{SkinEntry, SkinLibrary, validate_png};

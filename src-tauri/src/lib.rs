@@ -77,6 +77,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::settings::settings_set,
         commands::settings::settings_set_language,
         // skin
+        commands::skin::skin_file_read,
         commands::skin::skin_library_import,
         commands::skin::skin_library_list,
         commands::skin::skin_library_read,
@@ -86,6 +87,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::skin::skin_profile,
         commands::skin::skin_set_cape,
         commands::skin::skin_site_url,
+        commands::skin::skin_texture,
         commands::skin::skin_upload,
         // sync
         commands::sync::sync_apply,
@@ -1544,6 +1546,54 @@ fov:0.0
         let body = json!({ "args": { "id": "../x", "name": "a", "variant": "slim" } });
         let err = invoke(&webview, "skin_library_update", body);
         assert_eq!(error_code(err), ErrorCode::SkinNotFound);
+    }
+
+    #[test]
+    fn skin_file_read_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(DataPaths::at(dir.path()))));
+        let good = dir.path().join("drop.png");
+        std::fs::write(&good, skin_png(64, 32)).unwrap();
+        let body = json!({ "args": { "path": good } });
+        match invoke_body(&webview, "skin_file_read", body).unwrap() {
+            InvokeResponseBody::Raw(bytes) => assert_eq!(bytes, skin_png(64, 32)),
+            other => panic!("应返回二进制，实际为 {other:?}"),
+        }
+        let bad = dir.path().join("big.png");
+        std::fs::write(&bad, skin_png(128, 128)).unwrap();
+        let body = json!({ "args": { "path": bad } });
+        assert_eq!(
+            error_code(invoke(&webview, "skin_file_read", body)),
+            ErrorCode::SkinInvalidImage
+        );
+    }
+
+    #[test]
+    fn skin_texture_over_ipc() {
+        let hash = "ab".repeat(32);
+        let server = tauri::async_runtime::block_on(TestServer::start([
+            (format!("/texture/{hash}"), skin_png(64, 32)),
+            ("/texture/0bad".to_owned(), b"<html>".to_vec()),
+        ]));
+        let dir = tempfile::tempdir().unwrap();
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir.path())));
+        state.textures_base = server.url("");
+        let (_app, webview) = mock_app_with(state);
+        let url = format!("http://textures.minecraft.net/texture/{hash}");
+        match invoke_body(&webview, "skin_texture", json!({ "args": { "url": url } })).unwrap() {
+            InvokeResponseBody::Raw(bytes) => assert_eq!(bytes, skin_png(64, 32)),
+            other => panic!("应返回二进制，实际为 {other:?}"),
+        }
+        let body = json!({ "args": { "url": "http://textures.minecraft.net/texture/0bad" } });
+        assert_eq!(
+            error_code(invoke(&webview, "skin_texture", body)),
+            ErrorCode::SkinInvalidImage
+        );
+        let body = json!({ "args": { "url": format!("{}/texture/{hash}", server.url("")) } });
+        assert_eq!(
+            error_code(invoke(&webview, "skin_texture", body)),
+            ErrorCode::CommonInternal
+        );
     }
 
     #[test]

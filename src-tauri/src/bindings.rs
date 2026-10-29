@@ -37,8 +37,8 @@ use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
 use crate::commands::skin::{
-    SkinAccountArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList, SkinSetCapeArgs, SkinSite,
-    SkinUpdateArgs, SkinUploadArgs,
+    SkinAccountArgs, SkinFileArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList, SkinSetCapeArgs,
+    SkinSite, SkinTextureArgs, SkinUpdateArgs, SkinUploadArgs,
 };
 use crate::commands::sync::{
     SyncApplyResult, SyncCaptureArgs, SyncMaster, SyncPreview, SyncRestoreArgs, SyncRestoreResult,
@@ -131,12 +131,14 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SettingsSnapshot::export_all(&cfg)?;
     // skin（SkinEntry、SkinVariant 随 SkinLibraryList，ProfileSkin、ProfileCape 随 SkinProfile 一并导出）
     SkinAccountArgs::export_all(&cfg)?;
+    SkinFileArgs::export_all(&cfg)?;
     SkinIdArgs::export_all(&cfg)?;
     SkinImportArgs::export_all(&cfg)?;
     SkinLibraryList::export_all(&cfg)?;
     SkinProfile::export_all(&cfg)?;
     SkinSetCapeArgs::export_all(&cfg)?;
     SkinSite::export_all(&cfg)?;
+    SkinTextureArgs::export_all(&cfg)?;
     SkinUpdateArgs::export_all(&cfg)?;
     SkinUploadArgs::export_all(&cfg)?;
     // sync（SyncProfile、SyncOption、SyncOptionChange、SyncCategory 随之导出）

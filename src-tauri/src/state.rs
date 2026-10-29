@@ -44,6 +44,8 @@ pub struct AppState {
     pub modrinth: AppResult<ModrinthClient>,
     /// Minecraft 服务根地址（皮肤与披风接口）；测试中指向本地服务器。
     pub minecraft_api: String,
+    /// 皮肤与披风图片的材质服务器根地址；测试中指向本地服务器。
+    pub textures_base: String,
 }
 
 impl AppState {
@@ -78,6 +80,7 @@ impl AppState {
             ms: MsClient::from_build(),
             modrinth: HttpClient::new().and_then(|http| ModrinthClient::new(&http)),
             minecraft_api: tmcl_skin::mojang::API_BASE.to_owned(),
+            textures_base: tmcl_skin::texture::TEXTURES_BASE.to_owned(),
         }
     }
 
