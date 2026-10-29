@@ -11,7 +11,10 @@
     "instance_import": "Import instance",
     "launch": "Launch game",
     "loader_install": "Install mod loader",
-    "resources_modpack_export": "Export modpack"
+    "resources_modpack_export": "Export modpack",
+    "resources_install": "Install resources",
+    "resources_modpack_install": "Install modpack",
+    "resources_update": "Update resources"
   },
   "stage": {
     "version_json": "Version info",
@@ -29,7 +32,11 @@
     "loader_processors": "Processing loader files",
     "modpack_hash": "Hashing files",
     "modpack_lookup": "Looking up on Modrinth",
-    "modpack_export": "Packing"
+    "modpack_export": "Packing",
+    "resources": "Downloading resources",
+    "modpack_fetch": "Fetching modpack",
+    "modpack_files": "Modpack files",
+    "modpack_overrides": "Extracting modpack"
   },
   "status": {
     "waiting": "Preparing…",

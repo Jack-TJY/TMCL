@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 实例卡片：名称、版本与加载器、最近游玩时间；右上角菜单提供实例操作。
 import {
+  Apps20Regular,
   Copy20Regular,
   Delete20Regular,
   Edit20Regular,
@@ -17,7 +18,7 @@ import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import { canImportMods } from "./instances";
 
 export type CardAction =
-  "details" | "open" | "importMods" | "rename" | "duplicate" | "export" | "delete";
+  "details" | "resources" | "open" | "importMods" | "rename" | "duplicate" | "export" | "delete";
 
 const props = defineProps<{ instance: InstanceSummary }>();
 const emit = defineEmits<{ action: [action: CardAction] }>();
@@ -38,6 +39,7 @@ const menu = computed<DropdownOption[]>(() => {
       ]
     : [
         ["details", Settings20Regular],
+        ["resources", Apps20Regular],
         ["open", FolderOpen20Regular],
         ...(canImportMods(props.instance)
           ? [["importMods", PuzzlePiece20Regular] as [CardAction, Component]]

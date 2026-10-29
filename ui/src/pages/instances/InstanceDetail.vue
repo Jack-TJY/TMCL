@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 实例详情抽屉：版本、加载器（可更换）、分组、Java、内存、JVM / 游戏参数、窗口；可打开游戏目录，
-// 装有加载器的实例可导入 Mod。
-import { FolderOpen20Regular, PuzzlePiece20Regular } from "@vicons/fluent";
+// 可进入资源管理，装有加载器的实例可导入 Mod。
+import { Apps20Regular, FolderOpen20Regular, PuzzlePiece20Regular } from "@vicons/fluent";
 import {
   NAlert,
   NAutoComplete,
@@ -23,6 +23,7 @@ import {
 } from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 import { instanceGet, instanceSave } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
 import type { AppError } from "../../bindings/AppError";
@@ -44,6 +45,7 @@ const emit = defineEmits<{ close: []; saved: []; openDir: [id: string] }>();
 const { t, locale } = useI18n();
 const message = useMessage();
 const tasks = useTasksStore();
+const router = useRouter();
 const { importing: importingMods, importMods } = useModImport();
 
 const config = ref<InstanceConfig | null>(null);
@@ -319,6 +321,17 @@ async function save() {
               ><NIcon><FolderOpen20Regular /></NIcon
             ></template>
             {{ t("instances.action.open") }}
+          </NButton>
+          <NButton
+            :disabled="!instance"
+            @click="
+              instance && router.push({ name: 'instance-resources', params: { id: instance.id } })
+            "
+          >
+            <template #icon
+              ><NIcon><Apps20Regular /></NIcon
+            ></template>
+            {{ t("instances.action.resources") }}
           </NButton>
           <NButton
             v-if="instance && config?.loader"

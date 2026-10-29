@@ -1,0 +1,33 @@
+{
+  "title": "Resources",
+  "back": "Back to instances",
+  "loadFailed": "Couldn't read the instance",
+  "kind": {
+    "mod": "Mods",
+    "resourcepack": "Resource packs",
+    "shader": "Shaders",
+    "datapack": "Data packs"
+  },
+  "world": {
+    "label": "World",
+    "placeholder": "Choose a world for data packs",
+    "empty": "This instance has no worlds yet. Create one in game, then come back to add data packs"
+  },
+  "installed": {
+    "filter": "Filter by name",
+    "refresh": "Refresh",
+    "empty": "Nothing of this kind is installed yet",
+    "noMatch": "No matching resources",
+    "loadFailed": "Couldn't read installed resources",
+    "lookupFailed": "Couldn't identify files on Modrinth, showing file names instead",
+    "unknownSource": "Local file",
+    "count": "{count} in total, {enabled} enabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "deleteTitle": "Delete \"{name}\"?",
+    "deleteContent": "The file {file} will be deleted permanently, not moved to the recycle bin.",
+    "deleted": "Deleted \"{name}\"",
+    "cancel": "Cancel"
+  }
+}
