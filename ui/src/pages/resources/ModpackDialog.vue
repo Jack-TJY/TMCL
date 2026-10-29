@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// 安装整合包为新实例（PLAN.md M2-04、M2-06）：在 Modrinth 搜索并选版本，或选择本地 .mrpack；
-// 填写实例名后以 resources_modpack_install 任务安装。CurseForge 整合包待取得 API Key 后再加入。
+// 安装整合包为新实例（PLAN.md M2-04、M2-06）：在 Modrinth 或 CurseForge（构建带 Key 时才显示）
+// 搜索并选版本，或选择本地 .mrpack / CurseForge zip；填写实例名后以 resources_modpack_install 任务安装。
+// CurseForge 整合包中作者禁止第三方下载的文件会列出来，用户可打开网页手动下载后放进对应目录。
 import { Search20Regular } from "@vicons/fluent";
 import {
   NAlert,
@@ -10,6 +11,8 @@ import {
   NEmpty,
   NIcon,
   NInput,
+  NList,
+  NListItem,
   NModal,
   NSelect,
   NSpin,
@@ -26,7 +29,10 @@ import {
   resourcesModpackInstall,
   resourcesModpackSearch,
   resourcesModpackVersions,
+  resourcesOpenPage,
+  resourcesSources,
   RESOURCES_MODPACK_INSTALL_KIND,
+  type ManualDownload,
   type ModpackInfo,
   type ModpackSource,
   type ResourceHit,
@@ -40,7 +46,8 @@ import ChannelTag from "./ChannelTag.vue";
 import ResourceIcon from "./ResourceIcon.vue";
 import { defaultVersion, formatCount, formatSize } from "./resources";
 
-type Mode = "modrinth" | "file";
+type Platform = "modrinth" | "curseforge";
+type Mode = Platform | "file";
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ close: []; started: [taskId: TaskId] }>();
@@ -52,8 +59,12 @@ const tasks = useTasksStore();
 const mode = ref<Mode>("modrinth");
 const name = ref("");
 const busy = ref(false);
+const curseforge = ref(false);
+resourcesSources()
+  .then((sources) => (curseforge.value = sources.curseforge))
+  .catch(() => (curseforge.value = false));
 
-// Modrinth
+// Modrinth / CurseForge 搜索
 const query = ref("");
 const hits = ref<ResourceHit[]>([]);
 const searching = ref(false);
@@ -69,13 +80,21 @@ const info = ref<ModpackInfo | null>(null);
 const inspecting = ref(false);
 const inspectError = ref<AppError | null>(null);
 
+const platform = computed<Platform>(() =>
+  mode.value === "curseforge" ? "curseforge" : "modrinth",
+);
+
 let searchSeq = 0;
 async function search() {
   const id = ++searchSeq;
   searching.value = true;
   searchError.value = null;
   try {
-    const page = await resourcesModpackSearch({ query: query.value.trim(), limit: 20 });
+    const page = await resourcesModpackSearch({
+      platform: platform.value,
+      query: query.value.trim(),
+      limit: 20,
+    });
     if (id === searchSeq) hits.value = page.hits;
   } catch (err) {
     if (id === searchSeq) searchError.value = toAppError(err);
@@ -88,6 +107,13 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 watch(query, () => {
   clearTimeout(timer);
   timer = setTimeout(search, 350);
+});
+
+watch(mode, (next, prev) => {
+  if (next === "file" || next === prev) return;
+  selected.value = null;
+  hits.value = [];
+  void search();
 });
 
 watch(
@@ -111,7 +137,10 @@ async function select(hit: ResourceHit) {
   versionId.value = null;
   loadingVersions.value = true;
   try {
-    const list = await resourcesModpackVersions({ project_id: hit.project_id });
+    const list = await resourcesModpackVersions({
+      platform: platform.value,
+      project_id: hit.project_id,
+    });
     if (selected.value !== hit) return;
     versions.value = list;
     versionId.value = defaultVersion(list)?.id ?? null;
@@ -122,6 +151,13 @@ async function select(hit: ResourceHit) {
   }
 }
 
+const searchKey = computed(() =>
+  mode.value === "curseforge" ? "resources.modpack.searchCurseforge" : "resources.modpack.search",
+);
+const creditKey = computed(() =>
+  mode.value === "curseforge" ? "resources.creditCurseforge" : "resources.credit",
+);
+
 const version = computed(() => versions.value.find((v) => v.id === versionId.value) ?? null);
 const versionOptions = computed(() =>
   versions.value.map((v) => ({ label: v.version_number, value: v.id, version: v })),
@@ -131,7 +167,9 @@ function renderVersionLabel(option: { label: string; version: ResourceVersion })
 }
 
 async function chooseFile() {
-  const path = await pickFile([{ name: "Modrinth", extensions: ["mrpack"] }]).catch(() => null);
+  const filters = [{ name: "Modrinth", extensions: ["mrpack"] }];
+  if (curseforge.value) filters.push({ name: "CurseForge", extensions: ["zip"] });
+  const path = await pickFile(filters).catch(() => null);
   if (!path) return;
   filePath.value = path;
   info.value = null;
@@ -160,8 +198,27 @@ const source = computed<ModpackSource | null>(() => {
   if (mode.value === "modrinth") {
     return versionId.value ? { kind: "modrinth", version_id: versionId.value } : null;
   }
+  if (mode.value === "curseforge") {
+    return versionId.value && selected.value
+      ? {
+          kind: "curseforge",
+          project_id: Number(selected.value.project_id),
+          file_id: Number(versionId.value),
+        }
+      : null;
+  }
   return filePath.value && info.value ? { kind: "file", path: filePath.value } : null;
 });
+
+const manual = computed<ManualDownload[]>(() => info.value?.manual_downloads ?? []);
+
+async function openPage(item: ManualDownload) {
+  try {
+    await resourcesOpenPage({ url: item.page_url });
+  } catch (err) {
+    message.error(formatError(toAppError(err)));
+  }
+}
 
 async function confirm() {
   const chosen = source.value;
@@ -198,12 +255,13 @@ async function confirm() {
   >
     <NTabs v-model:value="mode" type="segment" size="small" class="modes">
       <NTab name="modrinth">Modrinth</NTab>
+      <NTab v-if="curseforge" name="curseforge">CurseForge</NTab>
       <NTab name="file">{{ t("resources.modpack.file") }}</NTab>
     </NTabs>
 
-    <template v-if="mode === 'modrinth'">
+    <template v-if="mode !== 'file'">
       <template v-if="!selected">
-        <NInput v-model:value="query" clearable :placeholder="t('resources.modpack.search')">
+        <NInput v-model:value="query" clearable :placeholder="t(searchKey)">
           <template #prefix
             ><NIcon><Search20Regular /></NIcon
           ></template>
@@ -233,7 +291,7 @@ async function confirm() {
             </span>
           </button>
         </NSpin>
-        <div class="credit">{{ t("resources.credit") }}</div>
+        <div class="credit">{{ t(creditKey) }}</div>
       </template>
       <template v-else>
         <div class="chosen">
@@ -265,6 +323,7 @@ async function confirm() {
             })
           }}
         </div>
+        <div v-if="mode === 'curseforge'" class="hint">{{ t("resources.modpack.manualHint") }}</div>
       </template>
     </template>
 
@@ -299,6 +358,25 @@ async function confirm() {
           </NDescriptionsItem>
         </NDescriptions>
         <div v-if="info?.summary" class="hint">{{ info.summary }}</div>
+        <NAlert
+          v-if="manual.length > 0"
+          type="warning"
+          class="block"
+          :title="t('resources.modpack.manualTitle', { count: manual.length })"
+        >
+          {{ t("resources.modpack.manualBody") }}
+          <NList size="small" class="manual">
+            <NListItem v-for="item in manual" :key="item.page_url">
+              <span class="manual-name">{{ item.project_name }}</span>
+              <span class="manual-file">{{ item.file_name }} → {{ item.target_dir }}/</span>
+              <template #suffix>
+                <NButton size="tiny" @click="openPage(item)">
+                  {{ t("resources.modpack.openPage") }}
+                </NButton>
+              </template>
+            </NListItem>
+          </NList>
+        </NAlert>
       </NSpin>
     </template>
 
@@ -410,6 +488,23 @@ async function confirm() {
 .field-label {
   flex-shrink: 0;
   font-size: 13px;
+}
+
+.manual {
+  max-height: 160px;
+  margin-top: 8px;
+  overflow-y: auto;
+  background: transparent;
+}
+
+.manual-name {
+  margin-right: 8px;
+  font-weight: 600;
+}
+
+.manual-file {
+  font-size: 12px;
+  color: var(--tmcl-text-secondary);
 }
 
 .path {
