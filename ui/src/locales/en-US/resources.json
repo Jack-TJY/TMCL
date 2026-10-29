@@ -50,7 +50,11 @@
     "by": "by {author}",
     "downloads": "{count} downloads",
     "install": "Install",
-    "installed": "Installed"
+    "installed": "Installed",
+    "separator": ", ",
+    "supports": "For {versions}",
+    "supportsMore": "For {versions} and more ({count} versions)",
+    "requires": "Requires {loader}"
   },
   "install": {
     "title": "Install \"{name}\"",
@@ -101,5 +105,27 @@
     "download": "Download",
     "started": "Installing modpack \"{name}\". It will appear in the instance list when done",
     "action": "Install modpack"
+  },
+  "global": {
+    "title": "Resources",
+    "target": "Install to",
+    "anyInstance": "No instance: browse everything",
+    "vanilla": "Vanilla",
+    "filtered": "Showing only resources for {target}",
+    "unfiltered": "Showing all resources with supported game versions and required loaders; you pick an instance before installing",
+    "modNoLoader": "\"{name}\" is a vanilla instance without Fabric, Forge or another loader, so it can't use mods",
+    "shaderNoLoader": "\"{name}\" is a vanilla instance; shaders need a mod such as Iris (Fabric) or Oculus (Forge)",
+    "installLoader": "Install a loader",
+    "showAll": "Browse everything",
+    "noneFor": "No {kind} found for {target}"
+  },
+  "pick": {
+    "title": "Install \"{name}\" to",
+    "none": "You don't have any instances yet; create one on the Download page",
+    "noCompatible": "No compatible instance",
+    "version": "Doesn't support {version}",
+    "noLoader": "Vanilla instances can't use mods",
+    "loader": "Requires {loaders}",
+    "next": "Next"
   }
 }

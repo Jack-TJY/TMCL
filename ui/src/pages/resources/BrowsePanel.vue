@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // 浏览 Modrinth：按实例的游戏版本与加载器搜索某类资源，点“安装”打开安装对话框。
+// 不指定实例时搜索全部资源，并在每一项上标出支持的游戏版本与所需的加载器。
 import { Search20Regular } from "@vicons/fluent";
 import {
   NAlert,
@@ -17,6 +18,7 @@ import { useI18n } from "vue-i18n";
 import { toAppError } from "../../api/invoke";
 import {
   resourcesSearch,
+  resourcesSearchAny,
   type ResourceHit,
   type ResourceKind,
   type ResourceSort,
@@ -25,9 +27,11 @@ import type { AppError } from "../../bindings/AppError";
 import { formatError } from "../../i18n";
 import ResourceIcon from "./ResourceIcon.vue";
 import { formatCount, PAGE_SIZE, RESOURCE_SORTS } from "./resources";
+import { hitLoaders, loaderName, versionSummary } from "./targets";
 
 const props = defineProps<{
-  instanceId: string;
+  /** 按该实例过滤；`null` 表示不限实例。 */
+  instanceId: string | null;
   kind: ResourceKind;
   /** 已安装项目的 Modrinth ID，用于标出已安装。 */
   installedIds: ReadonlySet<string>;
@@ -51,14 +55,16 @@ async function search() {
   loading.value = true;
   error.value = null;
   try {
-    const result = await resourcesSearch({
-      instance_id: props.instanceId,
+    const args = {
       kind: props.kind,
       query: query.value.trim(),
       sort: sort.value,
       offset: (page.value - 1) * PAGE_SIZE,
       limit: PAGE_SIZE,
-    });
+    };
+    const result = props.instanceId
+      ? await resourcesSearch({ instance_id: props.instanceId, ...args })
+      : await resourcesSearchAny(args);
     if (current !== seq) return;
     hits.value = result.hits;
     total.value = result.total_hits;
@@ -92,6 +98,16 @@ watch(
   { immediate: true },
 );
 
+/** 不限实例时显示的“支持的游戏版本”。 */
+function supportText(hit: ResourceHit): string {
+  const { latest, total } = versionSummary(hit.game_versions);
+  if (total === 0) return "";
+  const versions = latest.join(t("resources.browse.separator"));
+  return total > latest.length
+    ? t("resources.browse.supportsMore", { versions, count: total })
+    : t("resources.browse.supports", { versions });
+}
+
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)));
 const sortOptions = computed(() =>
   RESOURCE_SORTS.map((value) => ({ label: t(`resources.browse.sort.${value}`), value })),
@@ -122,11 +138,11 @@ const sortOptions = computed(() =>
     </NAlert>
 
     <NSpin :show="loading" class="list">
-      <NEmpty
-        v-if="!loading && !error && hits.length === 0"
-        class="empty"
-        :description="t('resources.browse.empty')"
-      />
+      <template v-if="!loading && !error && hits.length === 0">
+        <slot name="empty">
+          <NEmpty class="empty" :description="t('resources.browse.empty')" />
+        </slot>
+      </template>
       <div v-for="hit in hits" :key="hit.project_id" class="hit">
         <ResourceIcon :url="hit.icon_url" :size="44" />
         <div class="hit-body">
@@ -137,6 +153,20 @@ const sortOptions = computed(() =>
           <div class="hit-desc" :title="hit.description">{{ hit.description }}</div>
           <div class="hit-meta">
             {{ t("resources.browse.downloads", { count: formatCount(hit.downloads, locale) }) }}
+            <template v-if="instanceId === null && supportText(hit)">
+              · {{ supportText(hit) }}
+            </template>
+          </div>
+          <div v-if="instanceId === null && hitLoaders(hit, kind).length" class="hit-tags">
+            <NTag
+              v-for="loader in hitLoaders(hit, kind)"
+              :key="loader"
+              size="tiny"
+              round
+              :bordered="false"
+            >
+              {{ t("resources.browse.requires", { loader: loaderName(loader) }) }}
+            </NTag>
           </div>
         </div>
         <NTag v-if="installedIds.has(hit.project_id)" size="small" round :bordered="false">
@@ -232,6 +262,13 @@ const sortOptions = computed(() =>
 .hit-meta {
   font-size: 12px;
   color: var(--tmcl-text-secondary);
+}
+
+.hit-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .footer {

@@ -50,7 +50,11 @@
     "by": "作者 {author}",
     "downloads": "{count} 次下载",
     "install": "安装",
-    "installed": "已安装"
+    "installed": "已安装",
+    "separator": "、",
+    "supports": "适用 {versions}",
+    "supportsMore": "适用 {versions} 等 {count} 个版本",
+    "requires": "需要 {loader}"
   },
   "install": {
     "title": "安装“{name}”",
@@ -101,5 +105,27 @@
     "download": "下载",
     "started": "正在安装整合包“{name}”，完成后会出现在实例列表中",
     "action": "安装整合包"
+  },
+  "global": {
+    "title": "资源下载",
+    "target": "安装到",
+    "anyInstance": "不选实例：浏览全部资源",
+    "vanilla": "原版",
+    "filtered": "只显示适用于 {target} 的资源",
+    "unfiltered": "显示全部资源，并标出支持的游戏版本与所需的加载器；安装前需要选择实例",
+    "modNoLoader": "“{name}”是原版实例，没有安装 Fabric、Forge 等加载器，不能安装 Mod",
+    "shaderNoLoader": "“{name}”是原版实例，光影需要 Iris（Fabric）或 Oculus（Forge）等 Mod 才能加载",
+    "installLoader": "为实例安装加载器",
+    "showAll": "不选实例，浏览全部",
+    "noneFor": "没有适用于 {target} 的{kind}"
+  },
+  "pick": {
+    "title": "把“{name}”安装到",
+    "none": "还没有任何实例，先到“下载”页创建一个",
+    "noCompatible": "没有兼容的实例",
+    "version": "不支持 {version}",
+    "noLoader": "原版实例不能装 Mod",
+    "loader": "需要 {loaders}",
+    "next": "下一步"
   }
 }

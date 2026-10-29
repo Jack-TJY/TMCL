@@ -1,4 +1,4 @@
-// 左侧导航项（PLAN.md M1-11）：首页 / 实例 / 下载 / 账号 / 皮肤 / 同步（M2-10）/ 联机 / 设置。
+// 左侧导航项（PLAN.md M1-11）：首页 / 实例 / 下载 / 资源（M2-06）/ 账号 / 皮肤 / 同步（M2-10）/ 联机 / 设置。
 import {
   Accessibility24Filled,
   Accessibility24Regular,
@@ -14,6 +14,8 @@ import {
   PeopleCommunity24Regular,
   Person24Filled,
   Person24Regular,
+  PuzzlePiece24Filled,
+  PuzzlePiece24Regular,
   Settings24Filled,
   Settings24Regular,
 } from "@vicons/fluent";
@@ -44,6 +46,7 @@ export const MAIN_NAV: NavItem[] = [
   item("home", Home24Regular, Home24Filled),
   item("instances", Cube24Regular, Cube24Filled),
   item("download", ArrowDownload24Regular, ArrowDownload24Filled),
+  item("resources", PuzzlePiece24Regular, PuzzlePiece24Filled),
   item("accounts", Person24Regular, Person24Filled),
   item("skin", Accessibility24Regular, Accessibility24Filled),
   item("sync", ArrowSync24Regular, ArrowSync24Filled),
