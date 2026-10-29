@@ -4,6 +4,7 @@ import { NCollapse, NCollapseItem, NTag } from "naive-ui";
 import { useI18n } from "vue-i18n";
 import type { SyncPreview } from "../../bindings/SyncPreview";
 import { optionLabel, valueLabel } from "./options";
+import { OPTION_SPANS, spanText, supportedOn, usesLegacyKeys } from "./versions";
 
 defineProps<{ preview: SyncPreview; names: Record<string, string> }>();
 
@@ -43,6 +44,32 @@ const tr = { t, te };
             <td>
               <div>{{ optionLabel(change.key, tr) ?? change.key }}</div>
               <div v-if="optionLabel(change.key, tr)" class="mono raw">{{ change.key }}</div>
+              <div class="marks">
+                <NTag
+                  v-if="supportedOn(change.key, target.game_version) === false"
+                  size="tiny"
+                  type="warning"
+                  :bordered="false"
+                >
+                  {{ t("sync.version.missing", { version: target.game_version }) }}
+                </NTag>
+                <NTag
+                  v-else-if="OPTION_SPANS[change.key]"
+                  size="tiny"
+                  :bordered="false"
+                  :title="t('sync.version.range', { range: spanText(OPTION_SPANS[change.key]) })"
+                >
+                  {{ spanText(OPTION_SPANS[change.key]) }}
+                </NTag>
+                <NTag
+                  v-if="change.key.startsWith('key_') && usesLegacyKeys(target.game_version)"
+                  size="tiny"
+                  type="info"
+                  :bordered="false"
+                >
+                  {{ t("sync.version.legacyKeys") }}
+                </NTag>
+              </div>
             </td>
             <td>{{ t(`sync.category.${change.category}`) }}</td>
             <td v-if="change.old === null" class="muted">
@@ -91,6 +118,13 @@ const tr = { t, te };
 
 .mono {
   font-family: Consolas, "Cascadia Mono", monospace;
+}
+
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
 }
 
 .raw {

@@ -312,5 +312,25 @@
       "true": "Toggle",
       "false": "Hold"
     }
+  },
+  "version": {
+    "missing": "Not in {version}; the game ignores it",
+    "legacyKeys": "Converted to a legacy key code",
+    "range": "Available in {range}"
+  },
+  "template": {
+    "action": "Load template",
+    "title": "Load the {version} template?",
+    "content": "The template has the default key bindings and common video and audio settings of {version}, {count} options in total. Replace clears what you are editing; Merge only overwrites options with the same key.",
+    "replace": "Replace all",
+    "merge": "Merge",
+    "loaded": "Loaded the {version} template",
+    "note": {
+      "1_8_9": "Classic PvP version: no offhand or attack indicator, legacy key codes",
+      "1_12_2": "Popular for older mods; the last version with legacy key codes",
+      "1_16_5": "Graphics becomes Fast / Fancy / Fabulous; adds Social Interactions and FOV Effects",
+      "1_20_1": "Adds Simulation Distance, Chunk Builder, Darkness Pulsing and more",
+      "1_21_1": "Popular for current mods"
+    }
   }
 }
