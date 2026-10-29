@@ -4,6 +4,7 @@
 import { Delete20Regular, DocumentCopy20Regular, Search20Regular } from "@vicons/fluent";
 import {
   NButton,
+  NCheckbox,
   NDropdown,
   NEmpty,
   NIcon,
@@ -24,7 +25,7 @@ import type { SyncProfile } from "../../bindings/SyncProfile";
 import { formatError } from "../../i18n";
 import { defaultValue, KNOWN_SETTINGS } from "./controls";
 import OptionControl from "./OptionControl.vue";
-import { optionLabel } from "./options";
+import { isHiddenOption, optionLabel } from "./options";
 import {
   filterRows,
   MAX_OPTIONS,
@@ -48,6 +49,9 @@ const dialog = useDialog();
 const rows = ref<EditorRow[]>([]);
 const query = ref("");
 const busy = ref(false);
+const showHidden = ref(false);
+/** 本次打开后新添加的行：即使键名未收录也不隐藏，否则刚加的“自定义选项”会消失。 */
+const added = ref(new Set<number>());
 
 watch(
   () => props.show,
@@ -55,6 +59,8 @@ watch(
     if (!show) return;
     rows.value = toRows(props.options);
     query.value = "";
+    showHidden.value = false;
+    added.value = new Set();
   },
   { immediate: true },
 );
@@ -63,7 +69,13 @@ const issues = computed(() => {
   const list = validateRows(rows.value);
   return new Map(rows.value.map((row, i) => [row.id, list[i]]));
 });
-const visible = computed(() => filterRows(rows.value, query.value, (key) => optionLabel(key, tr)));
+const hidden = (row: EditorRow) => isHiddenOption(row.key, tr) && !added.value.has(row.id);
+const hiddenCount = computed(() => rows.value.filter(hidden).length);
+const visible = computed(() =>
+  filterRows(rows.value, query.value, (key) => optionLabel(key, tr)).filter(
+    (row) => showHidden.value || !hidden(row),
+  ),
+);
 const parsed = computed(() => rowsToOptions(rows.value));
 const tooMany = computed(() => rows.value.length > MAX_OPTIONS);
 
@@ -80,7 +92,9 @@ const addOptions = computed(() => {
 
 function addRow(key: string) {
   query.value = "";
-  rows.value.push(key === CUSTOM ? newRow() : newRow(key, defaultValue(key)));
+  const row = key === CUSTOM ? newRow() : newRow(key, defaultValue(key));
+  added.value.add(row.id);
+  rows.value.push(row);
 }
 
 /** 未收录或尚未填写键的行显示键输入框。 */
@@ -173,6 +187,12 @@ async function save() {
         </NButton>
       </NDropdown>
     </div>
+    <div v-if="hiddenCount > 0" class="hidden-toggle">
+      <NCheckbox v-model:checked="showHidden">
+        {{ t("sync.hidden.showHidden", { count: hiddenCount }) }}
+      </NCheckbox>
+      <span class="hidden-hint">{{ t("sync.hidden.hiddenHint") }}</span>
+    </div>
     <NScrollbar style="max-height: 50vh">
       <NEmpty v-if="visible.length === 0" class="empty" :description="t('sync.editor.empty')" />
       <div v-for="row in visible" :key="row.id" class="row">
@@ -238,6 +258,19 @@ async function save() {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.hidden-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.hidden-hint {
+  font-size: 12px;
+  color: var(--tmcl-text-secondary);
 }
 
 .empty {
