@@ -1,0 +1,80 @@
+{
+  "title": "Settings sync",
+  "loadFailed": "Couldn't load instances or the master profile",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "categories": "Categories",
+  "category": {
+    "keys": "Key bindings",
+    "video": "Video",
+    "audio": "Audio",
+    "language": "Language",
+    "other": "Other"
+  },
+  "master": {
+    "title": "Master profile",
+    "none": "No master profile yet. Capture one from an instance or edit it manually",
+    "source": "Source",
+    "manual": "Edited manually",
+    "options": "Options",
+    "updated": "Updated",
+    "pickSource": "Choose a source instance",
+    "capture": "Capture from instance",
+    "edit": "Edit manually",
+    "captured": "Captured the master profile from {name}",
+    "overwriteTitle": "Overwrite the master profile?",
+    "overwriteContent": "Capturing replaces the current master profile with the selected instance's game settings. Manual edits will be lost."
+  },
+  "targets": {
+    "title": "Target instances",
+    "all": "Select all",
+    "none": "Clear",
+    "empty": "No usable instances yet",
+    "isSource": "master source"
+  },
+  "preview": {
+    "action": "Preview changes",
+    "summary": "{changes} settings will change in {targets} instances",
+    "noChanges": "The selected instances already match the master profile",
+    "changes": "{count} changes",
+    "unchanged": "No changes",
+    "category": "Category",
+    "old": "Current",
+    "new": "New",
+    "missing": "(none)"
+  },
+  "apply": {
+    "action": "Sync",
+    "title": "Sync settings?",
+    "content": "{changes} settings will change in {targets} instances. Each file is backed up first, and you can undo it next to the instance.",
+    "confirm": "Sync",
+    "done": "Synced {count} instances"
+  },
+  "restore": {
+    "action": "Undo",
+    "title": "Undo the last sync for {name}?",
+    "content": "The instance's game settings will be replaced with the latest backup. Undoing again restores an earlier backup.",
+    "confirm": "Undo",
+    "done": "Restored the game settings of {name}",
+    "none": "{name} has no backup to restore"
+  },
+  "editor": {
+    "title": "Edit master profile",
+    "hint": "Use the 1.13+ format, e.g. key bindings as key_key.jump = key.keyboard.space. Values are converted automatically for older versions.",
+    "search": "Search keys or values",
+    "add": "Add",
+    "remove": "Remove",
+    "key": "Key",
+    "value": "Value",
+    "empty": "No options",
+    "count": "{count} / {max} options",
+    "save": "Save",
+    "saved": "Master profile saved",
+    "issue": {
+      "empty": "Key can't be empty",
+      "colon": "Key can't contain a colon",
+      "newline": "Value can't contain line breaks",
+      "duplicate": "Duplicate key"
+    }
+  }
+}

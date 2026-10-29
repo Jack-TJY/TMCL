@@ -9,6 +9,7 @@ import HomePage from "./pages/home/HomePage.vue";
 import InstancesPage from "./pages/instances/InstancesPage.vue";
 import SettingsPage from "./pages/settings/SettingsPage.vue";
 import SkinPage from "./pages/skin/SkinPage.vue";
+import SyncPage from "./pages/sync/SyncPage.vue";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -66,6 +67,12 @@ const routes: RouteRecordRaw[] = [
     name: "skin",
     component: SkinPage,
     meta: { titleKey: "shell.nav.skin" },
+  },
+  {
+    path: "/sync",
+    name: "sync",
+    component: SyncPage,
+    meta: { titleKey: "sync.title" },
   },
   { path: "/:pathMatch(.*)*", redirect: "/home" },
 ];
