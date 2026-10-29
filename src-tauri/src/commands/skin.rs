@@ -1,7 +1,8 @@
 //! `skin_*` 命令（PLAN.md M2-07）：本地皮肤库、正版账号的皮肤与披风、外置登录账号的皮肤站。
 //!
 //! 皮肤库位于 `<data_root>/skins/`，界面经 `skin_library_read` 取回图片内容，不直接访问文件系统；
-//! 拖入的 PNG 经 `skin_file_read`、档案中的图片经 `skin_texture` 取回。
+//! 拖入的 PNG 经 `skin_file_read`、档案中的图片经 `skin_texture` 取回；
+//! 档案中正在使用的皮肤经 `skin_library_add_texture` 加入皮肤库。
 //! 正版接口使用的 Minecraft 访问令牌经 `tmcl_auth::store::prepare_launch` 取得（快过期时续期），
 //! 不写入日志。
 
@@ -100,6 +101,16 @@ pub struct SkinTextureArgs {
     pub url: String,
 }
 
+/// `skin_library_add_texture` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SkinAddTextureArgs {
+    /// 档案中的皮肤地址（`ProfileSkin.url`）。
+    pub url: String,
+    /// 皮肤名称，例如玩家名。
+    pub name: String,
+    pub variant: SkinVariant,
+}
+
 /// 外置登录账号的皮肤站页面。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct SkinSite {
@@ -138,6 +149,20 @@ pub async fn skin_library_import(
             .unwrap_or_default()
     });
     library(&state)?.add(&bytes, &name, args.variant)
+}
+
+/// 下载档案中的皮肤（只接受 `textures.minecraft.net` 的地址）并加入皮肤库，
+/// 同一张图片已在库中时返回已有的条目。
+#[tauri::command]
+pub async fn skin_library_add_texture(
+    state: State<'_, AppState>,
+    args: SkinAddTextureArgs,
+) -> Result<SkinEntry, AppError> {
+    let library = library(&state)?;
+    let ctx = TaskCtx::noop("skin");
+    let png =
+        texture::fetch_texture(&HttpClient::new()?, &state.textures_base, &args.url, &ctx).await?;
+    library.add(&png, &args.name, args.variant)
 }
 
 /// 读取用户拖入的 PNG 供预览，不加入皮肤库；校验规则同 `skin_library_import`。
