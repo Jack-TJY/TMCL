@@ -22,7 +22,8 @@ pub const MAX_NAME_CHARS: usize = 64;
 
 const INDEX_FILE: &str = "index.json";
 const INDEX_SCHEMA: u32 = 1;
-const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+/// PNG 文件签名。
+pub const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 
 /// 串行化 `index.json` 的“读取—修改—写回”。
 static INDEX_LOCK: Mutex<()> = Mutex::new(());

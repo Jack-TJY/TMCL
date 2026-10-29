@@ -53,4 +53,5 @@
 | 档案皮肤与披风 | `GET https://api.minecraftservices.com/minecraft/profile` | `Authorization: Bearer <Minecraft 访问令牌>`，返回 `skins[]`（`id`、`state`、`url`、`variant: CLASSIC\|SLIM`）与 `capes[]`（`id`、`state`、`url`、`alias`）；401 视为令牌失效，404 为没有档案 | 未实测，需维护者用正版账号验证 |
 | 上传皮肤 | `POST https://api.minecraftservices.com/minecraft/profile/skins` | multipart：`variant`（`classic`\|`slim`）与 `file`（PNG）；成功返回新档案；400 视为图片不合法 | 同上 |
 | 切换 / 隐藏披风 | `PUT` / `DELETE https://api.minecraftservices.com/minecraft/profile/capes/active` | `PUT` 的 JSON 体为 `{"capeId": "<id>"}`；成功返回新档案 | 同上 |
+| 皮肤与披风图片 | `GET https://textures.minecraft.net/texture/<哈希>` | 档案 `skins[].url` / `capes[].url` 给出的 PNG（地址可能是 `http://`，启动器一律改用 HTTPS）；只用于界面预览（`skin_texture`） | 未实测，需维护者用正版账号验证 |
 | 外置登录皮肤站页面 | 账号保存的 Yggdrasil API 地址 | GET API 根读取元数据的 `meta.links.homepage`，没有时用 API 地址的站点根；只在系统浏览器中打开 | 离线测试 |

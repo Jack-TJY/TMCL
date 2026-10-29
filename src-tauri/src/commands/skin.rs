@@ -1,6 +1,7 @@
 //! `skin_*` 命令（PLAN.md M2-07）：本地皮肤库、正版账号的皮肤与披风、外置登录账号的皮肤站。
 //!
-//! 皮肤库位于 `<data_root>/skins/`，界面经 `skin_library_read` 取回图片内容，不直接访问文件系统。
+//! 皮肤库位于 `<data_root>/skins/`，界面经 `skin_library_read` 取回图片内容，不直接访问文件系统；
+//! 拖入的 PNG 经 `skin_file_read`、档案中的图片经 `skin_texture` 取回。
 //! 正版接口使用的 Minecraft 访问令牌经 `tmcl_auth::store::prepare_launch` 取得（快过期时续期），
 //! 不写入日志。
 
@@ -15,7 +16,10 @@ use tmcl_auth::{AccountKind, AuthlibServer, store};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::HttpClient;
 use tmcl_skin::library::MAX_SKIN_BYTES;
-use tmcl_skin::{MojangClient, SkinEntry, SkinLibrary, SkinProfile, SkinVariant, yggdrasil};
+use tmcl_skin::{
+    MojangClient, SkinEntry, SkinLibrary, SkinProfile, SkinVariant, texture, validate_png,
+    yggdrasil,
+};
 use ts_rs::TS;
 
 use crate::commands::settings::open_in_file_manager;
@@ -82,6 +86,20 @@ pub struct SkinSetCapeArgs {
     pub cape_id: Option<String>,
 }
 
+/// `skin_file_read` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SkinFileArgs {
+    /// 用户拖入或选中的 PNG 的绝对路径。
+    pub path: String,
+}
+
+/// `skin_texture` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SkinTextureArgs {
+    /// 档案中的图片地址（`ProfileSkin.url` / `ProfileCape.url`）。
+    pub url: String,
+}
+
 /// 外置登录账号的皮肤站页面。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct SkinSite {
@@ -120,6 +138,20 @@ pub async fn skin_library_import(
             .unwrap_or_default()
     });
     library(&state)?.add(&bytes, &name, args.variant)
+}
+
+/// 读取用户拖入的 PNG 供预览，不加入皮肤库；校验规则同 `skin_library_import`。
+/// 以二进制返回（前端收到 `ArrayBuffer`）。
+#[tauri::command]
+pub async fn skin_file_read(args: SkinFileArgs) -> Result<Response, AppError> {
+    let source = Path::new(&args.path);
+    let io_error = |e: std::io::Error| AppError::from(e).with_param("path", source.display());
+    if fs::metadata(source).map_err(io_error)?.len() > MAX_SKIN_BYTES as u64 {
+        return Err(AppError::new(ErrorCode::SkinInvalidImage));
+    }
+    let bytes = fs::read(source).map_err(io_error)?;
+    validate_png(&bytes)?;
+    Ok(Response::new(bytes))
 }
 
 /// 读取皮肤图片，以二进制返回（前端收到 `ArrayBuffer`）。
@@ -230,6 +262,18 @@ pub async fn skin_set_cape(
         client.set_cape(&token, args.cape_id.as_deref(), &ctx).await
     })
     .await
+}
+
+/// 下载档案中的皮肤或披风图片（只接受 `textures.minecraft.net` 的地址），以二进制返回。
+#[tauri::command]
+pub async fn skin_texture(
+    state: State<'_, AppState>,
+    args: SkinTextureArgs,
+) -> Result<Response, AppError> {
+    let ctx = TaskCtx::noop("skin");
+    texture::fetch_texture(&HttpClient::new()?, &state.textures_base, &args.url, &ctx)
+        .await
+        .map(Response::new)
 }
 
 async fn site_url(state: &AppState, account_id: &str) -> AppResult<SkinSite> {
