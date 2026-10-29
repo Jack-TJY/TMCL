@@ -15,4 +15,12 @@ url: string, } | { "kind": "modrinth",
 /**
  * 版本 ID。
  */
-version_id: string, };
+version_id: string, } | { "kind": "curseforge", 
+/**
+ * 项目 ID。
+ */
+project_id: number, 
+/**
+ * 文件 ID。
+ */
+file_id: number, };

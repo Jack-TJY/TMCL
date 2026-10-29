@@ -64,5 +64,7 @@
   "SKIN_NOT_FOUND": "皮肤库中没有这个皮肤，请刷新列表",
   "SYNC_MASTER_INVALID": "设置同步的主配置无效，请重新采集或编辑",
   "SYNC_NO_MASTER": "还没有设置同步的主配置，请先从实例采集或手动编辑",
-  "SYNC_SOURCE_NO_OPTIONS": "实例 {id} 还没有游戏设置，请先启动一次游戏"
+  "SYNC_SOURCE_NO_OPTIONS": "实例 {id} 还没有游戏设置，请先启动一次游戏",
+  "RESOURCES_CURSEFORGE_DISABLED": "此版本未启用 CurseForge",
+  "RESOURCES_MANUAL_DOWNLOAD": "{name} 的作者不允许第三方下载，请在 CurseForge 网页上手动下载"
 }

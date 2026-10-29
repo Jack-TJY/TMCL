@@ -74,6 +74,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_search,
         commands::resources::resources_search_any,
         commands::resources::resources_set_enabled,
+        commands::resources::resources_sources,
         commands::resources::resources_update,
         commands::resources::resources_versions,
         commands::resources::resources_worlds,
@@ -1451,6 +1452,86 @@ fov:0.0
         zip.start_file("overrides/config/a.toml", options).unwrap();
         zip.write_all(b"x = 1").unwrap();
         zip.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn curseforge_modpacks_over_ipc_and_hidden_without_key() {
+        let dir = tempfile::tempdir().unwrap();
+        let server =
+            tauri::async_runtime::block_on(TestServer::start(Vec::<(String, Vec<u8>)>::new()));
+        let hit = json!({ "id": 925200, "name": "Pack B", "slug": "pack-b", "classId": 4471,
+            "summary": "s", "downloadCount": 10.0, "authors": [{ "name": "a" }],
+            "logo": { "thumbnailUrl": "https://media.forgecdn.net/b.png" } });
+        let file = json!({ "id": 77, "modId": 925200, "displayName": "Pack B 1.0",
+            "fileName": "Pack B-1.0.zip", "releaseType": 2, "fileLength": 3,
+            "gameVersions": ["1.20.1", "Forge"], "fileDate": "2024-01-01T00:00:00Z" });
+        for (path, body) in [
+            (
+                modrinth_target(
+                    "/v1/mods/search",
+                    &[
+                        ("gameId", "432"),
+                        ("classId", "4471"),
+                        ("searchFilter", "pack"),
+                        ("sortField", "1"),
+                        ("sortOrder", "desc"),
+                        ("pageSize", "20"),
+                    ],
+                ),
+                json!({ "data": [hit],
+                    "pagination": { "index": 0, "pageSize": 20, "resultCount": 1, "totalCount": 1 } }),
+            ),
+            (
+                modrinth_target("/v1/mods/925200/files", &[("pageSize", "50")]),
+                json!({ "data": [file],
+                    "pagination": { "index": 0, "pageSize": 50, "resultCount": 1, "totalCount": 1 } }),
+            ),
+        ] {
+            server.route(path, body.to_string().into_bytes());
+        }
+
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir.path().join("data"))));
+        state.curseforge = Some(
+            tmcl_resources::curseforge::CurseForgeClient::with_base(
+                &tmcl_net::HttpClient::new().unwrap(),
+                &server.url("/v1"),
+                "test-api-key",
+            )
+            .unwrap(),
+        );
+        let (_app, webview) = mock_app_with(state);
+        let sources = invoke(&webview, "resources_sources", json!({})).unwrap();
+        assert_eq!(sources["curseforge"], true);
+        let body = json!({ "args": { "platform": "curseforge", "query": "pack" } });
+        let page = invoke(&webview, "resources_modpack_search", body).unwrap();
+        assert_eq!(page["hits"][0]["project_id"], "925200");
+        assert_eq!(
+            page["hits"][0]["icon_url"],
+            "https://media.forgecdn.net/b.png"
+        );
+        let body = json!({ "args": { "platform": "curseforge", "project_id": "925200" } });
+        let list = invoke(&webview, "resources_modpack_versions", body).unwrap();
+        assert_eq!(list["versions"][0]["id"], "77");
+        assert_eq!(list["versions"][0]["channel"], "beta");
+        assert_eq!(list["versions"][0]["loaders"], json!(["forge"]));
+
+        let mut state = AppState::with_data(Ok(DataPaths::at(dir.path().join("data2"))));
+        state.curseforge = None;
+        let (app, webview) = mock_app_with(state);
+        let finished_rx = finished_events(&app);
+        let sources = invoke(&webview, "resources_sources", json!({})).unwrap();
+        assert_eq!(sources["curseforge"], false);
+        let body = json!({ "args": { "platform": "curseforge", "query": "pack" } });
+        let err = invoke(&webview, "resources_modpack_search", body).unwrap_err();
+        assert_eq!(err["code"], "RESOURCES_CURSEFORGE_DISABLED");
+        let body = json!({ "args": { "source":
+            { "kind": "curseforge", "project_id": 925200, "file_id": 77 } } });
+        let finished = run_task(&webview, &finished_rx, "resources_modpack_install", body);
+        assert_eq!(finished.state, TaskState::Failed);
+        assert_eq!(
+            finished.error.unwrap().code,
+            ErrorCode::ResourcesCurseforgeDisabled
+        );
     }
 
     #[test]

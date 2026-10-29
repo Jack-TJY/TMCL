@@ -63,9 +63,11 @@
 | `NET_REQUEST` | net | 其他 HTTP 请求错误（构造请求、读取响应、解码失败等） | `url`（可选） | 网络请求失败 {url} | Network request failed for {url} |
 | `NET_SIZE_MISMATCH` | net | 下载文件的大小与期望值不一致 | `url`、`expected`、`actual` | 文件大小不符 {url} | File size mismatch for {url} |
 | `NET_TIMEOUT` | net | 连接或读取超时 | `url` | 连接超时 {url} | Connection timed out: {url} |
+| `RESOURCES_CURSEFORGE_DISABLED` | resources | 本次构建没有 CurseForge API Key，CurseForge 来源不可用 | — | 此版本未启用 CurseForge | CurseForge is not enabled in this build |
 | `RESOURCES_DEPENDENCY_UNAVAILABLE` | resources | 必需前置在 Modrinth 上没有适用于该实例游戏版本与加载器的版本，或前置项目已不存在 | `project` | 找不到适用于此实例的前置 {project} | No version of the required dependency {project} fits this instance |
 | `RESOURCES_FILE_NOT_FOUND` | resources | 实例中找不到要启用、禁用或删除的资源文件（已被移走或文件名非法） | `file` | 找不到资源文件 {file}，请刷新列表 | Resource file {file} was not found, please refresh the list |
 | `RESOURCES_INCOMPATIBLE` | resources | 要安装的资源与已安装或同批安装的资源不兼容（Modrinth `incompatible` 依赖） | `project`、`with` | {project} 与 {with} 不兼容，已取消安装 | {project} is incompatible with {with}, installation cancelled |
+| `RESOURCES_MANUAL_DOWNLOAD` | resources | CurseForge 上的作者禁止第三方下载该文件（`downloadUrl` 为空），需要在网页上手动下载 | `name`、`url` | {name} 的作者不允许第三方下载，请在 CurseForge 网页上手动下载 | The author of {name} does not allow third-party downloads, please download it from the CurseForge page |
 | `RESOURCES_MODPACK_INVALID` | resources | 整合包文件无效：不是 zip、缺少或损坏 `modrinth.index.json`，或其中的文件路径、哈希、下载地址非法 | — | 整合包文件已损坏或格式不正确 | The modpack file is damaged or not a valid modpack |
 | `RESOURCES_MODPACK_UNSUPPORTED` | resources | 整合包的格式版本、游戏或依赖（加载器）不受支持 | `name` | 不支持此整合包：{name} | This modpack is not supported: {name} |
 | `RESOURCES_VERSION_NOT_FOUND` | resources | Modrinth 上找不到要安装的版本，或该版本没有文件 | `version` | 找不到资源版本 {version} | Resource version {version} was not found |
