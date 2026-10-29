@@ -1,4 +1,4 @@
-//! `resources_*` 命令：按实例搜索 Modrinth 资源、列出版本、生成安装计划并安装；
+//! `resources_*` 命令：按实例（或不限实例）搜索 Modrinth 资源、列出版本、生成安装计划并安装；
 //! 管理已安装资源（列表、从本地导入、启用/禁用、删除、检查更新与更新）；搜索整合包并安装为新实例，
 //! 把实例导出为整合包。
 
@@ -40,6 +40,28 @@ pub const RESOURCES_MODPACK_EXPORT_KIND: &str = "resources_modpack_export";
 pub struct ResourcesSearchArgs {
     /// 按该实例的游戏版本与加载器过滤。
     pub instance_id: String,
+    /// 资源种类。
+    pub kind: ResourceKind,
+    /// 关键词，可为空。
+    #[serde(default)]
+    pub query: String,
+    /// 排序方式，默认相关度。
+    #[serde(default)]
+    #[ts(optional)]
+    pub sort: Option<ResourceSort>,
+    /// 跳过的条数。
+    #[serde(default)]
+    #[ts(optional)]
+    pub offset: Option<u32>,
+    /// 每页条数，默认 20，最多 100。
+    #[serde(default)]
+    #[ts(optional)]
+    pub limit: Option<u32>,
+}
+
+/// `resources_search_any` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesSearchAnyArgs {
     /// 资源种类。
     pub kind: ResourceKind,
     /// 关键词，可为空。
@@ -298,6 +320,22 @@ pub async fn resources_search(
     };
     let ctx = TaskCtx::noop("resources_search");
     browse::search(state.modrinth()?, &target, args.kind, &query, &ctx).await
+}
+
+/// 不按实例过滤，搜索全部资源。
+#[tauri::command]
+pub async fn resources_search_any(
+    state: State<'_, AppState>,
+    args: ResourcesSearchAnyArgs,
+) -> Result<ResourcePage, AppError> {
+    let query = BrowseQuery {
+        query: args.query,
+        sort: args.sort.unwrap_or_default(),
+        offset: args.offset.unwrap_or_default(),
+        limit: args.limit.unwrap_or_default(),
+    };
+    let ctx = TaskCtx::noop("resources_search_any");
+    browse::search_any(state.modrinth()?, args.kind, &query, &ctx).await
 }
 
 /// 列出项目中适用于该实例的版本。

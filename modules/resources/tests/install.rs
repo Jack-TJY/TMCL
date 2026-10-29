@@ -228,6 +228,36 @@ async fn search_filters_by_instance() {
 }
 
 #[tokio::test]
+async fn search_any_skips_instance_filters() {
+    let api = MockServer::start(|_, _| Response::json(SEARCH)).await;
+    let page = browse::search_any(
+        &client(&api),
+        ResourceKind::Mod,
+        &BrowseQuery::default(),
+        &ctx(),
+    )
+    .await
+    .unwrap();
+    assert!(!page.hits[0].game_versions.is_empty());
+    let q = api.requests()[0].query();
+    assert!(q.contains(&("facets".into(), r#"[["project_type:mod"]]"#.into())));
+
+    browse::search_any(
+        &client(&api),
+        ResourceKind::Datapack,
+        &BrowseQuery::default(),
+        &ctx(),
+    )
+    .await
+    .unwrap();
+    let q = api.requests()[1].query();
+    assert!(q.contains(&(
+        "facets".into(),
+        r#"[["project_type:datapack"],["categories:datapack"]]"#.into()
+    )));
+}
+
+#[tokio::test]
 async fn versions_are_filtered_and_missing_project_is_empty() {
     let api = MockServer::start(|req, _| match req.path() {
         "/v2/project/sodium/version" => Response::json(PROJECT_VERSIONS),
