@@ -39,8 +39,8 @@ use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
 use crate::commands::skin::{
-    SkinAccountArgs, SkinFileArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList, SkinSetCapeArgs,
-    SkinSite, SkinTextureArgs, SkinUpdateArgs, SkinUploadArgs,
+    SkinAccountArgs, SkinAddTextureArgs, SkinFileArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList,
+    SkinSetCapeArgs, SkinSite, SkinTextureArgs, SkinUpdateArgs, SkinUploadArgs,
 };
 use crate::commands::sync::{
     SyncApplyResult, SyncCaptureArgs, SyncMaster, SyncPreview, SyncRestoreArgs, SyncRestoreResult,
@@ -138,6 +138,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SettingsSnapshot::export_all(&cfg)?;
     // skin（SkinEntry、SkinVariant 随 SkinLibraryList，ProfileSkin、ProfileCape 随 SkinProfile 一并导出）
     SkinAccountArgs::export_all(&cfg)?;
+    SkinAddTextureArgs::export_all(&cfg)?;
     SkinFileArgs::export_all(&cfg)?;
     SkinIdArgs::export_all(&cfg)?;
     SkinImportArgs::export_all(&cfg)?;

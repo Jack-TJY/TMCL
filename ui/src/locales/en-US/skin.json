@@ -35,7 +35,8 @@
     "empty": "Your skin library is empty. Import or drop a PNG skin.",
     "import": "Import skin",
     "add": "Add to library",
-    "imported": "Added to library: {name}"
+    "imported": "Added to library: {name}",
+    "alreadyIn": "Already in library: {name}"
   },
   "edit": {
     "title": "Edit skin",

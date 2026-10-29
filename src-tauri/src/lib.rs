@@ -82,6 +82,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::settings::settings_set_language,
         // skin
         commands::skin::skin_file_read,
+        commands::skin::skin_library_add_texture,
         commands::skin::skin_library_import,
         commands::skin::skin_library_list,
         commands::skin::skin_library_read,
@@ -1737,6 +1738,29 @@ fov:0.0
             error_code(invoke(&webview, "skin_texture", body)),
             ErrorCode::CommonInternal
         );
+
+        let add = |url: &str| {
+            let body = json!({ "args": { "url": url, "name": "Steve", "variant": "slim" } });
+            invoke(&webview, "skin_library_add_texture", body)
+        };
+        let entry = add(&url).unwrap();
+        assert_eq!(
+            (&entry["name"], &entry["variant"], &entry["height"]),
+            (&json!("Steve"), &json!("slim"), &json!(32))
+        );
+        let id = entry["id"].as_str().unwrap();
+        let file = DataPaths::at(dir.path())
+            .skins_dir()
+            .join(format!("{id}.png"));
+        assert!(file.is_file());
+        // 已在库中：返回已有条目，不重复保存。
+        assert_eq!(add(&url).unwrap(), entry);
+        let list = invoke(&webview, "skin_library_list", json!({})).unwrap();
+        assert_eq!(list["skins"], json!([entry]));
+        let bad = "http://textures.minecraft.net/texture/0bad";
+        assert_eq!(error_code(add(bad)), ErrorCode::SkinInvalidImage);
+        let other = format!("{}/texture/{hash}", server.url(""));
+        assert_eq!(error_code(add(&other)), ErrorCode::CommonInternal);
     }
 
     #[test]

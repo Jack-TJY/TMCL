@@ -22,6 +22,7 @@ import { toAppError } from "../../api/invoke";
 import {
   pngObjectUrl,
   skinFileRead,
+  skinLibraryAddTexture,
   skinLibraryImport,
   skinLibraryList,
   skinLibraryRead,
@@ -170,18 +171,31 @@ async function previewFile(path: string) {
   }
 }
 
-async function importPath(path: string) {
+/** 加入皮肤库后刷新列表并选中该皮肤；图片已在库中时提示已有的名称。 */
+async function addToLibrary(add: () => Promise<SkinEntry>) {
   importing.value = true;
   try {
-    const entry = await skinLibraryImport({ path, variant: variant.value });
+    const existed = new Set(entries.value.map((e) => e.id));
+    const entry = await add();
     await loadLibrary();
     selectEntry(entries.value.find((e) => e.id === entry.id) ?? entry);
-    message.success(t("skin.library.imported", { name: entry.name }));
+    const key = existed.has(entry.id) ? "skin.library.alreadyIn" : "skin.library.imported";
+    message.success(t(key, { name: entry.name }));
   } catch (err) {
     showError(err);
   } finally {
     importing.value = false;
   }
+}
+
+function importPath(path: string) {
+  return addToLibrary(() => skinLibraryImport({ path, variant: variant.value }));
+}
+
+/** 把档案中的皮肤存入皮肤库，以账号名命名，模型取档案中的模型。 */
+function saveProfileSkin(skin: ProfileSkin) {
+  const name = accounts.current?.name ?? t("skin.preview.profile");
+  return addToLibrary(() => skinLibraryAddTexture({ url: skin.url, name, variant: skin.variant }));
 }
 
 async function pickAndImport() {
@@ -283,6 +297,15 @@ onBeforeUnmount(() => {
           >
             {{ t("skin.library.add") }}
           </NButton>
+          <NButton
+            v-else-if="preview?.kind === 'profile'"
+            size="small"
+            type="primary"
+            :loading="importing"
+            @click="saveProfileSkin(preview.skin)"
+          >
+            {{ t("skin.library.add") }}
+          </NButton>
         </div>
         <NAlert v-if="viewerError === 'load'" type="error" :show-icon="false">
           {{ t("skin.preview.loadFailed") }}
@@ -318,7 +341,9 @@ onBeforeUnmount(() => {
         <AccountSkinPanel
           :account="accounts.current"
           :selected="selected"
+          :saving="importing"
           @preview-skin="previewProfileSkin"
+          @save-skin="saveProfileSkin"
           @active-skin="onActiveSkin"
           @cape="onCape"
         />

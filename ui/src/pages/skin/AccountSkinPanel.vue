@@ -23,10 +23,14 @@ const props = defineProps<{
   account: Account | null;
   /** 皮肤库中选中的皮肤，可上传到正版账号。 */
   selected: SkinEntry | null;
+  /** 正在把档案皮肤加入皮肤库。 */
+  saving: boolean;
 }>();
 const emit = defineEmits<{
   /** 点击“预览”：预览档案中正在使用的皮肤。 */
   previewSkin: [skin: ProfileSkin];
+  /** 点击“加入皮肤库”：把档案中正在使用的皮肤存入皮肤库，方便以后切换回来。 */
+  saveSkin: [skin: ProfileSkin];
   /** 档案读取或修改后，其中正在使用的皮肤。 */
   activeSkin: [skin: ProfileSkin | null];
   /** 档案中当前显示的披风地址；没有披风时为 `null`。 */
@@ -147,6 +151,15 @@ async function openSite() {
               @click="emit('previewSkin', activeSkin)"
             >
               {{ t("skin.account.previewCurrent") }}
+            </NButton>
+            <NButton
+              v-if="activeSkin"
+              size="small"
+              secondary
+              :loading="saving"
+              @click="emit('saveSkin', activeSkin)"
+            >
+              {{ t("skin.library.add") }}
             </NButton>
             <span v-else class="hint">{{ t("skin.account.noSkin") }}</span>
           </div>

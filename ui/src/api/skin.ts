@@ -1,5 +1,6 @@
 // `skin_*` 命令封装（PLAN.md M2-07、M2-08）。图片一律经后端读取，界面不直接访问文件系统和网络。
 import type { SkinAccountArgs } from "../bindings/SkinAccountArgs";
+import type { SkinAddTextureArgs } from "../bindings/SkinAddTextureArgs";
 import type { SkinEntry } from "../bindings/SkinEntry";
 import type { SkinFileArgs } from "../bindings/SkinFileArgs";
 import type { SkinIdArgs } from "../bindings/SkinIdArgs";
@@ -26,6 +27,11 @@ export async function skinLibraryList(): Promise<SkinEntry[]> {
 /** 把选中的 PNG 加入皮肤库；同一张图片已在库中时返回已有条目。 */
 export function skinLibraryImport(args: SkinImportArgs): Promise<SkinEntry> {
   return invoke<SkinEntry>("skin_library_import", { args });
+}
+
+/** 下载档案中的皮肤（如正在使用的皮肤）并加入皮肤库；已在库中时返回已有条目。 */
+export function skinLibraryAddTexture(args: SkinAddTextureArgs): Promise<SkinEntry> {
+  return invoke<SkinEntry>("skin_library_add_texture", { args });
 }
 
 /** 读取皮肤库中的图片。 */
