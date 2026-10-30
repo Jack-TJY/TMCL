@@ -1,15 +1,18 @@
 //! EasyTier 公共节点。
 //!
 //! 原定与陶瓦联机相同的四个节点（`docs/research/p2p.md` 第 7 节），但 EasyTier 官方的
-//! `public.easytier.top`、`public2.easytier.cn` 在 2026-10-30 已无法解析，维护者决定只保留
-//! 社区成员 zkitefly 提供的两个节点：均禁止中转，node1 只对中国大陆开放，node2 只对大陆以外开放。
-//! 用户可在设置里追加自己的节点，或关闭默认节点。
+//! `public.easytier.top`、`public2.easytier.cn` 在 2026-10-30 已无法解析。维护者按第 8 节的实测
+//! 改为：两个社区 TCP 节点在前（直接建连，约 4 秒找到房间），zkitefly 的两个 https 节点兜底
+//! （需要先请求一次拿到真实地址，较慢；node1 只对中国大陆开放，node2 只对大陆以外开放）。
+//! 这些节点都由个人维护，可能随时下线；用户可在设置里追加自己的节点，或关闭默认节点。
 
 use reqwest::Url;
 use tmcl_common::{AppError, AppResult, ErrorCode};
 
 /// 默认公共节点。
-pub const DEFAULT_PUBLIC_NODES: [&str; 2] = [
+pub const DEFAULT_PUBLIC_NODES: [&str; 4] = [
+    "tcp://sh.vomiku.com:7910",
+    "tcp://us01.225284.xyz:11010",
     "https://etnode.zkitefly.eu.org/node1",
     "https://etnode.zkitefly.eu.org/node2",
 ];
