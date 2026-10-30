@@ -210,6 +210,11 @@ impl DataPaths {
     pub fn skins_dir(&self) -> PathBuf {
         self.root.join("skins")
     }
+
+    /// `p2p/`：P2P 联机用到的外部程序（EasyTier）。
+    pub fn p2p_dir(&self) -> PathBuf {
+        self.root.join("p2p")
+    }
 }
 
 /// `X.app/Contents/MacOS` → `X.app` 的父目录；不是应用包结构时返回 `None`。

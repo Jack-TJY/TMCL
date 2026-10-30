@@ -36,6 +36,7 @@
 │  ├─ layout.json            # 主页组件布局
 │  └─ backgrounds/           # 用户背景图
 ├─ skins/                    # 本地皮肤库：<sha256>.png 与 index.json（M2-07）
+├─ p2p/easytier/<版本>/      # 运行时下载的 EasyTier 程序（M2-12）
 ├─ cache/                    # 可随时清空
 └─ logs/                     # 启动器日志，已脱敏
 ```
@@ -45,6 +46,8 @@
 代码中一律通过 `DataPaths` 的方法取路径（`config_file()`、`instance_game_dir(id)` 等），不手写拼接。`DataPaths::ensure_dirs()` 创建上述固定目录，可重复调用。
 
 `skins/`（`DataPaths::skins_dir()`，首次导入皮肤时创建）：每张皮肤存为 `<sha256>.png`（文件内容的 SHA-256，小写十六进制，同一图片只存一份），`index.json` 为 `{ "schema": 1, "skins": [{ "id", "name", "variant": "classic"|"slim", "height": 64|32, "added_at": <unix 毫秒> }] }`；图片已丢失的条目读取时忽略。
+
+`p2p/`（`DataPaths::p2p_dir()`，首次联机时创建）：`easytier/<版本>/` 下是从 EasyTier 官方 GitHub Releases 下载、按内置 SHA-256 校验后解压的 `easytier-core`、`easytier-cli`（Windows 另有 `Packet.dll`），解压完成后写入 `.complete`；没有 `.complete` 的目录视为未安装，下次重新下载。
 
 ## 3. config.json
 
