@@ -8,7 +8,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use tmcl_common::config::{AppearanceConfig, DownloadConfig, MemoryConfig, ThemeMode};
+use tmcl_common::config::{AppearanceConfig, DownloadConfig, MemoryConfig, P2pConfig, ThemeMode};
 use tmcl_common::{AppError, AppResult, Config, DataPaths, ErrorCode};
 use ts_rs::TS;
 
@@ -17,6 +17,8 @@ use crate::state::AppState;
 
 /// 同时下载数的上限。
 pub const MAX_CONCURRENCY: u32 = 64;
+/// 自定义 P2P 节点的数量上限。
+pub const MAX_CUSTOM_NODES: usize = 16;
 /// 全局内存的取值范围（MiB）。
 pub const MEMORY_RANGE_MB: RangeInclusive<u32> = 512..=32768;
 
@@ -31,6 +33,8 @@ pub struct LauncherSettings {
     pub memory: MemoryConfig,
     /// 下载设置。
     pub download: DownloadConfig,
+    /// P2P 联机设置。
+    pub p2p: P2pConfig,
 }
 
 impl LauncherSettings {
@@ -40,6 +44,7 @@ impl LauncherSettings {
             appearance: config.appearance.clone(),
             memory: config.memory,
             download: config.download.clone(),
+            p2p: config.p2p.clone(),
         }
     }
 
@@ -48,6 +53,7 @@ impl LauncherSettings {
         config.appearance = self.appearance;
         config.memory = self.memory;
         config.download = self.download;
+        config.p2p = self.p2p;
     }
 }
 
@@ -122,6 +128,7 @@ fn set_settings(
 }
 
 fn validate_settings(settings: &LauncherSettings) -> AppResult<()> {
+    validate_p2p(&settings.p2p)?;
     let accent_ok = settings.appearance.accent.as_deref().is_none_or(|accent| {
         accent.len() == 7
             && accent.starts_with('#')
@@ -143,6 +150,18 @@ fn validate_settings(settings: &LauncherSettings) -> AppResult<()> {
             .with_detail("settings_set: value out of range"));
     }
     Ok(())
+}
+
+/// 自定义节点逐项校验（`P2P_NODE_INVALID`），数量不超过 [`MAX_CUSTOM_NODES`]。
+fn validate_p2p(p2p: &P2pConfig) -> AppResult<()> {
+    if p2p.custom_nodes.len() > MAX_CUSTOM_NODES {
+        return Err(AppError::new(ErrorCode::CommonInternal)
+            .with_param("custom_nodes", false)
+            .with_detail("settings_set: too many custom nodes"));
+    }
+    p2p.custom_nodes
+        .iter()
+        .try_for_each(|node| tmcl_p2p::validate_node(node))
 }
 
 /// 在系统文件管理器中打开目录。
@@ -290,6 +309,8 @@ mod tests {
         next.theme = ThemeMode::Dark;
         next.appearance.accent = Some("#FF0000".to_owned());
         next.memory.max_mb = 8192;
+        next.p2p.use_default_nodes = false;
+        next.p2p.custom_nodes = vec!["tcp://my.node:11010".to_owned()];
         let (saved, download_changed) = set_settings(&paths, next.clone()).unwrap();
         assert_eq!(saved, next);
         assert!(!download_changed);
@@ -337,5 +358,21 @@ mod tests {
             let err = validate_settings(&settings).unwrap_err();
             assert_eq!(err.code, ErrorCode::CommonInternal);
         }
+    }
+
+    #[test]
+    fn validates_custom_nodes() {
+        let mut settings = sample();
+        settings.p2p.custom_nodes = vec!["tcp://my.node:11010".to_owned()];
+        assert!(validate_settings(&settings).is_ok());
+
+        settings.p2p.custom_nodes.push("my.node:11010".to_owned());
+        let err = validate_settings(&settings).unwrap_err();
+        assert_eq!(err.code, ErrorCode::P2pNodeInvalid);
+        assert_eq!(err.params["node"], "my.node:11010");
+
+        settings.p2p.custom_nodes = vec!["tcp://n:1".to_owned(); MAX_CUSTOM_NODES + 1];
+        let err = validate_settings(&settings).unwrap_err();
+        assert_eq!(err.code, ErrorCode::CommonInternal);
     }
 }
