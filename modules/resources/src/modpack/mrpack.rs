@@ -16,7 +16,7 @@ use tmcl_net::DownloadItem;
 use ts_rs::TS;
 use zip::ZipArchive;
 
-use super::curseforge::ManualDownload;
+use super::curseforge::{ManualDownload, RedirectedDownload};
 
 /// 包内索引文件名。
 pub const INDEX_FILE: &str = "modrinth.index.json";
@@ -59,6 +59,8 @@ pub struct ModpackInfo {
     pub download_size: u64,
     /// 作者禁止第三方分发、需要用户手动下载的文件（只有 CurseForge 整合包会有）。
     pub manual_downloads: Vec<ManualDownload>,
+    /// 作者禁止第三方分发、改从 Modrinth 或镜像下载的文件（只有 CurseForge 整合包会有）。
+    pub redirected_downloads: Vec<RedirectedDownload>,
 }
 
 /// 要下载到实例 `game/` 下的一个文件。
@@ -214,6 +216,7 @@ pub fn parse_index(text: &str) -> AppResult<Mrpack> {
         file_count: u32::try_from(files.len()).unwrap_or(u32::MAX),
         download_size: files.iter().map(|f| f.size).sum(),
         manual_downloads: Vec::new(),
+        redirected_downloads: Vec::new(),
     };
     Ok(Mrpack { info, files })
 }
