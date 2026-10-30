@@ -558,7 +558,14 @@ mod tests {
         let a = store.create("a", "1.20.1", None).unwrap();
         let file = env.paths.instance_file(&a.id);
         let text = fs::read_to_string(&file).unwrap();
-        fs::write(&file, text.replace("\"schema\": 1", "\"schema\": 99")).unwrap();
+        fs::write(
+            &file,
+            text.replace(
+                &format!("\"schema\": {}", crate::INSTANCE_SCHEMA),
+                "\"schema\": 99",
+            ),
+        )
+        .unwrap();
         store.reconcile().unwrap();
         assert_eq!(
             store.list().unwrap()[0].error,

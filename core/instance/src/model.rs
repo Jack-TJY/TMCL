@@ -9,11 +9,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
+use tmcl_common::config::MemoryConfig;
 use tmcl_common::{AppError, AppResult, ErrorCode};
 use ts_rs::TS;
 
 /// 当前程序写出的 `instance.json` 结构版本。
-pub const INSTANCE_SCHEMA: u32 = 1;
+pub const INSTANCE_SCHEMA: u32 = 2;
 
 /// 实例名称的最大长度（按字符计）。
 pub const MAX_NAME_CHARS: usize = 64;
@@ -78,17 +79,31 @@ pub enum JavaSetting {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default)]
 pub struct MemorySetting {
-    /// `-Xms`。
+    /// 使用 `config.json` 中的全局内存；为 `false` 时使用下面的自定义值。
+    pub follow_global: bool,
+    /// 自定义的 `-Xms`。
     pub min_mb: u32,
-    /// `-Xmx`。
+    /// 自定义的 `-Xmx`。
     pub max_mb: u32,
 }
 
 impl Default for MemorySetting {
     fn default() -> Self {
         Self {
+            follow_global: true,
             min_mb: 1024,
             max_mb: 4096,
+        }
+    }
+}
+
+impl MemorySetting {
+    /// 启动时实际使用的 `(-Xms, -Xmx)`：跟随全局时取 `global`，否则取自定义值。
+    pub fn effective(&self, global: &MemoryConfig) -> (u32, u32) {
+        if self.follow_global {
+            (global.min_mb, global.max_mb)
+        } else {
+            (self.min_mb, self.max_mb)
         }
     }
 }
@@ -200,15 +215,41 @@ impl InstanceConfig {
 
 /// 把 `value` 从 `from` 版本逐步迁移到 [`INSTANCE_SCHEMA`]。
 ///
-/// 目前只有 schema 1，没有迁移步骤；新增步骤时按 `n → n+1` 顺序追加分支。
+/// 新增步骤时按 `n → n+1` 顺序追加分支。
 fn migrate(value: &mut Value, from: u64) {
     let current = u64::from(INSTANCE_SCHEMA);
     let mut version = from;
     while version < current {
-        // 例：1 => migrate_1_to_2(value),
+        if version == 1 {
+            migrate_1_to_2(value);
+        }
         version += 1;
     }
     value["schema"] = Value::from(current);
+}
+
+/// 1 → 2：新增 `memory.follow_global`。内存仍是旧默认值（1024 / 4096）的实例改为跟随全局，
+/// 改过内存的实例保留为自定义。
+fn migrate_1_to_2(value: &mut Value) {
+    let Some(root) = value.as_object_mut() else {
+        return;
+    };
+    let memory = root
+        .entry("memory")
+        .or_insert_with(|| Value::Object(Default::default()));
+    let Some(memory) = memory.as_object_mut() else {
+        return;
+    };
+    let defaults = MemorySetting::default();
+    let field = |key: &str, default: u32| {
+        memory
+            .get(key)
+            .and_then(Value::as_u64)
+            .unwrap_or(u64::from(default))
+    };
+    let untouched = field("min_mb", defaults.min_mb) == u64::from(defaults.min_mb)
+        && field("max_mb", defaults.max_mb) == u64::from(defaults.max_mb);
+    memory.insert("follow_global".to_owned(), Value::Bool(untouched));
 }
 
 /// 去掉首尾空白并校验名称：不能为空，不超过 [`MAX_NAME_CHARS`] 个字符，不含控制字符。
@@ -240,13 +281,13 @@ mod tests {
     use super::*;
 
     const SAMPLE: &str = r#"{
-        "schema": 1,
+        "schema": 2,
         "id": "0b6f0000-0000-4000-8000-000000000000",
         "name": "生存 1.20.1",
         "game_version": "1.20.1",
         "loader": { "kind": "fabric", "version": "0.16.5" },
         "java": { "mode": "auto" },
-        "memory": { "min_mb": 1024, "max_mb": 4096 },
+        "memory": { "follow_global": true, "min_mb": 1024, "max_mb": 4096 },
         "jvm_args": [],
         "game_args": [],
         "window": { "width": 854, "height": 480, "fullscreen": false },
@@ -296,6 +337,49 @@ mod tests {
     }
 
     #[test]
+    fn schema_1_memory_migrates_to_follow_global() {
+        let v1 = |memory: &str| {
+            format!(
+                r#"{{ "schema": 1, "id": "x", "name": "n", "game_version": "1.20.1",
+                     "created_at": "2026-10-22T00:00:00Z"{memory} }}"#
+            )
+        };
+        let untouched =
+            InstanceConfig::from_json(&v1(r#", "memory": { "min_mb": 1024, "max_mb": 4096 }"#))
+                .unwrap();
+        assert_eq!(untouched.schema, 2);
+        assert_eq!(untouched.memory, MemorySetting::default());
+        assert!(
+            InstanceConfig::from_json(&v1(""))
+                .unwrap()
+                .memory
+                .follow_global
+        );
+
+        let custom = InstanceConfig::from_json(&v1(r#", "memory": { "max_mb": 8192 }"#)).unwrap();
+        assert_eq!(
+            custom.memory,
+            MemorySetting {
+                follow_global: false,
+                min_mb: 1024,
+                max_mb: 8192
+            }
+        );
+    }
+
+    #[test]
+    fn effective_memory_follows_global_or_custom() {
+        let global = MemoryConfig {
+            min_mb: 2048,
+            max_mb: 6144,
+        };
+        let mut memory = MemorySetting::default();
+        assert_eq!(memory.effective(&global), (2048, 6144));
+        memory.follow_global = false;
+        assert_eq!(memory.effective(&global), (1024, 4096));
+    }
+
+    #[test]
     fn broken_json_is_corrupted() {
         for text in ["{ not json", r#"{ "schema": 1, "id": "x" }"#] {
             let err = InstanceConfig::from_json(text).unwrap_err();
@@ -305,8 +389,8 @@ mod tests {
 
     #[test]
     fn unsupported_schema_rejected() {
-        for schema in ["0", "2", "null"] {
-            let text = SAMPLE.replace("\"schema\": 1", &format!("\"schema\": {schema}"));
+        for schema in ["0", "3", "null"] {
+            let text = SAMPLE.replace("\"schema\": 2", &format!("\"schema\": {schema}"));
             let err = InstanceConfig::from_json(&text).unwrap_err();
             assert_eq!(err.code, ErrorCode::InstanceSchemaUnsupported);
         }

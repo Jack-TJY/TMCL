@@ -17,7 +17,7 @@ theme: ThemeMode,
  */
 appearance: AppearanceConfig, 
 /**
- * 新建实例的默认内存。
+ * 全局游戏内存。
  */
 memory: MemoryConfig, 
 /**

@@ -17,7 +17,7 @@ use crate::state::AppState;
 
 /// 同时下载数的上限。
 pub const MAX_CONCURRENCY: u32 = 64;
-/// 默认内存的取值范围（MiB）。
+/// 全局内存的取值范围（MiB）。
 pub const MEMORY_RANGE_MB: RangeInclusive<u32> = 512..=32768;
 
 /// 设置页编辑的启动器设置：`config.json` 中除 `schema`、`language` 外的全部字段。
@@ -27,7 +27,7 @@ pub struct LauncherSettings {
     pub theme: ThemeMode,
     /// 外观。
     pub appearance: AppearanceConfig,
-    /// 新建实例的默认内存。
+    /// 全局游戏内存。
     pub memory: MemoryConfig,
     /// 下载设置。
     pub download: DownloadConfig,
@@ -128,7 +128,10 @@ fn validate_settings(settings: &LauncherSettings) -> AppResult<()> {
             && accent[1..].chars().all(|c| c.is_ascii_hexdigit())
     });
     let concurrency_ok = (1..=MAX_CONCURRENCY).contains(&settings.download.max_concurrency);
-    let memory_ok = MEMORY_RANGE_MB.contains(&settings.memory.max_mb);
+    let memory = settings.memory;
+    let memory_ok = MEMORY_RANGE_MB.contains(&memory.max_mb)
+        && MEMORY_RANGE_MB.contains(&memory.min_mb)
+        && memory.min_mb <= memory.max_mb;
     let background_ok = background_valid(&settings.appearance.background)
         && settings.appearance.material_opacity <= 100;
     if !(accent_ok && concurrency_ok && memory_ok && background_ok) {
@@ -317,12 +320,14 @@ mod tests {
     #[test]
     fn rejects_out_of_range_settings() {
         assert!(validate_settings(&sample()).is_ok());
-        let cases: [fn(&mut LauncherSettings); 7] = [
+        let cases: [fn(&mut LauncherSettings); 9] = [
             |s| s.appearance.accent = Some("red".to_owned()),
             |s| s.appearance.accent = Some("#GGGGGG".to_owned()),
             |s| s.download.max_concurrency = 0,
             |s| s.download.max_concurrency = MAX_CONCURRENCY + 1,
             |s| s.memory.max_mb = 256,
+            |s| s.memory.min_mb = 256,
+            |s| s.memory.min_mb = s.memory.max_mb + 1,
             |s| s.appearance.background.blur = 41,
             |s| s.appearance.material_opacity = 101,
         ];

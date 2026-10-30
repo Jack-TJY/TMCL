@@ -98,7 +98,15 @@ function setAccent(value: string) {
 }
 
 function setMemory(value: number | null) {
-  if (value !== null) save((s) => (s.memory.max_mb = value));
+  if (value === null) return;
+  save((s) => {
+    s.memory.max_mb = value;
+    s.memory.min_mb = Math.min(s.memory.min_mb, value);
+  });
+}
+
+function setMemoryMin(value: number | null) {
+  if (value !== null) save((s) => (s.memory.min_mb = Math.min(value, s.memory.max_mb)));
 }
 
 function openDataDir() {
@@ -216,6 +224,22 @@ function setConcurrency(value: number | null) {
           :max="MEMORY_MAX_MB"
           :step="512"
           @update:value="setMemory"
+        >
+          <template #suffix>MB</template>
+        </NInputNumber>
+      </SettingRow>
+      <SettingRow
+        :icon="DeveloperBoard24Regular"
+        :title="t('settings.memoryMin.label')"
+        :description="t('settings.memoryMin.description')"
+      >
+        <NInputNumber
+          class="control-number"
+          :value="store.settings.memory.min_mb"
+          :min="MEMORY_MIN_MB"
+          :max="store.settings.memory.max_mb"
+          :step="256"
+          @update:value="setMemoryMin"
         >
           <template #suffix>MB</template>
         </NInputNumber>

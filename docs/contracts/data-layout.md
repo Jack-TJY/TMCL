@@ -72,6 +72,7 @@
     }
   },
   "memory": {
+    "min_mb": 1024,
     "max_mb": 4096
   },
   "download": {
@@ -98,7 +99,8 @@
 | `appearance.background.blur` | 整数 0–40 | `0` | 背景模糊半径（px） |
 | `appearance.background.mask` | 整数 -100–100 | `0` | 遮罩亮度：负数变暗、正数变亮 |
 | `appearance.background.card_opacity` | 整数 0–100 | `85` | 卡片与内容区底色不透明度（%），低于 100 时显示毛玻璃 |
-| `memory.max_mb` | 正整数 | `4096` | 新建实例的默认最大内存（MiB），512–32768 |
+| `memory.min_mb` | 正整数 | `1024` | 全局最小内存（MiB，`-Xms`），512–32768 且不大于 `memory.max_mb` |
+| `memory.max_mb` | 正整数 | `4096` | 全局最大内存（MiB，`-Xmx`），512–32768；`instance.json` 中 `memory.follow_global` 为 `true` 的实例启动时使用这两项 |
 | `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
 | `download.source` | `"auto"` \| `"official"` \| 镜像名（如 `"bmclapi"`） | `"auto"` | 下载源。`auto`：Forge、NeoForge、Fabric 先走 BMCLAPI（`bmclapi-loaders`），其余文件走官方源，失败都回退官方源。`bmclapi`：所有文件先走 BMCLAPI 再回退官方源。`mcim`：Modrinth 与 CurseForge 的文件（`cdn.modrinth.com`、`edge.forgecdn.net`）先走 MCIM 再回退官方源（MCIM 暂不提供文件，设置界面不提供此项）。未知名称按 `auto` 处理 |
 

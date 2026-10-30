@@ -138,17 +138,22 @@ impl Default for BackgroundConfig {
     }
 }
 
-/// 新建实例的默认内存。
+/// 全局游戏内存：`memory.follow_global` 为 `true` 的实例启动时使用。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default)]
 pub struct MemoryConfig {
-    /// 最大内存（MiB）。
+    /// 最小内存（MiB），`-Xms`。
+    pub min_mb: u32,
+    /// 最大内存（MiB），`-Xmx`。
     pub max_mb: u32,
 }
 
 impl Default for MemoryConfig {
     fn default() -> Self {
-        Self { max_mb: 4096 }
+        Self {
+            min_mb: 1024,
+            max_mb: 4096,
+        }
     }
 }
 
@@ -183,7 +188,7 @@ pub struct Config {
     pub theme: ThemeMode,
     /// 外观设置。
     pub appearance: AppearanceConfig,
-    /// 新建实例的默认内存。
+    /// 全局游戏内存。
     pub memory: MemoryConfig,
     /// 下载设置。
     pub download: DownloadConfig,
@@ -432,7 +437,10 @@ mod tests {
         let config = Config::parse(br#"{"schema": 2, "theme": "dark"}"#).unwrap();
         assert_eq!(config.appearance, AppearanceConfig::default());
         assert!(config.appearance.window_material);
-        assert_eq!(config.memory.max_mb, 4096);
+        assert_eq!(config.memory, MemoryConfig::default());
+        let old_memory = Config::parse(br#"{"schema": 2, "memory": {"max_mb": 8192}}"#).unwrap();
+        assert_eq!(old_memory.memory.min_mb, 1024);
+        assert_eq!(old_memory.memory.max_mb, 8192);
         let partial = Config::parse(br##"{"appearance": {"accent": "#FF0000"}}"##).unwrap();
         assert_eq!(partial.appearance.accent.as_deref(), Some("#FF0000"));
         assert!(partial.appearance.window_material);

@@ -26,7 +26,7 @@ describe("settings commands", () => {
         material_opacity: 0,
         background: DEFAULT_BACKGROUND,
       },
-      memory: { max_mb: 4096 },
+      memory: { min_mb: 1024, max_mb: 4096 },
       download: { max_concurrency: 16, source: "auto" },
     };
     await settingsSet({ settings });
