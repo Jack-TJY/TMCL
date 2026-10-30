@@ -1,0 +1,93 @@
+{
+  "mode": {
+    "direct": "直连",
+    "sakura": "樱花穿透",
+    "directHint": "免费、不需要账号：双方通过 P2P 直接连接，房间码与 HMCL、PCL CE、陶瓦联机互通。双方网络限制都较严时可能连不上。",
+    "sakuraHint": "房主用 SakuraFrp 账号开一条临时穿透隧道，成员只需在游戏里输入地址，适合直连不通的情况。"
+  },
+  "role": {
+    "host": "我是房主",
+    "member": "我要加入"
+  },
+  "direct": {
+    "soonTitle": "直连即将推出",
+    "soonBody": "直连联机正在开发中，完成后会出现在这里。现在需要联机可以先用樱花穿透。",
+    "useSakura": "改用樱花穿透"
+  },
+  "sakura": {
+    "credit": "樱花穿透由 SakuraFrp（natfrp.com）提供，使用你自己的账号与流量。",
+    "terms": {
+      "title": "使用前请阅读 SakuraFrp 服务条款",
+      "intro": "开房需要你自己的 SakuraFrp 账号。TMCL 会在后台调用 SakuraFrp 的接口创建临时隧道，并运行官方客户端 frpc。",
+      "read": "阅读并同意",
+      "dialogTitle": "SakuraFrp 服务条款（更新于 {updated}）",
+      "agree": "同意"
+    },
+    "account": {
+      "keyTitle": "填写访问密钥",
+      "keyHelp": "登录 SakuraFrp 管理面板（www.natfrp.com），在“用户信息”页复制访问密钥，粘贴到下面。",
+      "keyPlaceholder": "访问密钥",
+      "keyPrivacy": "密钥只保存在本机的系统密钥库中，不会上传到别处，也不要发给其他人。",
+      "save": "保存",
+      "saved": "已登录樱花穿透账号 {name}",
+      "change": "更换密钥",
+      "clear": "移除密钥",
+      "clearTitle": "移除访问密钥？",
+      "clearContent": "正在进行的联机会先停止。之后需要重新填写密钥才能开房。",
+      "unverified": "未实名",
+      "summary": "限速 {speed} · 剩余流量 {traffic}",
+      "verifyHint": "SakuraFrp 要求实名认证后才能创建隧道。请到 SakuraFrp 管理面板（www.natfrp.com）完成实名，然后回到这里点“重试”或重新打开本页。TMCL 不收集任何身份信息。"
+    },
+    "host": {
+      "step1": "在游戏中打开单人世界，按 Esc，选择“对局域网开放”。",
+      "step2": "把聊天栏里显示的端口号填到下面，并选一个节点（离你和朋友都近的更好）。",
+      "step3": "点“开始联机”，把得到的地址发给朋友。",
+      "port": "游戏端口",
+      "portPlaceholder": "例如 25565",
+      "node": "节点",
+      "nodePlaceholder": "选择节点",
+      "nodeOffline": "这个节点现在离线或已满，请换一个。",
+      "nodeNotPublic": "这个节点不允许公开的游戏服务器，公开房间请换一个标有“多线”或允许游戏的节点。",
+      "public": "公开房间",
+      "publicOn": "会把地址发到论坛、大群、服务器列表等公开场合：只能用允许公开游戏服务器的节点。",
+      "publicOff": "只发给认识的朋友。若要公开发布地址，请打开“公开房间”，否则可能违反 SakuraFrp 的规定。",
+      "start": "开始联机",
+      "taskLabel": "樱花穿透开房",
+      "preparing": "准备中…",
+      "failed": "开始联机失败",
+      "online": "联机中",
+      "share": "把下面的地址发给朋友，让他们在“多人游戏 → 直接连接”中输入：",
+      "ipAddress": "IP 地址",
+      "details": "节点 {node} · 本机游戏端口 {port}",
+      "exitedHint": "穿透客户端已意外停止，朋友暂时连不上。请点“停止联机”后重新开始。",
+      "unreachableHint": "暂时连不上穿透节点，可能是节点故障或本机网络中断。如果朋友也进不来，请停止后换一个节点。",
+      "stop": "停止联机",
+      "stopTitle": "停止联机？",
+      "stopContent": "穿透隧道会被删除，正在游戏中的朋友会断开连接。"
+    },
+    "join": {
+      "step1": "向房主要联机地址，形如 frp-xxx.com:12345，粘贴到下面。",
+      "step2": "点“测试连接”确认能连上穿透节点。",
+      "step3": "打开同版本的游戏，进入“多人游戏 → 直接连接”，粘贴地址加入。",
+      "placeholder": "联机地址，例如 frp-xxx.com:12345",
+      "invalid": "地址格式不对，应为 主机:端口",
+      "test": "测试连接",
+      "reachable": "能连上穿透节点。如果游戏里仍进不去，请确认房主的世界仍对局域网开放，且双方游戏版本一致。",
+      "unreachable": "连不上这个地址。请检查地址是否完整，并确认房主仍在联机。"
+    }
+  },
+  "status": {
+    "running": "运行中",
+    "exited": "已停止"
+  },
+  "latency": {
+    "measuring": "测量延迟…",
+    "unreachable": "连不上",
+    "value": "延迟 {ms} ms"
+  },
+  "copy": "复制",
+  "copied": "已复制",
+  "copyFailed": "复制失败",
+  "retry": "重试",
+  "cancel": "取消"
+}

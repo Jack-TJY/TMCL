@@ -1,12 +1,12 @@
 // 路由表（AGENTS.md §5.2 共享文件）：每个页面一个路由块，按路径字母排序。
 // 页面尚未实现时使用 PlaceholderPage，对应步骤把 component 换成自己的页面即可。
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from "vue-router";
-import PlaceholderPage from "./layouts/PlaceholderPage.vue";
 import AboutPage from "./pages/about/AboutPage.vue";
 import AccountsPage from "./pages/accounts/AccountsPage.vue";
 import DownloadPage from "./pages/download/DownloadPage.vue";
 import HomePage from "./pages/home/HomePage.vue";
 import InstancesPage from "./pages/instances/InstancesPage.vue";
+import MultiplayerPage from "./pages/multiplayer/MultiplayerPage.vue";
 import ResourceBrowserPage from "./pages/resources/ResourceBrowserPage.vue";
 import ResourcesPage from "./pages/resources/ResourcesPage.vue";
 import SettingsPage from "./pages/settings/SettingsPage.vue";
@@ -61,7 +61,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/multiplayer",
     name: "multiplayer",
-    component: PlaceholderPage,
+    component: MultiplayerPage,
     meta: { titleKey: "shell.nav.multiplayer" },
   },
   {

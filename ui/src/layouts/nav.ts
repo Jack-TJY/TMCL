@@ -31,8 +31,8 @@ export interface NavItem {
   activeIcon: Component;
 }
 
-/** 联机页在 M2 显示（PLAN.md M2-15）；完成后把它改为 `true`。 */
-export const MULTIPLAYER_ENABLED = false;
+/** 联机页（PLAN.md M2-15）。 */
+export const MULTIPLAYER_ENABLED = true;
 
 const item = (name: string, icon: Component, activeIcon: Component): NavItem => ({
   name,

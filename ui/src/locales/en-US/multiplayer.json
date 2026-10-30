@@ -1,0 +1,93 @@
+{
+  "mode": {
+    "direct": "Direct",
+    "sakura": "SakuraFrp",
+    "directHint": "Free and no account needed: players connect peer to peer, and room codes work with HMCL, PCL CE and Terracotta. It may fail when both networks are strict.",
+    "sakuraHint": "The host opens a temporary tunnel with their own SakuraFrp account, and members just enter an address in game. Use it when Direct does not connect."
+  },
+  "role": {
+    "host": "Host a room",
+    "member": "Join a room"
+  },
+  "direct": {
+    "soonTitle": "Direct is coming soon",
+    "soonBody": "Direct multiplayer is still being built and will appear here when ready. You can use SakuraFrp in the meantime.",
+    "useSakura": "Use SakuraFrp"
+  },
+  "sakura": {
+    "credit": "SakuraFrp tunnels are provided by SakuraFrp (natfrp.com) using your own account and traffic.",
+    "terms": {
+      "title": "Read the SakuraFrp terms of service first",
+      "intro": "Hosting needs your own SakuraFrp account. TMCL creates a temporary tunnel through the SakuraFrp API and runs the official frpc client in the background.",
+      "read": "Read and accept",
+      "dialogTitle": "SakuraFrp terms of service (updated {updated})",
+      "agree": "Accept"
+    },
+    "account": {
+      "keyTitle": "Enter your access key",
+      "keyHelp": "Sign in to the SakuraFrp dashboard (www.natfrp.com), copy the access key from the user information page and paste it below.",
+      "keyPlaceholder": "Access key",
+      "keyPrivacy": "The key is kept only in this computer's system keychain. Don't share it with anyone.",
+      "save": "Save",
+      "saved": "Signed in to SakuraFrp as {name}",
+      "change": "Change key",
+      "clear": "Remove key",
+      "clearTitle": "Remove the access key?",
+      "clearContent": "Any running room is stopped first. You will need to enter the key again to host.",
+      "unverified": "Not verified",
+      "summary": "Speed {speed} · {traffic} traffic left",
+      "verifyHint": "SakuraFrp requires identity verification before you can create tunnels. Complete it on the SakuraFrp dashboard (www.natfrp.com), then come back and retry or reopen this page. TMCL does not collect any identity information."
+    },
+    "host": {
+      "step1": "Open a singleplayer world, press Esc and choose \"Open to LAN\".",
+      "step2": "Enter the port shown in chat below and pick a node, ideally close to you and your friends.",
+      "step3": "Click \"Start hosting\" and send the address to your friends.",
+      "port": "Game port",
+      "portPlaceholder": "e.g. 25565",
+      "node": "Node",
+      "nodePlaceholder": "Pick a node",
+      "nodeOffline": "This node is offline or full. Pick another one.",
+      "nodeNotPublic": "This node does not allow public game servers. Pick one that does for a public room.",
+      "public": "Public room",
+      "publicOn": "The address will be posted publicly (forums, large groups, server lists), so only nodes that allow public game servers can be used.",
+      "publicOff": "Only for friends you know. Turn on \"Public room\" if you will post the address publicly, otherwise you may break SakuraFrp's rules.",
+      "start": "Start hosting",
+      "taskLabel": "SakuraFrp room",
+      "preparing": "Preparing…",
+      "failed": "Could not start hosting",
+      "online": "Hosting",
+      "share": "Send this address to your friends. They enter it under Multiplayer → Direct Connection:",
+      "ipAddress": "IP address",
+      "details": "Node {node} · local game port {port}",
+      "exitedHint": "The tunnel client stopped unexpectedly, so friends cannot connect. Stop hosting and start again.",
+      "unreachableHint": "The tunnel node cannot be reached right now, perhaps because the node is down or your network dropped. If friends cannot join either, stop and pick another node.",
+      "stop": "Stop hosting",
+      "stopTitle": "Stop hosting?",
+      "stopContent": "The tunnel will be deleted and friends in game will be disconnected."
+    },
+    "join": {
+      "step1": "Ask the host for the address, like frp-xxx.com:12345, and paste it below.",
+      "step2": "Click \"Test connection\" to check that the tunnel node can be reached.",
+      "step3": "Start the same game version, go to Multiplayer → Direct Connection and paste the address.",
+      "placeholder": "Address, e.g. frp-xxx.com:12345",
+      "invalid": "The address should look like host:port",
+      "test": "Test connection",
+      "reachable": "The tunnel node can be reached. If you still can't join in game, make sure the host's world is still open to LAN and you both use the same game version.",
+      "unreachable": "This address cannot be reached. Check that it is complete and that the host is still hosting."
+    }
+  },
+  "status": {
+    "running": "Running",
+    "exited": "Stopped"
+  },
+  "latency": {
+    "measuring": "Measuring…",
+    "unreachable": "Unreachable",
+    "value": "{ms} ms"
+  },
+  "copy": "Copy",
+  "copied": "Copied",
+  "copyFailed": "Copy failed",
+  "retry": "Retry",
+  "cancel": "Cancel"
+}
