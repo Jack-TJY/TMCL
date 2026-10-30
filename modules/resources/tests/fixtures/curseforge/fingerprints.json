@@ -1,0 +1,88 @@
+{
+  "data": {
+    "exactFingerprints": [
+      741545197
+    ],
+    "exactMatches": [
+      {
+        "file": {
+          "dependencies": [
+            {
+              "modId": 1689768,
+              "relationType": 3
+            },
+            {
+              "modId": 1700987,
+              "relationType": 2
+            }
+          ],
+          "displayName": "15.74.0.232 for Forge 1.20.1",
+          "downloadUrl": "https://edge.forgecdn.net/files/9352/806/jei-1.20.1-forge-15.74.0.232.jar",
+          "fileDate": "2026-10-28T14:10:29.947Z",
+          "fileFingerprint": 741545197,
+          "fileLength": 4759629,
+          "fileName": "jei-1.20.1-forge-15.74.0.232.jar",
+          "fileStatus": 18,
+          "gameId": 432,
+          "gameVersions": [
+            "Client",
+            "1.20.1",
+            "Forge",
+            "Server"
+          ],
+          "hashes": [
+            {
+              "algo": 1,
+              "value": "7e095c4c5b95a478002df0822975920a4201263e"
+            },
+            {
+              "algo": 2,
+              "value": "97cb94d02ae1af465d81be81520ff880"
+            }
+          ],
+          "id": 9352806,
+          "isAvailable": false,
+          "modId": 238222,
+          "releaseType": 2
+        },
+        "id": 238222,
+        "latestFiles": [
+          {
+            "dependencies": [],
+            "displayName": "jei_1.12.2-4.16.1.301.jar",
+            "downloadUrl": "https://edge.forgecdn.net/files/3040/523/jei_1.12.2-4.16.1.301.jar",
+            "fileDate": "2020-08-24T01:01:39.123Z",
+            "fileFingerprint": 3089143260,
+            "fileLength": 653211,
+            "fileName": "jei_1.12.2-4.16.1.301.jar",
+            "fileStatus": 4,
+            "gameId": 432,
+            "gameVersions": [
+              "1.12.2"
+            ],
+            "hashes": [
+              {
+                "algo": 1,
+                "value": "3045e8440ea44071d8b83c4e7b3c190348fdc527"
+              },
+              {
+                "algo": 2,
+                "value": "1dee4be93d666e2228039c551e927b35"
+              }
+            ],
+            "id": 3040523,
+            "isAvailable": true,
+            "modId": 238222,
+            "releaseType": 1
+          }
+        ]
+      }
+    ],
+    "installedFingerprints": [
+      741545197,
+      1
+    ],
+    "isCacheBuilt": true,
+    "unmatchedFingerprints": null
+  }
+}

@@ -1,0 +1,254 @@
+{
+  "data": [
+    {
+      "allowModDistribution": true,
+      "authors": [
+        {
+          "avatarUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/ce4a8a5fe354959b-profile_image-150x150.png",
+          "id": 17072262,
+          "name": "mezz",
+          "url": "https://www.curseforge.com/members/mezz",
+          "userTierInfo": {
+            "downloadsThreshold": 500000000,
+            "tierLevel": 6
+          }
+        }
+      ],
+      "categories": [
+        {
+          "classId": 6,
+          "dateModified": "2014-05-08T17:42:23.74Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/6/38/635351497437388438.png",
+          "id": 423,
+          "isClass": false,
+          "name": "Map and Information",
+          "parentCategoryId": 6,
+          "slug": "map-information",
+          "url": "https://www.curseforge.com/minecraft/mc-mods/map-information"
+        },
+        {
+          "classId": 6,
+          "dateModified": "2014-05-23T03:21:44.06Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/6/36/635351496947765531.png",
+          "id": 421,
+          "isClass": false,
+          "name": "API and Library",
+          "parentCategoryId": 6,
+          "slug": "library-api",
+          "url": "https://www.curseforge.com/minecraft/mc-mods/library-api"
+        }
+      ],
+      "classId": 6,
+      "dateCreated": "2015-11-23T23:00:41.923Z",
+      "dateModified": "2026-10-29T14:53:05.777Z",
+      "dateReleased": "2026-10-29T14:49:05.583Z",
+      "downloadCount": 641625833,
+      "gameId": 432,
+      "id": 238222,
+      "isAvailable": true,
+      "isFeatured": false,
+      "latestFilesIndexes": [
+        {
+          "fileId": 9362743,
+          "filename": "jei-1.21.11-neoforge-27.54.0.115.jar",
+          "gameVersion": "1.21.11",
+          "gameVersionTypeId": 77784,
+          "modLoader": 6,
+          "releaseType": 2
+        },
+        {
+          "fileId": 9362742,
+          "filename": "jei-1.21.11-fabric-27.54.0.115.jar",
+          "gameVersion": "1.21.11",
+          "gameVersionTypeId": 77784,
+          "modLoader": 4,
+          "releaseType": 2
+        },
+        {
+          "fileId": 9362649,
+          "filename": "jei-26.1.2-neoforge-29.53.0.114.jar",
+          "gameVersion": "26.1",
+          "gameVersionTypeId": 83806,
+          "modLoader": 6,
+          "releaseType": 2
+        },
+        {
+          "fileId": 9362649,
+          "filename": "jei-26.1.2-neoforge-29.53.0.114.jar",
+          "gameVersion": "26.1.1",
+          "gameVersionTypeId": 83806,
+          "modLoader": 6,
+          "releaseType": 2
+        }
+      ],
+      "links": {
+        "issuesUrl": "https://github.com/mezz/JustEnoughItems/issues?q=is%3Aissue",
+        "sourceUrl": "https://github.com/mezz/JustEnoughItems",
+        "websiteUrl": "https://www.curseforge.com/minecraft/mc-mods/jei",
+        "wikiUrl": ""
+      },
+      "logo": {
+        "description": "",
+        "id": 29069,
+        "modId": 238222,
+        "thumbnailUrl": "https://media.forgecdn.net/avatars/thumbnails/29/69/256/256/635838945588716414.jpeg",
+        "title": "635838945588716414.jpeg",
+        "url": "https://media.forgecdn.net/avatars/29/69/635838945588716414.jpeg"
+      },
+      "mainFileId": 9207610,
+      "name": "Just Enough Items (JEI)",
+      "primaryCategoryId": 423,
+      "slug": "jei",
+      "status": 4,
+      "summary": "View Items and Recipes"
+    },
+    {
+      "allowModDistribution": true,
+      "authors": [
+        {
+          "avatarUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/64fa8983-ed12-491b-b356-948fd04f9690-profile_image-150x150.png",
+          "id": 14753335,
+          "name": "way2muchnoise",
+          "url": "https://www.curseforge.com/members/way2muchnoise",
+          "userTierInfo": {
+            "downloadsThreshold": 500000000,
+            "tierLevel": 6
+          }
+        }
+      ],
+      "categories": [
+        {
+          "classId": 6,
+          "dateModified": "2014-05-08T17:09:48.63Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/5/998/635351477886290676.png",
+          "id": 426,
+          "isClass": false,
+          "name": "Addons",
+          "parentCategoryId": 6,
+          "slug": "mc-addons",
+          "url": "https://www.curseforge.com/minecraft/mc-mods/mc-addons"
+        },
+        {
+          "classId": 6,
+          "dateModified": "2014-05-08T17:42:23.74Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/6/38/635351497437388438.png",
+          "id": 423,
+          "isClass": false,
+          "name": "Map and Information",
+          "parentCategoryId": 6,
+          "slug": "map-information",
+          "url": "https://www.curseforge.com/minecraft/mc-mods/map-information"
+        },
+        {
+          "classId": 6,
+          "dateModified": "2014-05-08T17:34:59.587Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/6/22/635351492995856506.png",
+          "id": 407,
+          "isClass": false,
+          "name": "Biomes",
+          "parentCategoryId": 406,
+          "slug": "world-biomes",
+          "url": "https://www.curseforge.com/minecraft/mc-mods/world-gen/world-biomes"
+        },
+        {
+          "classId": 6,
+          "dateModified": "2014-05-08T17:46:59.507Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/6/53/635351500195070414.png",
+          "id": 411,
+          "isClass": false,
+          "name": "Mobs",
+          "parentCategoryId": 406,
+          "slug": "world-mobs",
+          "url": "https://www.curseforge.com/minecraft/mc-mods/world-gen/world-mobs"
+        },
+        {
+          "classId": 6,
+          "dateModified": "2014-05-08T17:36:41.233Z",
+          "gameId": 432,
+          "iconUrl": "https://media.forgecdn.net/avatars/6/23/635351494012336510.png",
+          "id": 408,
+          "isClass": false,
+          "name": "Ores and Resources",
+          "parentCategoryId": 406,
+          "slug": "world-ores-resources",
+          "url": "https://www.curseforge.com/minecraft/mc-mods/world-gen/world-ores-resources"
+        }
+      ],
+      "classId": 6,
+      "dateCreated": "2016-01-10T19:42:40.9Z",
+      "dateModified": "2026-10-24T17:32:41.113Z",
+      "dateReleased": "2026-10-24T17:29:19.133Z",
+      "downloadCount": 245297489,
+      "gameId": 432,
+      "id": 240630,
+      "isAvailable": true,
+      "isFeatured": false,
+      "latestFilesIndexes": [
+        {
+          "fileId": 9311693,
+          "filename": "JustEnoughResources-NeoForge-1.21.1-1.6.0.57.jar",
+          "gameVersion": "1.21.1",
+          "gameVersionTypeId": 77784,
+          "modLoader": 6,
+          "releaseType": 1
+        },
+        {
+          "fileId": 9311692,
+          "filename": "JustEnoughResources-Fabric-1.21.1-1.6.0.57.jar",
+          "gameVersion": "1.21.1",
+          "gameVersionTypeId": 77784,
+          "modLoader": 4,
+          "releaseType": 1
+        },
+        {
+          "fileId": 9311691,
+          "filename": "JustEnoughResources-Forge-1.21.1-1.6.0.57.jar",
+          "gameVersion": "1.21.1",
+          "gameVersionTypeId": 77784,
+          "modLoader": 1,
+          "releaseType": 1
+        },
+        {
+          "fileId": 9311669,
+          "filename": "JustEnoughResources-Fabric-26.1.2-1.10.1.56.jar",
+          "gameVersion": "26.1.2",
+          "gameVersionTypeId": 83806,
+          "modLoader": 4,
+          "releaseType": 1
+        }
+      ],
+      "links": {
+        "issuesUrl": "https://github.com/way2muchnoise/JustEnoughResources/issues",
+        "sourceUrl": "https://github.com/way2muchnoise/JustEnoughResources",
+        "websiteUrl": "https://www.curseforge.com/minecraft/mc-mods/just-enough-resources-jer",
+        "wikiUrl": ""
+      },
+      "logo": {
+        "description": "",
+        "id": 32419,
+        "modId": 240630,
+        "thumbnailUrl": "https://media.forgecdn.net/avatars/thumbnails/32/419/256/256/635880199659979425.png",
+        "title": "635880199659979425.png",
+        "url": "https://media.forgecdn.net/avatars/32/419/635880199659979425.png"
+      },
+      "mainFileId": 9311693,
+      "name": "Just Enough Resources (JER)",
+      "primaryCategoryId": 426,
+      "slug": "just-enough-resources-jer",
+      "status": 4,
+      "summary": "A JEI addon that adds mob drops, ore gen, .."
+    }
+  ],
+  "pagination": {
+    "index": 0,
+    "pageSize": 2,
+    "resultCount": 2,
+    "totalCount": 201
+  }
+}

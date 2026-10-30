@@ -1,0 +1,90 @@
+{
+  "data": [
+    {
+      "dependencies": [
+        {
+          "modId": 1689768,
+          "relationType": 3
+        },
+        {
+          "modId": 1700987,
+          "relationType": 2
+        }
+      ],
+      "displayName": "15.74.0.232 for Forge 1.20.1",
+      "downloadUrl": "https://edge.forgecdn.net/files/9352/806/jei-1.20.1-forge-15.74.0.232.jar",
+      "fileDate": "2026-10-28T14:10:29.947Z",
+      "fileFingerprint": 741545197,
+      "fileLength": 4759629,
+      "fileName": "jei-1.20.1-forge-15.74.0.232.jar",
+      "fileStatus": 4,
+      "gameId": 432,
+      "gameVersions": [
+        "Client",
+        "1.20.1",
+        "Forge",
+        "Server"
+      ],
+      "hashes": [
+        {
+          "algo": 1,
+          "value": "7e095c4c5b95a478002df0822975920a4201263e"
+        },
+        {
+          "algo": 2,
+          "value": "97cb94d02ae1af465d81be81520ff880"
+        }
+      ],
+      "id": 9352806,
+      "isAvailable": true,
+      "modId": 238222,
+      "releaseType": 2
+    },
+    {
+      "dependencies": [
+        {
+          "modId": 1700987,
+          "relationType": 2
+        },
+        {
+          "modId": 1689768,
+          "relationType": 3
+        }
+      ],
+      "displayName": "15.74.0.230 for Forge 1.20.1",
+      "downloadUrl": "https://edge.forgecdn.net/files/9323/499/jei-1.20.1-forge-15.74.0.230.jar",
+      "fileDate": "2026-10-25T15:32:38.467Z",
+      "fileFingerprint": 3974647164,
+      "fileLength": 4758381,
+      "fileName": "jei-1.20.1-forge-15.74.0.230.jar",
+      "fileStatus": 4,
+      "gameId": 432,
+      "gameVersions": [
+        "Client",
+        "1.20.1",
+        "Forge",
+        "Server"
+      ],
+      "hashes": [
+        {
+          "algo": 1,
+          "value": "dff3d4d48ed974649bc9ce843ed57051bf7c7523"
+        },
+        {
+          "algo": 2,
+          "value": "24b2771b9b762d3f7122925bd9d15cbe"
+        }
+      ],
+      "id": 9323499,
+      "isAvailable": true,
+      "modId": 238222,
+      "releaseType": 2
+    }
+  ],
+  "pagination": {
+    "index": 0,
+    "pageSize": 2,
+    "resultCount": 2,
+    "totalCount": 210
+  }
+}
