@@ -102,3 +102,20 @@
 | C. 整体走 BMCLAPI | `auto` = `bmclapi` 后回退官方 | 不推荐：两种网络下原版内容都更慢，大量小文件要等超时后才回退 |
 
 B 已实现为内置镜像 `bmclapi-loaders`，并设为 `DEFAULT_MIRROR`。用户仍可在设置里把 `download.source` 设为 `bmclapi`（全部先走 BMCLAPI）或 `official`（只用官方源）。按 BMCLAPI 条款，下载界面需要标明来源，待下载界面实现时处理。
+
+## 6. Modrinth / CurseForge 文件镜像（2026-10-30）
+
+用户希望资源与整合包下载也走镜像。调研与实测结论：
+
+- 已知唯一面向启动器的公开镜像是 MCIM（`mod.mcimirror.top`，<https://github.com/mcmod-info-mirror/mcim-rust-api>）。规则：`cdn.modrinth.com`、`edge.forgecdn.net` → `mod.mcimirror.top`，路径不变；API 另有 `/modrinth`、`/curseforge` 前缀。BMCLAPI 不镜像这两个平台的文件。
+- MCIM README 写明 OpenMCIM 已暂停、“文件下载暂时不提供”，并建议启动器在官方下载失败后才用镜像；还要求启动器提交 UA（mcim-rust-api#12）。
+- 实测（Windows 10，国内直连，`User-Agent: Jack-TJY/TMCL/0.1.0`，每项 2 次）：
+
+  | 文件 | 官方耗时 (s) | 镜像耗时 (s) | 镜像实际服务主机 | SHA1 |
+  | --- | --- | --- | --- | --- |
+  | Sodium 0.5.13（0.9 MiB） | 3.16 / 1.84 | 4.23 / 2.94 | `cdn.modrinth.com`（302） | 一致 |
+  | Fabulously Optimized `.mrpack`（0.2 MiB） | 1.31 / 1.32 | 3.80 / 2.64 | `cdn.modrinth.com`（302） | 一致 |
+  | Faithful 32x（12.5 MiB） | 3.02 / 2.94 | 4.17 / 3.98 | `cdn.modrinth.com`（302） | 一致 |
+  | JEI（4.5 MiB，CurseForge） | 未测（需 key） | 3.99 / 3.82 | `mediafilez.forgecdn.net`（302） | 一致 |
+
+- 结论：MCIM 目前只是把文件请求 302 回官方 CDN，不能加速，反而多一次跳转。`core/net` 已内置 `mcim` 改写规则，但 `RESOURCE_MIRROR` 默认关闭；MCIM 恢复文件服务后再启用，并在资源与整合包下载界面标明来源。

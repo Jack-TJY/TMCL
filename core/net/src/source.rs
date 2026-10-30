@@ -29,9 +29,12 @@ pub const MCIM: &str = "mcim";
 /// 但 Mojang 的小文件常超时。维护者于 2026-10-23 选定。
 pub const DEFAULT_MIRROR: Option<&str> = Some(BMCLAPI_LOADERS);
 
-/// 非 `official` 策略下，首选镜像不提供的文件再交给的资源镜像：Modrinth 与
-/// CurseForge 的 mod、资源包等文件先走 MCIM，失败回退官方源。
-pub const RESOURCE_MIRROR: Option<&str> = Some(MCIM);
+/// 非 `official` 策略下，首选镜像不提供的文件再交给的资源镜像（Modrinth 与
+/// CurseForge 的 mod、资源包等文件）。
+///
+/// 暂不启用：2026-10-30 实测 MCIM 的文件地址全部 302 回官方 CDN，其 README 也写明
+/// “文件下载暂时不提供”，启用只会多一次跳转。MCIM 恢复文件服务后改为 `Some(MCIM)`。
+pub const RESOURCE_MIRROR: Option<&str> = None;
 
 const BMCLAPI_ROOT: &str = "https://bmclapi2.bangbang93.com";
 
@@ -528,29 +531,38 @@ mod tests {
     }
 
     #[test]
+    fn resource_mirror_is_off_by_default() {
+        for policy in [AUTO, BMCLAPI] {
+            let s = Sources::new(policy);
+            assert_eq!(sources(&s.candidates(MODRINTH_FILE)), [OFFICIAL]);
+            assert_eq!(sources(&s.candidates(CURSEFORGE_FILE)), [OFFICIAL]);
+        }
+    }
+
+    #[test]
     fn resource_files_go_through_mcim_unless_official() {
         for policy in [AUTO, BMCLAPI, "nope"] {
-            let s = Sources::new(policy);
+            let mut s = Sources::new(policy);
+            s.set_resource_mirror(Some(MCIM));
             for url in [MODRINTH_FILE, CURSEFORGE_FILE] {
                 let c = s.candidates(url);
                 assert_eq!(sources(&c), [MCIM, OFFICIAL], "{policy} {url}");
                 assert!(c[0].url.starts_with("https://mod.mcimirror.top/"));
             }
         }
-        assert_eq!(
-            sources(&Sources::official_only().candidates(MODRINTH_FILE)),
-            [OFFICIAL]
-        );
+        let mut s = Sources::official_only();
+        s.set_resource_mirror(Some(MCIM));
+        assert_eq!(sources(&s.candidates(MODRINTH_FILE)), [OFFICIAL]);
         // 首选镜像提供的文件仍只走首选镜像。
-        assert_eq!(
-            sources(&Sources::new(AUTO).candidates(FORGE)),
-            [BMCLAPI_LOADERS, OFFICIAL]
-        );
+        let mut s = Sources::new(AUTO);
+        s.set_resource_mirror(Some(MCIM));
+        assert_eq!(sources(&s.candidates(FORGE)), [BMCLAPI_LOADERS, OFFICIAL]);
     }
 
     #[test]
     fn resource_mirror_can_be_disabled_or_chosen_directly() {
         let mut s = Sources::new(AUTO);
+        s.set_resource_mirror(Some(MCIM));
         s.set_resource_mirror(None);
         assert_eq!(sources(&s.candidates(MODRINTH_FILE)), [OFFICIAL]);
         let s = Sources::new(MCIM);

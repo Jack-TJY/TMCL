@@ -24,8 +24,8 @@
     "started": "已开始下载“{name}”，可在任务中心查看进度"
   },
   "source": {
-    "auto": "下载源：自动。游戏文件来自 Mojang 官方源；Forge、NeoForge、Fabric 由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速；Modrinth 与 CurseForge 的文件由 MCIM（mod.mcimirror.top）提供镜像加速；失败时都自动回退官方源。",
-    "bmclapi": "下载源：BMCLAPI。文件优先由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速，Modrinth 与 CurseForge 的文件由 MCIM（mod.mcimirror.top）加速，失败时自动回退官方源；文件版权归原站点所有。",
-    "official": "下载源：官方源。所有文件均从 Mojang、各加载器、Modrinth 与 CurseForge 的官方站点下载。"
+    "auto": "下载源：自动。游戏文件来自 Mojang 官方源；Forge、NeoForge、Fabric 由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速，失败时自动回退官方源。",
+    "bmclapi": "下载源：BMCLAPI。文件优先由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速，失败时自动回退官方源；文件版权归原站点所有。",
+    "official": "下载源：官方源。所有文件均从 Mojang 与各加载器的官方站点下载。"
   }
 }

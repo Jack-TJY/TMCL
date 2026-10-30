@@ -22,7 +22,6 @@ import type { TaskId } from "../../bindings/TaskId";
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import ChannelTag from "./ChannelTag.vue";
-import MirrorNote from "./MirrorNote.vue";
 import { defaultVersion, formatSize, planBlocked, planSize } from "./resources";
 
 const props = defineProps<{
@@ -239,8 +238,6 @@ async function confirm() {
         </template>
       </template>
     </NSpin>
-    <MirrorNote />
-
     <template #footer>
       <div class="dialog-actions">
         <NButton :disabled="busy" @click="emit('close')">{{

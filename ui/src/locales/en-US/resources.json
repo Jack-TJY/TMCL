@@ -147,9 +147,5 @@
     "confirm": "Create and download",
     "started": "Downloading \"{name}\"; installation continues when it finishes",
     "ready": "\"{name}\" is ready; continuing to install \"{title}\""
-  },
-  "mirror": {
-    "mcim": "Mods, resource packs and other files are mirrored by MCIM (mcmod-info-mirror, mod.mcimirror.top) and fall back to the official source on failure or hash mismatch. Files remain the property of their authors.",
-    "loaders": " Loaders are mirrored by BMCLAPI (bangbang93, bmclapidoc.bangbang93.com)."
   }
 }
