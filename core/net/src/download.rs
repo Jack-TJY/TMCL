@@ -415,12 +415,23 @@ impl Downloader {
                 *offset = 0;
                 return Ok(Some(r));
             }
-            Err(e) if e.params.get("status").is_some_and(|s| s == "416") => {}
+            Err(e) if is_range_rejected(&e) => {}
             Err(e) => return Err(e),
         }
         *offset = 0;
         self.client.get(&item.url, ctx).await.map(Some)
     }
+}
+
+/// 带 `Range` 的请求被拒：416，或对 Range 返回 403/404 的 CDN（如 `edge.forgecdn.net`
+/// 对任何 Range 请求都返回 404）。调用方应改为不带 `Range` 的完整请求；文件若真的不存在，
+/// 完整请求会返回同样的错误。
+pub(crate) fn is_range_rejected(err: &AppError) -> bool {
+    err.code == ErrorCode::NetHttpStatus
+        && err
+            .params
+            .get("status")
+            .is_some_and(|s| matches!(s.as_str(), "403" | "404" | "416"))
 }
 
 /// 单个文件计入批次进度的字节数，重试从头开始时能准确撤回。

@@ -1,7 +1,10 @@
 //! 共享的 HTTP 客户端：统一 `User-Agent`、超时、取消与错误码映射。
 
 use std::ops::Deref;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+use reqwest::header::{HeaderName, HeaderValue};
 
 use serde::de::DeserializeOwned;
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
@@ -44,6 +47,30 @@ impl Default for Timeouts {
 pub struct HttpClient {
     inner: reqwest::Client,
     timeouts: Timeouts,
+    host_headers: Arc<Vec<HostHeader>>,
+}
+
+/// 只发给某个域名（含其子域名）的请求头，见 [`HttpClient::with_host_header`]。
+#[derive(Debug)]
+struct HostHeader {
+    host: String,
+    name: HeaderName,
+    value: HeaderValue,
+}
+
+impl HostHeader {
+    fn matches(&self, url: &str) -> bool {
+        let Some(host) = reqwest::Url::parse(url)
+            .ok()
+            .and_then(|u| u.host_str().map(str::to_ascii_lowercase))
+        else {
+            return false;
+        };
+        host == self.host
+            || host
+                .strip_suffix(&self.host)
+                .is_some_and(|rest| rest.ends_with('.'))
+    }
 }
 
 impl HttpClient {
@@ -60,7 +87,44 @@ impl HttpClient {
             .read_timeout(timeouts.read_idle)
             .build()
             .map_err(|e| AppError::new(ErrorCode::NetRequest).with_detail(e.to_string()))?;
-        Ok(Self { inner, timeouts })
+        Ok(Self {
+            inner,
+            timeouts,
+            host_headers: Arc::new(Vec::new()),
+        })
+    }
+
+    /// 返回一个对 `host` 及其子域名的请求都附加 `name: value` 请求头的克隆，其他请求不受影响。
+    ///
+    /// 用于需要凭据的 CDN（如 CurseForge 的 `x-api-key`）。值标记为敏感，不会出现在
+    /// `Debug` 输出中；名称或值不合法时返回 `NET_REQUEST`（错误中不含值）。
+    pub fn with_host_header(&self, host: &str, name: &str, value: &str) -> AppResult<Self> {
+        let invalid = |what: &str| {
+            AppError::new(ErrorCode::NetRequest)
+                .with_param("host", host)
+                .with_detail(format!("invalid header {what}"))
+        };
+        let name = HeaderName::from_bytes(name.as_bytes()).map_err(|_| invalid("name"))?;
+        let mut value = HeaderValue::from_str(value).map_err(|_| invalid("value"))?;
+        value.set_sensitive(true);
+        let mut headers: Vec<HostHeader> = self
+            .host_headers
+            .iter()
+            .map(|h| HostHeader {
+                host: h.host.clone(),
+                name: h.name.clone(),
+                value: h.value.clone(),
+            })
+            .collect();
+        headers.push(HostHeader {
+            host: host.trim_matches('.').to_ascii_lowercase(),
+            name,
+            value,
+        });
+        Ok(Self {
+            host_headers: Arc::new(headers),
+            ..self.clone()
+        })
     }
 
     /// 当前超时设置。
@@ -108,6 +172,10 @@ impl HttpClient {
         url: &str,
         ctx: &TaskCtx,
     ) -> AppResult<reqwest::Response> {
+        let mut request = request;
+        for header in self.host_headers.iter().filter(|h| h.matches(url)) {
+            request = request.header(header.name.clone(), header.value.clone());
+        }
         // 连接、TLS 握手与等待响应头都算在内，避免任何一步无限挂起。
         let send = tokio::time::timeout(self.timeouts.response, request.send());
         let sent = tokio::select! {
@@ -252,4 +320,44 @@ pub(crate) fn map_reqwest_error(url: &str, err: &reqwest::Error) -> AppError {
     AppError::new(code)
         .with_param("url", url)
         .with_detail(err.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn header(host: &str) -> HostHeader {
+        HostHeader {
+            host: host.to_owned(),
+            name: HeaderName::from_static("x-api-key"),
+            value: HeaderValue::from_static("test-api-key"),
+        }
+    }
+
+    #[test]
+    fn host_header_matches_host_and_subdomains_only() {
+        let h = header("forgecdn.net");
+        assert!(h.matches("https://forgecdn.net/a"));
+        assert!(h.matches("https://edge.forgecdn.net/files/1/2/a.jar"));
+        assert!(h.matches("https://MEDIAFILEZ.forgecdn.net/a"));
+        assert!(!h.matches("https://notforgecdn.net/a"));
+        assert!(!h.matches("https://forgecdn.net.evil.example/a"));
+        assert!(!h.matches("https://cdn.modrinth.com/forgecdn.net"));
+        assert!(!h.matches("not a url"));
+    }
+
+    #[test]
+    fn host_header_value_is_hidden_from_debug() {
+        let client = HttpClient::new()
+            .unwrap()
+            .with_host_header("forgecdn.net", "x-api-key", "test-api-key")
+            .unwrap();
+        assert!(!format!("{client:?}").contains("test-api-key"));
+        let err = HttpClient::new()
+            .unwrap()
+            .with_host_header("forgecdn.net", "x-api-key", "bad\nvalue")
+            .unwrap_err();
+        assert_eq!(err.code, ErrorCode::NetRequest);
+        assert!(!format!("{err:?}").contains("bad"));
+    }
 }

@@ -114,10 +114,14 @@ async fn supports_range(
     ctx: &TaskCtx,
 ) -> AppResult<bool> {
     let _permit = acquire(engine.connections(), ctx).await?;
-    let response = engine
-        .client()
-        .get_range(&item.url, 0, Some(0), ctx)
-        .await?;
+    let response = match engine.client().get_range(&item.url, 0, Some(0), ctx).await {
+        Ok(response) => response,
+        Err(e) if crate::download::is_range_rejected(&e) => {
+            tracing::debug!(url = %item.url, "服务器拒绝 Range 请求，改为整文件下载");
+            return Ok(false);
+        }
+        Err(e) => return Err(e),
+    };
     if response.status() != StatusCode::PARTIAL_CONTENT {
         return Ok(false);
     }
