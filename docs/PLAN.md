@@ -431,7 +431,7 @@ M1 可以拆成四条并行泳道（详见第 10 节）：**下载**（M1-01→0
 ### M2-02 CurseForge 客户端
 - **文件**：`modules/resources/src/curseforge/{client.rs,models.rs}`、`modules/resources/build.rs`。
 - **前置**：维护者申请 CurseForge API Key，以 `TMCL_CURSEFORGE_API_KEY` 按 M0-08 同样方式注入；没有 key 时 CurseForge 来源隐藏。
-- **要点**：`api.curseforge.com/v1`，请求头 `x-api-key`；处理作者禁止第三方下载的文件（`downloadUrl` 为空）：提示用户手动下载并提供打开网页按钮。
+- **要点**：`api.curseforge.com/v1`，请求头 `x-api-key`；处理作者禁止第三方下载的文件（`downloadUrl` 为空）：提示用户手动下载并提供打开网页按钮。从 `edge.forgecdn.net`（`*.forgecdn.net`）下载文件同样要带 `x-api-key`；按第三方 API 条款，API 数据不缓存到磁盘，不通过代理/VPN 隐藏身份。
 - **验收**：同 M2-01；无 key 构建时功能隐藏且无报错。
 - **依赖**：M1-01 · **规模**：M · **外部阻塞**：API Key
 
