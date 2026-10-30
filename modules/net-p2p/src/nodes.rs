@@ -1,16 +1,15 @@
 //! EasyTier 公共节点。
 //!
-//! 默认使用与陶瓦联机相同的四个社区节点（维护者 2026-10-29 决定，见
-//! `docs/research/p2p.md` 第 7 节）；用户可在设置里追加自己的节点，或关闭默认节点。
-//! 后两个节点由社区成员 zkitefly 提供，两节点均禁止中转，node1 只对中国大陆开放。
+//! 原定与陶瓦联机相同的四个节点（`docs/research/p2p.md` 第 7 节），但 EasyTier 官方的
+//! `public.easytier.top`、`public2.easytier.cn` 在 2026-10-30 已无法解析，维护者决定只保留
+//! 社区成员 zkitefly 提供的两个节点：均禁止中转，node1 只对中国大陆开放，node2 只对大陆以外开放。
+//! 用户可在设置里追加自己的节点，或关闭默认节点。
 
 use reqwest::Url;
 use tmcl_common::{AppError, AppResult, ErrorCode};
 
 /// 默认公共节点。
-pub const DEFAULT_PUBLIC_NODES: [&str; 4] = [
-    "tcp://public.easytier.top:11010",
-    "tcp://public2.easytier.cn:54321",
+pub const DEFAULT_PUBLIC_NODES: [&str; 2] = [
     "https://etnode.zkitefly.eu.org/node1",
     "https://etnode.zkitefly.eu.org/node2",
 ];
@@ -85,16 +84,19 @@ mod tests {
         let custom = vec![
             " tcp://my.node:11010 ".to_owned(),
             "not a url".to_owned(),
-            "tcp://public.easytier.top:11010".to_owned(),
+            "https://etnode.zkitefly.eu.org/node1".to_owned(),
             "tcp://my.node:11010".to_owned(),
         ];
         let nodes = effective_nodes(true, &custom);
         assert_eq!(nodes[0], "tcp://my.node:11010");
-        assert_eq!(nodes[1], "tcp://public.easytier.top:11010");
+        assert_eq!(nodes[1], "https://etnode.zkitefly.eu.org/node1");
         assert_eq!(nodes.len(), 1 + DEFAULT_PUBLIC_NODES.len());
         assert_eq!(
             effective_nodes(false, &custom),
-            ["tcp://my.node:11010", "tcp://public.easytier.top:11010"]
+            [
+                "tcp://my.node:11010",
+                "https://etnode.zkitefly.eu.org/node1"
+            ]
         );
         assert!(effective_nodes(false, &[]).is_empty());
     }
