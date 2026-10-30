@@ -75,5 +75,6 @@
   "SAKURA_KEY_MISSING": "Please enter your SakuraFrp access key first",
   "SAKURA_NODE_NOT_PUBLIC": "Public servers may only use nodes that allow public games, and {node} does not. Pick another node",
   "SAKURA_NODE_UNAVAILABLE": "Node {node} is not available right now. Pick another node",
-  "SAKURA_REALNAME_REQUIRED": "Your SakuraFrp account is not verified yet. Complete identity verification on the SakuraFrp website first"
+  "SAKURA_REALNAME_REQUIRED": "Your SakuraFrp account is not verified yet. Complete identity verification on the SakuraFrp website first",
+  "SAKURA_ALREADY_RUNNING": "Already hosting a room. Stop it first"
 }

@@ -10,6 +10,7 @@ pub mod launch;
 pub mod layout;
 pub mod loader;
 pub mod resources;
+pub mod sakura;
 pub mod settings;
 pub mod skin;
 pub mod sync;
