@@ -143,6 +143,24 @@ pub enum ErrorCode {
     ResourcesVersionNotFound,
     /// 数据包要安装到的存档不存在或名称非法。
     ResourcesWorldNotFound,
+    /// SakuraFrp 账号已被冻结（`/user/info` 返回 `ban`）。
+    SakuraAccountBanned,
+    /// SakuraFrp 接口拒绝请求（4xx），`msg` 为服务端给出的说明。
+    SakuraApiError,
+    /// frpc 无法启动、提前退出或超时没有给出联机地址。
+    SakuraFrpcFailed,
+    /// 官方没有提供适用于当前平台的 frpc。
+    SakuraFrpcUnavailable,
+    /// SakuraFrp 访问密钥无效或已重置（接口返回 401）。
+    SakuraKeyInvalid,
+    /// 还没有保存 SakuraFrp 访问密钥。
+    SakuraKeyMissing,
+    /// 公开房间选了不允许穿透公开游戏服务器的节点。
+    SakuraNodeNotPublic,
+    /// 所选节点不存在、离线或已满载。
+    SakuraNodeUnavailable,
+    /// SakuraFrp 账号未完成实名认证。
+    SakuraRealnameRequired,
     /// 皮肤文件不是 PNG，或尺寸不是 64×64 / 64×32（正版上传时服务器拒收也用此码）。
     SkinInvalidImage,
     /// 本地皮肤库中没有该皮肤（已被删除或 ID 无效）。
@@ -222,6 +240,15 @@ impl ErrorCode {
             Self::ResourcesModpackUnsupported => "RESOURCES_MODPACK_UNSUPPORTED",
             Self::ResourcesVersionNotFound => "RESOURCES_VERSION_NOT_FOUND",
             Self::ResourcesWorldNotFound => "RESOURCES_WORLD_NOT_FOUND",
+            Self::SakuraAccountBanned => "SAKURA_ACCOUNT_BANNED",
+            Self::SakuraApiError => "SAKURA_API_ERROR",
+            Self::SakuraFrpcFailed => "SAKURA_FRPC_FAILED",
+            Self::SakuraFrpcUnavailable => "SAKURA_FRPC_UNAVAILABLE",
+            Self::SakuraKeyInvalid => "SAKURA_KEY_INVALID",
+            Self::SakuraKeyMissing => "SAKURA_KEY_MISSING",
+            Self::SakuraNodeNotPublic => "SAKURA_NODE_NOT_PUBLIC",
+            Self::SakuraNodeUnavailable => "SAKURA_NODE_UNAVAILABLE",
+            Self::SakuraRealnameRequired => "SAKURA_REALNAME_REQUIRED",
             Self::SkinInvalidImage => "SKIN_INVALID_IMAGE",
             Self::SkinNotFound => "SKIN_NOT_FOUND",
             Self::SyncMasterInvalid => "SYNC_MASTER_INVALID",
@@ -373,6 +400,15 @@ mod tests {
             ErrorCode::ResourcesModpackUnsupported,
             ErrorCode::ResourcesVersionNotFound,
             ErrorCode::ResourcesWorldNotFound,
+            ErrorCode::SakuraAccountBanned,
+            ErrorCode::SakuraApiError,
+            ErrorCode::SakuraFrpcFailed,
+            ErrorCode::SakuraFrpcUnavailable,
+            ErrorCode::SakuraKeyInvalid,
+            ErrorCode::SakuraKeyMissing,
+            ErrorCode::SakuraNodeNotPublic,
+            ErrorCode::SakuraNodeUnavailable,
+            ErrorCode::SakuraRealnameRequired,
             ErrorCode::SkinInvalidImage,
             ErrorCode::SkinNotFound,
             ErrorCode::SyncMasterInvalid,

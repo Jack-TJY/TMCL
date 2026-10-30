@@ -64,3 +64,12 @@
 | 切换 / 隐藏披风 | `PUT` / `DELETE https://api.minecraftservices.com/minecraft/profile/capes/active` | `PUT` 的 JSON 体为 `{"capeId": "<id>"}`；成功返回新档案 | 同上 |
 | 皮肤与披风图片 | `GET https://textures.minecraft.net/texture/<哈希>` | 档案 `skins[].url` / `capes[].url` 给出的 PNG（地址可能是 `http://`，启动器一律改用 HTTPS）；只用于界面预览（`skin_texture`） | 未实测，需维护者用正版账号验证 |
 | 外置登录皮肤站页面 | 账号保存的 Yggdrasil API 地址 | GET API 根读取元数据的 `meta.links.homepage`，没有时用 API 地址的站点根；只在系统浏览器中打开 | 离线测试 |
+
+## sakura（M2-14）
+
+| 用途 | 地址 | 说明 | 核实 |
+| --- | --- | --- | --- |
+| SakuraFrp 开放 API v4 | `https://api.natfrp.com/v4` | 账号 `GET /user/info`（校验访问密钥；`realname` > 0 为已实名，有 `ban` 字段为已冻结）、节点 `GET /nodes`（键为节点 ID；`flag` 位：`1<<2` 可建隧道、`1<<9` 离线、`1<<11` 允许公开游戏）、隧道 `GET /tunnels`、`POST /tunnels`（JSON：`name`、`type=tcp`、`node`、`local_ip`、`local_port`、`note`，返回 201 与 `id`）、`POST /tunnel/delete`（JSON `ids` 逗号分隔，每次最多 10 条）。请求头 `Authorization: Bearer <访问密钥>`，密钥只存系统密钥库（键 `tmcl:sakura:access-key`），不写日志。401 视为密钥无效；其余 4xx 的 `{code,msg}` 中 `msg` 原样交给界面 | 2026-10-30 实测下方两个公开接口；需要密钥的接口离线测试，待维护者用自己的账号真机验证 |
+| SakuraFrp 客户端下载信息 | `GET https://api.natfrp.com/v4/system/clients` | 不需要登录。顶层键为分类（`windows`、`macos`、`android`、`unix`、`frpc`、`other`），只用 `frpc`：`ver`（如 `0.51.0-sakura-15.1`）与 `archs.<os>_<arch>`（`windows_amd64`、`linux_arm64`、`darwin_arm64` 等）的 `url`、`hash`、`size`；没有 `hash` 的条目（Docker 链接）跳过 | 2026-10-30 Windows 10 国内直连实测 200 |
+| frpc 下载 | `https://nya.globalslb.net/natfrp/client/frpc/<ver>/frpc_<os>_<arch>[.exe]` | 由上一行的 `url` 给出，不在代码中拼接；未压缩的可执行文件，按 `size` 与 `hash`（MD5）校验，存到 `<data_root>/cache/sakura-frpc/<ver>/`，新版本可用后删除旧版本。运行参数 `-f <密钥>:<隧道 ID> -n --disable_log_color`，Windows 上不弹出控制台窗口 | 2026-10-30 下载 `frpc_windows_amd64.exe`，大小 14209024 与 MD5 均与接口一致 |
+| SakuraFrp 服务条款 | `GET https://api.natfrp.com/v4/system/policy?type=tos` | 不需要登录，返回 `updated`（如 `2024/02/13`）、`alert`、`content`（Markdown，UTF-8）；首次使用时在界面展示 | 2026-10-30 实测 200 |
