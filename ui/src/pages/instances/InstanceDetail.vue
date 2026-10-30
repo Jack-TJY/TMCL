@@ -316,43 +316,46 @@ async function save() {
       />
       <template #footer>
         <div class="footer">
-          <NButton :disabled="!instance" @click="instance && emit('openDir', instance.id)">
-            <template #icon
-              ><NIcon><FolderOpen20Regular /></NIcon
-            ></template>
-            {{ t("instances.action.open") }}
-          </NButton>
-          <NButton
-            :disabled="!instance"
-            @click="
-              instance && router.push({ name: 'instance-resources', params: { id: instance.id } })
-            "
-          >
-            <template #icon
-              ><NIcon><Apps20Regular /></NIcon
-            ></template>
-            {{ t("instances.action.resources") }}
-          </NButton>
-          <NButton
-            v-if="instance && config?.loader"
-            :loading="importingMods === instance.id"
-            @click="importMods(instance.id)"
-          >
-            <template #icon
-              ><NIcon><PuzzlePiece20Regular /></NIcon
-            ></template>
-            {{ t("instances.action.importMods") }}
-          </NButton>
-          <div class="spacer" />
-          <NButton @click="emit('close')">{{ t("instances.cancel") }}</NButton>
-          <NButton
-            type="primary"
-            :loading="saving"
-            :disabled="!config || javaPathMissing"
-            @click="save"
-          >
-            {{ t("instances.detail.save") }}
-          </NButton>
+          <div class="group">
+            <NButton :disabled="!instance" @click="instance && emit('openDir', instance.id)">
+              <template #icon
+                ><NIcon><FolderOpen20Regular /></NIcon
+              ></template>
+              {{ t("instances.action.open") }}
+            </NButton>
+            <NButton
+              :disabled="!instance"
+              @click="
+                instance && router.push({ name: 'instance-resources', params: { id: instance.id } })
+              "
+            >
+              <template #icon
+                ><NIcon><Apps20Regular /></NIcon
+              ></template>
+              {{ t("instances.action.resources") }}
+            </NButton>
+            <NButton
+              v-if="instance && config?.loader"
+              :loading="importingMods === instance.id"
+              @click="importMods(instance.id)"
+            >
+              <template #icon
+                ><NIcon><PuzzlePiece20Regular /></NIcon
+              ></template>
+              {{ t("instances.action.importMods") }}
+            </NButton>
+          </div>
+          <div class="group confirm">
+            <NButton @click="emit('close')">{{ t("instances.cancel") }}</NButton>
+            <NButton
+              type="primary"
+              :loading="saving"
+              :disabled="!config || javaPathMissing"
+              @click="save"
+            >
+              {{ t("instances.detail.save") }}
+            </NButton>
+          </div>
         </div>
       </template>
     </NDrawerContent>
@@ -396,14 +399,23 @@ async function save() {
   white-space: nowrap;
 }
 
+/* 抽屉宽度固定，按钮放不下一行时自动换行，避免出现横向滚动条。 */
 .footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   width: 100%;
 }
 
-.spacer {
-  flex: 1;
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 取消/保存始终靠右，换行时整体移到下一行。 */
+.confirm {
+  margin-left: auto;
 }
 </style>
