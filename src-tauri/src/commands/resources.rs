@@ -1,12 +1,12 @@
 //! `resources_*` 命令：按实例搜索 Modrinth 资源、列出版本、生成安装计划并安装；
-//! 管理已安装资源（列表、从本地导入、启用/禁用、删除、检查更新与更新）；搜索整合包并安装为新实例，
-//! 把实例导出为整合包。
+//! 管理已安装资源（列表、从本地导入、启用/禁用、删除、检查更新与更新）；在 Modrinth 或 CurseForge
+//! 搜索整合包并安装为新实例，把实例导出为 `.mrpack` 或 CurseForge 整合包。
 
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
-use tmcl_common::{AppError, AppResult, TaskCtx};
+use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_instance::InstanceStore;
 use tmcl_loader::LoaderInstaller;
 use tmcl_resources::browse::{self, BrowseQuery};
@@ -14,12 +14,14 @@ use tmcl_resources::modpack::{export, source};
 use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::update;
 use tmcl_resources::{
-    InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackExport, ModpackInfo,
-    ModpackInstaller, ModpackSource, ResourceImportResult, ResourceInstaller, ResourceKind,
-    ResourceManager, ResourcePage, ResourceSort, ResourceUpdate, ResourceVersion,
+    InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackExport, ModpackFormat,
+    ModpackInfo, ModpackInstaller, ModpackSource, ResourceImportResult, ResourceInstaller,
+    ResourceKind, ResourceManager, ResourcePage, ResourcePlatform, ResourceSort, ResourceUpdate,
+    ResourceVersion,
 };
 use ts_rs::TS;
 
+use crate::commands::settings::open_in_file_manager;
 use crate::events::{TaskStarted, spawn_task};
 use crate::state::AppState;
 
@@ -207,9 +209,27 @@ pub struct ResourceWorldList {
     pub worlds: Vec<String>,
 }
 
+/// `resources_open_page` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesOpenPageArgs {
+    /// 要在浏览器中打开的 CurseForge 网页（如需要手动下载的文件页）。
+    pub url: String,
+}
+
+/// `resources_sources` 的返回值：本次构建可用的资源平台。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ResourceSources {
+    /// 是否可用 CurseForge（构建时注入了 API Key）；为 `false` 时界面应隐藏 CurseForge。
+    pub curseforge: bool,
+}
+
 /// `resources_modpack_search` 的参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 pub struct ResourcesModpackSearchArgs {
+    /// 搜索哪个平台，默认 Modrinth。
+    #[serde(default)]
+    #[ts(optional)]
+    pub platform: Option<ResourcePlatform>,
     /// 关键词，可为空。
     #[serde(default)]
     pub query: String,
@@ -234,7 +254,11 @@ pub struct ResourcesModpackSearchArgs {
 /// `resources_modpack_versions` 的参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 pub struct ResourcesModpackVersionsArgs {
-    /// Modrinth 整合包项目 ID。
+    /// 项目所在平台，默认 Modrinth。
+    #[serde(default)]
+    #[ts(optional)]
+    pub platform: Option<ResourcePlatform>,
+    /// 整合包项目 ID（CurseForge 为十进制数字）。
     pub project_id: String,
     /// 只要支持该游戏版本的版本；省略表示不限。
     #[serde(default)]
@@ -245,7 +269,7 @@ pub struct ResourcesModpackVersionsArgs {
 /// `resources_modpack_inspect` 的参数。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 pub struct ResourcesModpackInspectArgs {
-    /// 本地 `.mrpack` 文件的绝对路径。
+    /// 本地 `.mrpack` 或 CurseForge 整合包 zip 的绝对路径。
     pub path: String,
 }
 
@@ -265,8 +289,12 @@ pub struct ResourcesModpackInstallArgs {
 pub struct ResourcesModpackExportArgs {
     /// 要导出的实例。
     pub instance_id: String,
-    /// 目标 `.mrpack` 的绝对路径。
+    /// 目标文件（`.mrpack` 或 `.zip`）的绝对路径。
     pub dest: String,
+    /// 导出格式，默认 `.mrpack`。
+    #[serde(default)]
+    #[ts(optional)]
+    pub format: Option<ModpackFormat>,
     /// 要包含的 `game/` 顶层条目名（见 `instance_game_entries`）。
     pub include: Vec<String>,
     /// 整合包名称；省略或为空时使用实例名称。
@@ -434,7 +462,34 @@ pub async fn resources_worlds(
     })
 }
 
-/// 在 Modrinth 搜索整合包。
+/// 在系统浏览器中打开 CurseForge 网页，用于手动下载作者禁止第三方分发的文件。
+/// 只接受 `https://www.curseforge.com/` 下的地址，其他地址返回 `COMMON_INTERNAL`（`params.url`）。
+#[tauri::command]
+pub async fn resources_open_page(args: ResourcesOpenPageArgs) -> Result<(), AppError> {
+    if !is_curseforge_page(&args.url) {
+        return Err(AppError::new(ErrorCode::CommonInternal).with_param("url", &args.url));
+    }
+    open_in_file_manager(std::path::Path::new(&args.url))
+}
+
+/// `https://www.curseforge.com/<路径>`，且不含会被 shell 解释的字符。
+fn is_curseforge_page(url: &str) -> bool {
+    url.strip_prefix("https://www.curseforge.com/").is_some()
+        && url
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-._~/:?=%".contains(&b))
+}
+
+/// 本次构建可用的资源平台。
+#[tauri::command]
+pub fn resources_sources(state: State<'_, AppState>) -> ResourceSources {
+    ResourceSources {
+        curseforge: state.curseforge.is_some(),
+    }
+}
+
+/// 在 Modrinth 或 CurseForge 搜索整合包；没有 CurseForge Key 时搜索 CurseForge 返回
+/// `RESOURCES_CURSEFORGE_DISABLED`。
 #[tauri::command]
 pub async fn resources_modpack_search(
     state: State<'_, AppState>,
@@ -447,13 +502,15 @@ pub async fn resources_modpack_search(
         limit: args.limit.unwrap_or_default(),
     };
     let ctx = TaskCtx::noop("resources_modpack_search");
-    source::search(
-        state.modrinth()?,
-        args.game_version.as_deref(),
-        &query,
-        &ctx,
-    )
-    .await
+    let game_version = args.game_version.as_deref();
+    match args.platform.unwrap_or_default() {
+        ResourcePlatform::Modrinth => {
+            source::search(state.modrinth()?, game_version, &query, &ctx).await
+        }
+        ResourcePlatform::Curseforge => {
+            source::search_curseforge(state.curseforge()?, game_version, &query, &ctx).await
+        }
+    }
 }
 
 /// 列出整合包项目的版本。
@@ -463,17 +520,21 @@ pub async fn resources_modpack_versions(
     args: ResourcesModpackVersionsArgs,
 ) -> Result<ResourceVersionList, AppError> {
     let ctx = TaskCtx::noop("resources_modpack_versions");
-    let versions = source::versions(
-        state.modrinth()?,
-        &args.project_id,
-        args.game_version.as_deref(),
-        &ctx,
-    )
-    .await?;
+    let (id, game_version) = (&args.project_id, args.game_version.as_deref());
+    let versions = match args.platform.unwrap_or_default() {
+        ResourcePlatform::Modrinth => {
+            source::versions(state.modrinth()?, id, game_version, &ctx).await?
+        }
+        ResourcePlatform::Curseforge => {
+            source::versions_curseforge(state.curseforge()?, id, game_version, &ctx).await?
+        }
+    };
     Ok(ResourceVersionList { versions })
 }
 
-/// 读取并校验本地 `.mrpack`，返回概要，不写文件。
+/// 读取并校验本地整合包（`.mrpack` 或 CurseForge zip），返回概要，不写文件。
+///
+/// CurseForge 整合包会向 API 查询文件，概要中列出需要手动下载的文件。
 #[tauri::command]
 pub async fn resources_modpack_inspect(
     state: State<'_, AppState>,
@@ -492,13 +553,22 @@ pub async fn resources_modpack_install<R: Runtime>(
 ) -> Result<TaskStarted, AppError> {
     let installer = modpack_installer(&state)?;
     let client = state.modrinth()?.clone();
+    let curseforge = state.curseforge.clone();
     let downloader = state.downloader()?;
     let cache_dir = state.data()?.cache_dir().join("modpacks");
     Ok(spawn_task(
         &app,
         RESOURCES_MODPACK_INSTALL_KIND,
         move |ctx| async move {
-            let pack = source::fetch(&args.source, &client, &downloader, &cache_dir, &ctx).await?;
+            let pack = source::fetch(
+                &args.source,
+                &client,
+                curseforge.as_ref(),
+                &downloader,
+                &cache_dir,
+                &ctx,
+            )
+            .await?;
             let result = installer
                 .install(&pack.path, args.name.as_deref(), &ctx)
                 .await;
@@ -508,7 +578,8 @@ pub async fn resources_modpack_install<R: Runtime>(
     ))
 }
 
-/// 把实例导出为 `.mrpack`，立即返回任务 ID。
+/// 把实例导出为 `.mrpack` 或 CurseForge 整合包，立即返回任务 ID；没有 CurseForge Key 时导出
+/// CurseForge 格式返回 `RESOURCES_CURSEFORGE_DISABLED`。
 #[tauri::command]
 pub async fn resources_modpack_export<R: Runtime>(
     app: AppHandle<R>,
@@ -517,7 +588,12 @@ pub async fn resources_modpack_export<R: Runtime>(
 ) -> Result<TaskStarted, AppError> {
     let config = state.with_db(|paths, db| InstanceStore::new(paths, db).get(&args.instance_id))?;
     let game_dir = state.data()?.instance_game_dir(&config.id);
+    let format = args.format.unwrap_or(ModpackFormat::Mrpack);
     let client = state.modrinth()?.clone();
+    let curseforge = match format {
+        ModpackFormat::Mrpack => None,
+        ModpackFormat::Curseforge => Some(state.curseforge()?.clone()),
+    };
     let pack = ModpackExport {
         name: non_empty(args.name).unwrap_or(config.name),
         version: non_empty(args.version).unwrap_or_else(|| "1.0.0".to_owned()),
@@ -531,9 +607,11 @@ pub async fn resources_modpack_export<R: Runtime>(
         &app,
         RESOURCES_MODPACK_EXPORT_KIND,
         move |ctx| async move {
-            export::export(&client, &game_dir, &dest, &pack, &ctx)
-                .await
-                .map(drop)
+            match &curseforge {
+                None => export::export(&client, &game_dir, &dest, &pack, &ctx).await,
+                Some(cf) => export::export_curseforge(cf, &game_dir, &dest, &pack, &ctx).await,
+            }
+            .map(drop)
         },
     ))
 }
@@ -547,7 +625,7 @@ fn modpack_installer(state: &AppState) -> AppResult<ModpackInstaller> {
     let loader = LoaderInstaller::new(state.downloader()?, state.data()?.clone())
         .with_endpoints(state.loader.clone())
         .with_game_options(state.game.clone());
-    Ok(ModpackInstaller::new(loader, state.game.clone()))
+    Ok(ModpackInstaller::new(loader, state.game.clone()).with_curseforge(state.curseforge.clone()))
 }
 
 /// 读取实例的游戏版本与加载器；实例不存在返回 `INSTANCE_NOT_FOUND`。
@@ -580,4 +658,26 @@ fn manager(
     let target = target(state, instance_id)?;
     let game_dir = state.data()?.instance_game_dir(instance_id);
     ResourceManager::new(state.modrinth()?.clone(), target, &game_dir, kind, world)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_curseforge_pages_are_opened() {
+        assert!(is_curseforge_page(
+            "https://www.curseforge.com/minecraft/mc-mods/jei/files/9352806"
+        ));
+        for bad in [
+            "http://www.curseforge.com/minecraft",
+            "https://www.curseforge.com.evil.example/x",
+            "https://evil.example/https://www.curseforge.com/",
+            "https://www.curseforge.com/a&calc",
+            "https://www.curseforge.com/a b",
+            "file:///C:/Windows",
+        ] {
+            assert!(!is_curseforge_page(bad), "{bad}");
+        }
+    }
 }

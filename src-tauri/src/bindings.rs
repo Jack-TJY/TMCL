@@ -30,10 +30,10 @@ use crate::commands::launch::{
 use crate::commands::layout::{LayoutSaveArgs, LayoutSnapshot};
 use crate::commands::loader::{LoaderInstallArgs, LoaderListArgs, LoaderVersionList};
 use crate::commands::resources::{
-    ResourceUpdateList, ResourceVersionList, ResourceWorldList, ResourcesDirArgs,
+    ResourceSources, ResourceUpdateList, ResourceVersionList, ResourceWorldList, ResourcesDirArgs,
     ResourcesImportArgs, ResourcesInstallArgs, ResourcesModpackExportArgs,
     ResourcesModpackInspectArgs, ResourcesModpackInstallArgs, ResourcesModpackSearchArgs,
-    ResourcesModpackVersionsArgs, ResourcesRemoveArgs, ResourcesSearchArgs,
+    ResourcesModpackVersionsArgs, ResourcesOpenPageArgs, ResourcesRemoveArgs, ResourcesSearchArgs,
     ResourcesSetEnabledArgs, ResourcesSetEnabledResult, ResourcesUpdateArgs, ResourcesVersionsArgs,
     ResourcesWorldsArgs,
 };
@@ -118,6 +118,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ResourceImportResult::export_all(&cfg)?;
     ModpackInfo::export_all(&cfg)?;
     ResourcePage::export_all(&cfg)?;
+    ResourceSources::export_all(&cfg)?;
     ResourceUpdateList::export_all(&cfg)?;
     ResourceVersionList::export_all(&cfg)?;
     ResourceWorldList::export_all(&cfg)?;
@@ -129,6 +130,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ResourcesModpackInstallArgs::export_all(&cfg)?;
     ResourcesModpackSearchArgs::export_all(&cfg)?;
     ResourcesModpackVersionsArgs::export_all(&cfg)?;
+    ResourcesOpenPageArgs::export_all(&cfg)?;
     ResourcesRemoveArgs::export_all(&cfg)?;
     ResourcesSearchArgs::export_all(&cfg)?;
     ResourcesSetEnabledArgs::export_all(&cfg)?;
