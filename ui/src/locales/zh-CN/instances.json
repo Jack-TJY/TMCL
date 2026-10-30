@@ -96,6 +96,13 @@
     "mrpackHint": "能在 Modrinth 上找到的 mod、资源包和光影只写下载链接，其余文件直接打包。需要联网。",
     "curseforgeHint": "能在 CurseForge 上找到的 mod、资源包和光影只写进清单，其余文件直接打包。需要联网。"
   },
+  "drop": {
+    "title": "松开以安装",
+    "hint": "支持 Modrinth 整合包（.mrpack）、CurseForge 整合包（.zip）和 TMCL 实例包（.tmclpack）",
+    "multiple": "一次只能安装一个文件，已使用第一个",
+    "multimc": "{file} 是 MultiMC / Prism Launcher 导出的实例，暂不支持导入。使用 Prism Launcher 的话，可以先在其中导出为 Modrinth 整合包（.mrpack）再拖入",
+    "unknown": "无法识别 {file}：它不是整合包（.mrpack、CurseForge .zip），也不是 TMCL 实例包（.tmclpack）"
+  },
   "import": {
     "action": "导入",
     "title": "导入实例",

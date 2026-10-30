@@ -11,14 +11,14 @@ use tmcl_instance::InstanceStore;
 use tmcl_loader::LoaderInstaller;
 use tmcl_resources::browse::{self, BrowseQuery};
 use tmcl_resources::modpack::curseforge::{Fallbacks, MIRROR_BASE};
-use tmcl_resources::modpack::{export, source};
+use tmcl_resources::modpack::{detect, export, source};
 use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::update;
 use tmcl_resources::{
     InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackExport, ModpackFormat,
-    ModpackInfo, ModpackInstaller, ModpackSource, ResourceImportResult, ResourceInstaller,
-    ResourceKind, ResourceManager, ResourcePage, ResourcePlatform, ResourceSort, ResourceUpdate,
-    ResourceVersion,
+    ModpackInfo, ModpackInstaller, ModpackSource, PackKind, ResourceImportResult,
+    ResourceInstaller, ResourceKind, ResourceManager, ResourcePage, ResourcePlatform, ResourceSort,
+    ResourceUpdate, ResourceVersion,
 };
 use ts_rs::TS;
 
@@ -294,6 +294,20 @@ pub struct ResourcesModpackVersionsArgs {
 pub struct ResourcesModpackInspectArgs {
     /// 本地 `.mrpack` 或 CurseForge 整合包 zip 的绝对路径。
     pub path: String,
+}
+
+/// `resources_pack_detect` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesPackDetectArgs {
+    /// 拖入文件的绝对路径。
+    pub path: String,
+}
+
+/// `resources_pack_detect` 的结果。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DetectedPack {
+    /// 包类型。
+    pub kind: PackKind,
 }
 
 /// `resources_modpack_install` 的参数。
@@ -581,6 +595,18 @@ pub async fn resources_modpack_inspect(
 ) -> Result<ModpackInfo, AppError> {
     let installer = modpack_installer(&state)?;
     Ok(installer.inspect(args.path.as_ref()).await?.info)
+}
+
+/// 识别本地压缩包是整合包、TMCL 实例包还是其他启动器的实例，供实例页拖入安装。
+#[tauri::command]
+pub async fn resources_pack_detect(
+    args: ResourcesPackDetectArgs,
+) -> Result<DetectedPack, AppError> {
+    let path = PathBuf::from(args.path);
+    let kind = tauri::async_runtime::spawn_blocking(move || detect::detect(&path))
+        .await
+        .map_err(|e| AppError::new(ErrorCode::CommonInternal).with_detail(e.to_string()))??;
+    Ok(DetectedPack { kind })
 }
 
 /// 把整合包安装为新实例，立即返回任务 ID；失败或取消时不留下新实例。

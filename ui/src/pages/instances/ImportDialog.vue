@@ -12,7 +12,8 @@ import { useTasksStore } from "../../stores/tasks";
 
 const PACK_FILTERS = [{ name: "TMCL", extensions: ["tmclpack"] }];
 
-const props = defineProps<{ show: boolean }>();
+// `path`：打开时预填的包路径（实例页拖入文件时使用）。
+const props = defineProps<{ show: boolean; path?: string | null }>();
 const emit = defineEmits<{ close: []; started: [taskId: TaskId] }>();
 
 const { t } = useI18n();
@@ -25,7 +26,7 @@ const busy = ref(false);
 watch(
   () => props.show,
   (show) => {
-    if (show) pack.value = "";
+    if (show) pack.value = props.path ?? "";
   },
 );
 

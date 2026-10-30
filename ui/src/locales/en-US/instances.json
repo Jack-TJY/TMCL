@@ -96,6 +96,13 @@
     "mrpackHint": "Mods, resource packs and shaders found on Modrinth are saved as download links; everything else is packed as is. Needs an internet connection.",
     "curseforgeHint": "Mods, resource packs and shaders found on CurseForge are only listed in the manifest; everything else is packed as is. Requires an internet connection."
   },
+  "drop": {
+    "title": "Drop to install",
+    "hint": "Modrinth modpacks (.mrpack), CurseForge modpacks (.zip) and TMCL instance packs (.tmclpack)",
+    "multiple": "Only one file can be installed at a time. Using the first one.",
+    "multimc": "{file} is a MultiMC / Prism Launcher instance, which can't be imported yet. In Prism Launcher you can export it as a Modrinth modpack (.mrpack) and drop that instead.",
+    "unknown": "Couldn't recognize {file}: it is neither a modpack (.mrpack, CurseForge .zip) nor a TMCL instance pack (.tmclpack)."
+  },
   "import": {
     "action": "Import",
     "title": "Import instance",

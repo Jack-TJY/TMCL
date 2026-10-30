@@ -14,6 +14,7 @@ import {
   resourcesModpackInstall,
   resourcesModpackSearch,
   resourcesModpackVersions,
+  resourcesPackDetect,
   resourcesRemove,
   resourcesSearch,
   resourcesSetEnabled,
@@ -95,6 +96,11 @@ describe("resources commands", () => {
     await resourcesModpackInspect({ path: "/a.mrpack" });
     expect(tauriInvoke).toHaveBeenLastCalledWith("resources_modpack_inspect", {
       args: { path: "/a.mrpack" },
+    });
+    tauriInvoke.mockResolvedValueOnce({ kind: "tmclpack" });
+    expect(await resourcesPackDetect({ path: "/a.zip" })).toBe("tmclpack");
+    expect(tauriInvoke).toHaveBeenLastCalledWith("resources_pack_detect", {
+      args: { path: "/a.zip" },
     });
     const install = { source: { kind: "modrinth" as const, version_id: "v" }, name: "Pack" };
     await resourcesModpackInstall(install);
