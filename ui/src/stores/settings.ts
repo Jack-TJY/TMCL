@@ -38,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   memory: { min_mb: 1024, max_mb: 4096 },
   download: { max_concurrency: 16, source: DEFAULT_SOURCE },
+  p2p: { use_default_nodes: true, custom_nodes: [] },
 };
 
 /** 跟踪系统的深浅色偏好。 */

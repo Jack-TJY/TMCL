@@ -1,11 +1,12 @@
 <script setup lang="ts">
-// 关于页（PLAN.md M1-16）：版本、GPL-3.0 声明与第三方许可证列表。
+// 关于页（PLAN.md M1-16）：版本、GPL-3.0 声明、运行时下载的组件与第三方许可证列表。
 // 列表由 scripts/gen-licenses.mjs 生成，约 700 KB，按需加载为单独的代码块。
 import { Search24Regular } from "@vicons/fluent";
 import { NButton, NEmpty, NIcon, NInput, NModal, NSpin, NTag } from "naive-ui";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { appInfo } from "../../api/app";
+import { p2pInfo } from "../../api/p2p";
 import type { AppInfo } from "../../bindings/AppInfo";
 import logo from "./logo.png";
 import { filterPackages, type LicenseData, type ThirdPartyPackage } from "./licenses";
@@ -13,6 +14,7 @@ import { filterPackages, type LicenseData, type ThirdPartyPackage } from "./lice
 const { t } = useI18n();
 
 const info = ref<AppInfo | null>(null);
+const easytierVersion = ref<string | null>(null);
 const data = ref<LicenseData | null>(null);
 const query = ref("");
 const selected = ref<ThirdPartyPackage | null>(null);
@@ -27,6 +29,7 @@ function openLicense(pkg: ThirdPartyPackage) {
 onMounted(async () => {
   // 浏览器中调试时没有后端，版本号显示为占位符。
   info.value = await appInfo().catch(() => null);
+  easytierVersion.value = (await p2pInfo().catch(() => null))?.easytier_version ?? null;
   data.value = (await import("./third-party-licenses.json")).default as LicenseData;
 });
 
@@ -60,6 +63,20 @@ const selectedTexts = computed(() =>
     <section class="notice">
       <p>{{ t("about.disclaimer") }}</p>
       <p>{{ t("about.license") }}</p>
+    </section>
+
+    <section>
+      <h2 class="section-title">{{ t("about.runtime.title") }}</h2>
+      <p class="secondary">{{ t("about.runtime.description") }}</p>
+      <ul class="packages">
+        <li class="package runtime">
+          <span class="name">EasyTier</span>
+          <span class="secondary version">{{ easytierVersion ?? "" }}</span>
+          <span class="secondary license">LGPL-3.0</span>
+          <span class="secondary">https://github.com/EasyTier/EasyTier</span>
+        </li>
+      </ul>
+      <p class="secondary runtime-note">{{ t("about.runtime.easytier") }}</p>
     </section>
 
     <section>
@@ -191,6 +208,15 @@ section + section {
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.runtime {
+  flex-wrap: wrap;
+  cursor: default;
+}
+
+.runtime-note {
+  margin: 8px 0 0;
 }
 
 .package:hover {

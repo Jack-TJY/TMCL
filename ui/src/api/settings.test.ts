@@ -28,6 +28,7 @@ describe("settings commands", () => {
       },
       memory: { min_mb: 1024, max_mb: 4096 },
       download: { max_concurrency: 16, source: "auto" },
+      p2p: { use_default_nodes: true, custom_nodes: [] },
     };
     await settingsSet({ settings });
     expect(tauriInvoke).toHaveBeenLastCalledWith("settings_set", { args: { settings } });

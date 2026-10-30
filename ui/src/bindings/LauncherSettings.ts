@@ -2,6 +2,7 @@
 import type { AppearanceConfig } from "./AppearanceConfig";
 import type { DownloadConfig } from "./DownloadConfig";
 import type { MemoryConfig } from "./MemoryConfig";
+import type { P2pConfig } from "./P2pConfig";
 import type { ThemeMode } from "./ThemeMode";
 
 /**
@@ -23,4 +24,8 @@ memory: MemoryConfig,
 /**
  * 下载设置。
  */
-download: DownloadConfig, };
+download: DownloadConfig, 
+/**
+ * P2P 联机设置。
+ */
+p2p: P2pConfig, };

@@ -4,7 +4,8 @@
     "download": "Download",
     "game": "Game",
     "storage": "Storage",
-    "about": "About"
+    "about": "About",
+    "multiplayer": "Multiplayer"
   },
   "theme": {
     "label": "Theme",
@@ -61,5 +62,21 @@
     "versionUnknown": "Version information unavailable",
     "disclaimer": "TMCL is an unofficial launcher and is not affiliated with Mojang Studios or Microsoft.",
     "license": "TMCL is open-source software released under the GPL-3.0 license."
+  },
+  "p2p": {
+    "defaults": {
+      "label": "Use built-in public nodes",
+      "description": "P2P multiplayer uses public nodes to let players find each other before connecting directly. Built-in nodes are run by community members and may stop working at any time"
+    },
+    "custom": {
+      "label": "Custom nodes",
+      "description": "EasyTier node addresses to try before the built-in ones. The host and guests should use the same node",
+      "empty": "No nodes are available, so P2P multiplayer cannot find rooms. Turn on built-in nodes or add a custom node",
+      "placeholder": "tcp://host:port",
+      "add": "Add",
+      "remove": "Remove",
+      "invalid": "Invalid address, expected something like tcp://host:port (tcp, udp, ws, wss, quic, wg, http, https, txt, srv)",
+      "duplicate": "This node has already been added"
+    }
   }
 }

@@ -62,6 +62,8 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // loader
         commands::loader::loader_install,
         commands::loader::loader_list,
+        // p2p
+        commands::p2p::p2p_info,
         // resources
         commands::resources::resources_check_updates,
         commands::resources::resources_import,

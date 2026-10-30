@@ -176,6 +176,25 @@ impl Default for DownloadConfig {
     }
 }
 
+/// P2P 联机设置（PLAN.md M2-12）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(default)]
+pub struct P2pConfig {
+    /// 是否使用内置的默认公共节点。
+    pub use_default_nodes: bool,
+    /// 用户添加的 EasyTier 节点地址，排在默认节点之前使用。
+    pub custom_nodes: Vec<String>,
+}
+
+impl Default for P2pConfig {
+    fn default() -> Self {
+        Self {
+            use_default_nodes: true,
+            custom_nodes: Vec::new(),
+        }
+    }
+}
+
 /// 启动器设置。缺失的字段取默认值，未知字段被忽略。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default)]
@@ -192,6 +211,8 @@ pub struct Config {
     pub memory: MemoryConfig,
     /// 下载设置。
     pub download: DownloadConfig,
+    /// P2P 联机设置。
+    pub p2p: P2pConfig,
 }
 
 impl Default for Config {
@@ -203,6 +224,7 @@ impl Default for Config {
             appearance: AppearanceConfig::default(),
             memory: MemoryConfig::default(),
             download: DownloadConfig::default(),
+            p2p: P2pConfig::default(),
         }
     }
 }
@@ -399,6 +421,18 @@ mod tests {
         assert_eq!(config.language, "zh-CN");
         assert_eq!(config.download.max_concurrency, 16);
         assert_eq!(config.download.source, "auto");
+        assert!(config.p2p.use_default_nodes);
+        assert!(config.p2p.custom_nodes.is_empty());
+    }
+
+    #[test]
+    fn p2p_section_is_read() {
+        let config = Config::parse(
+            br#"{"schema": 2, "p2p": {"custom_nodes": ["tcp://my.node:11010"], "use_default_nodes": false}}"#,
+        )
+        .unwrap();
+        assert!(!config.p2p.use_default_nodes);
+        assert_eq!(config.p2p.custom_nodes, ["tcp://my.node:11010"]);
     }
 
     #[test]

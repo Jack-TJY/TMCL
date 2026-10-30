@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 设置页（PLAN.md M1-11）：外观（背景与透明度见 appearance/，M1-19）、下载、游戏、存储与关于。
+// 设置页（PLAN.md M1-11）：外观（背景与透明度见 appearance/，M1-19）、下载、联机节点（M2-12）、游戏、存储与关于。
 // 下载源与 Java 列表暂由 api/__mocks__ 提供，见该文件说明。
 import {
   ArrowDownload24Regular,
@@ -31,6 +31,7 @@ import { formatError, isLocale, LOCALE_NAMES, setLocale, SUPPORTED_LOCALES } fro
 import { useSettingsStore, type Settings } from "../../stores/settings";
 import { DEFAULT_ACCENT, isHexColor } from "../../theme/fluent";
 import BackgroundSettings from "./appearance/BackgroundSettings.vue";
+import P2pNodeSettings from "./P2pNodeSettings.vue";
 import SettingRow from "./SettingRow.vue";
 
 /** Win11 个性化设置中的部分强调色，作为取色器的预设。 */
@@ -232,6 +233,11 @@ function setConcurrency(value: number | null) {
           @update:value="setConcurrency"
         />
       </SettingRow>
+    </section>
+
+    <section>
+      <h2 class="section-title">{{ t("settings.section.multiplayer") }}</h2>
+      <P2pNodeSettings />
     </section>
 
     <section>

@@ -4,7 +4,8 @@
     "download": "下载",
     "game": "游戏",
     "storage": "存储",
-    "about": "关于"
+    "about": "关于",
+    "multiplayer": "联机"
   },
   "theme": {
     "label": "主题",
@@ -61,5 +62,21 @@
     "versionUnknown": "版本信息不可用",
     "disclaimer": "TMCL 是非官方启动器，与 Mojang Studios、Microsoft 无关。",
     "license": "TMCL 是开源软件，以 GPL-3.0 许可证发布。"
+  },
+  "p2p": {
+    "defaults": {
+      "label": "使用内置公共节点",
+      "description": "P2P 联机先通过公共节点让双方互相发现，再尝试直连。内置节点由社区成员维护，可能随时失效"
+    },
+    "custom": {
+      "label": "自定义节点",
+      "description": "填写 EasyTier 节点地址，优先于内置节点使用；房主和房客最好填同一个节点",
+      "empty": "当前没有可用的节点，P2P 联机将无法发现房间。请打开内置节点或添加自定义节点",
+      "placeholder": "tcp://主机:端口",
+      "add": "添加",
+      "remove": "删除",
+      "invalid": "格式不正确，应为 tcp://主机:端口 这样的地址（支持 tcp、udp、ws、wss、quic、wg、http、https、txt、srv）",
+      "duplicate": "这个节点已经添加过了"
+    }
   }
 }

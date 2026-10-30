@@ -32,6 +32,7 @@ tmcl-java = { path = "../core/java" }
 tmcl-launch = { path = "../core/launch" }
 tmcl-loader = { path = "../core/loader" }
 tmcl-net = { path = "../core/net" }
+tmcl-p2p = { path = "../modules/net-p2p" }
 tmcl-resources = { path = "../modules/resources" }
 tmcl-sakura = { path = "../modules/net-sakura" }
 tmcl-skin = { path = "../modules/skin" }

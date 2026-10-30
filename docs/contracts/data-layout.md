@@ -81,6 +81,10 @@
   "download": {
     "max_concurrency": 16,
     "source": "auto"
+  },
+  "p2p": {
+    "use_default_nodes": true,
+    "custom_nodes": []
   }
 }
 ```
@@ -106,6 +110,8 @@
 | `memory.max_mb` | 正整数 | `4096` | 全局最大内存（MiB，`-Xmx`），512–32768；`instance.json` 中 `memory.follow_global` 为 `true` 的实例启动时使用这两项 |
 | `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
 | `download.source` | `"auto"` \| `"official"` \| 镜像名（如 `"bmclapi"`） | `"auto"` | 下载源。`auto`：Forge、NeoForge、Fabric 先走 BMCLAPI（`bmclapi-loaders`），其余文件走官方源，失败都回退官方源。`bmclapi`：所有文件先走 BMCLAPI 再回退官方源。`mcim`：Modrinth 与 CurseForge 的文件（`cdn.modrinth.com`、`edge.forgecdn.net`）先走 MCIM 再回退官方源（MCIM 暂不提供文件，设置界面不提供此项）。未知名称按 `auto` 处理 |
+| `p2p.use_default_nodes` | 布尔 | `true` | P2P 联机是否使用内置的默认 EasyTier 公共节点（`tmcl_p2p::DEFAULT_PUBLIC_NODES`） |
+| `p2p.custom_nodes` | 字符串数组 | `[]` | 用户添加的 EasyTier 节点，形如 `tcp://主机:端口`（协议 tcp/udp/ws/wss/quic/wg/http/https/txt/srv），最多 16 个，排在默认节点之前使用；保存时逐项校验，无效时返回 `P2P_NODE_INVALID` |
 
 读写规则：
 

@@ -31,6 +31,7 @@ use crate::commands::launch::{
 };
 use crate::commands::layout::{LayoutSaveArgs, LayoutSnapshot};
 use crate::commands::loader::{LoaderInstallArgs, LoaderListArgs, LoaderVersionList};
+use crate::commands::p2p::P2pInfo;
 use crate::commands::resources::{
     DetectedPack, ResourceSources, ResourceUpdateList, ResourceVersionList, ResourceWorldList,
     ResourcesDirArgs, ResourcesImportArgs, ResourcesInstallArgs, ResourcesModpackExportArgs,
@@ -150,6 +151,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     // sakura（SakuraNodeInfo、SakuraNode 随 SakuraNodeList，SakuraRoom 随 SakuraStatus 一并导出）
     SakuraKeyArgs::export_all(&cfg)?;
     SakuraNodeList::export_all(&cfg)?;
+    P2pInfo::export_all(&cfg)?;
     SakuraPolicy::export_all(&cfg)?;
     SakuraStatus::export_all(&cfg)?;
     SakuraUser::export_all(&cfg)?;

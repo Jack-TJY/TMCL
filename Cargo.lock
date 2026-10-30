@@ -4512,6 +4512,7 @@ dependencies = [
  "tmcl-launch",
  "tmcl-loader",
  "tmcl-net",
+ "tmcl-p2p",
  "tmcl-resources",
  "tmcl-sakura",
  "tmcl-skin",

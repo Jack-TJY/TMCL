@@ -17,5 +17,10 @@
     "count": "{count} packages",
     "noMatch": "No matching packages",
     "noText": "This package does not ship a license file; refer to the license expression and project link above."
+  },
+  "runtime": {
+    "title": "Components downloaded at runtime",
+    "description": "These programs are not bundled with the installer. They are downloaded from their official release pages the first time you use the related feature, verified, and run as separate programs. TMCL does not modify or link against them.",
+    "easytier": "EasyTier powers P2P multiplayer and is released under the GNU Lesser General Public License v3 (LGPL-3.0). Its source code is available at the address above."
   }
 }
