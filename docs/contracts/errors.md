@@ -63,9 +63,14 @@
 | `NET_REQUEST` | net | 其他 HTTP 请求错误（构造请求、读取响应、解码失败等） | `url`（可选） | 网络请求失败 {url} | Network request failed for {url} |
 | `NET_SIZE_MISMATCH` | net | 下载文件的大小与期望值不一致 | `url`、`expected`、`actual` | 文件大小不符 {url} | File size mismatch for {url} |
 | `NET_TIMEOUT` | net | 连接或读取超时 | `url` | 连接超时 {url} | Connection timed out: {url} |
+| `P2P_ALREADY_RUNNING` | p2p | 已在一个 P2P 房间中（开房或加入），同一时间只能有一个 | — | 已经在联机房间中，请先退出当前房间 | Already in a multiplayer room. Leave it first |
 | `P2P_BINARY_INVALID` | p2p | EasyTier 安装包的 SHA-256 与内置值不符，或包内缺少所需文件 | `file`（缺文件时） | 联机组件 EasyTier 下载后校验失败，请重试 | The EasyTier networking component failed verification after download, please try again |
+| `P2P_CENTER_NOT_FOUND` | p2p | 加入房间后 60 秒内在 EasyTier 网络中找不到唯一的联机中心（房间不存在、房主已关闭，或网络中有多个联机中心） | — | 找不到这个房间，请确认房间码正确且房主仍在联机 | Room not found. Check the code and make sure the host is still online |
+| `P2P_DIRECT_FAILED` | p2p | 找到了联机中心，但 30 秒内无法与房主建立直连（双方 NAT 都较严格，打洞失败） | — | 无法与房主直连，可能是双方网络限制较严，建议改用樱花穿透 | Could not connect directly to the host, probably due to strict networks on both sides. Try SakuraFrp instead |
 | `P2P_NODE_INVALID` | p2p | EasyTier 节点地址无效（不是 `协议://主机[:端口]`，或协议不受支持） | `node` | 节点地址 {node} 无效，应为 tcp://主机:端口 这样的格式 | Node address {node} is invalid, expected something like tcp://host:port |
+| `P2P_PROTOCOL_ERROR` | p2p | 联机中心的 Scaffolding 响应不合规范，或返回未知错误（状态 255，响应体原文在 `detail`） | — | 房主的联机服务响应异常，对方的启动器可能不兼容 | The host's room service gave an invalid response. Their launcher may not be compatible |
 | `P2P_ROOM_CODE_INVALID` | p2p | 房间码格式错误或校验不通过（Scaffolding `U/NNNN-NNNN-SSSS-SSSS`） | — | 房间码不正确，请检查后重新输入 | The room code is not valid, please check it and try again |
+| `P2P_SERVER_NOT_RUNNING` | p2p | 房主的 Minecraft 世界没有对局域网开放：开房时本机游戏端口连不上，或加入时 `c:server_port` 返回状态 32 | `port`（开房时） | 房主的游戏世界还没有对局域网开放，请先在游戏中“对局域网开放” | The host's world is not open to LAN yet. Open it to LAN in game first |
 | `P2P_TUNNEL_EXITED` | p2p | EasyTier 进程意外退出（启动失败或运行中崩溃） | `code`（有退出码时） | 联机组件意外退出，请重试 | The networking component stopped unexpectedly, please try again |
 | `P2P_UNSUPPORTED_PLATFORM` | p2p | 当前操作系统或 CPU 架构没有可用的 EasyTier 程序 | `platform` | 当前系统（{platform}）暂不支持 P2P 联机 | P2P multiplayer is not supported on this system ({platform}) |
 | `RESOURCES_CURSEFORGE_DISABLED` | resources | 本次构建没有 CurseForge API Key，CurseForge 来源不可用 | — | 此版本未启用 CurseForge | CurseForge is not enabled in this build |
