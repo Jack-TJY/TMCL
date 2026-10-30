@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Win11 样式的自绘标题栏（窗口 `decorations: false`）：拖拽区域 + 最小化 / 最大化 / 关闭。
-// 在浏览器中调试（非 Tauri 环境）时不显示窗口按钮。关闭时若仍有任务在运行，先请用户确认。
+// 在浏览器中调试（非 Tauri 环境）时不显示窗口按钮。关闭主窗口时若仍有任务在运行，先请用户确认；
+// 日志等辅助窗口（`plainClose`）直接关闭。
 import {
   Dismiss16Regular,
   Maximize16Regular,
@@ -14,7 +15,7 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { taskList } from "../api/task";
 
-defineProps<{ title: string }>();
+const props = defineProps<{ title: string; plainClose?: boolean }>();
 
 const { t } = useI18n();
 const dialog = useDialog();
@@ -35,6 +36,10 @@ onBeforeUnmount(() => unlisten?.());
 
 async function requestClose() {
   if (!appWindow) return;
+  if (props.plainClose) {
+    await appWindow.close();
+    return;
+  }
   const running = await taskList()
     .then(({ tasks }) => tasks.filter((task) => task.status === "running").length)
     .catch(() => 0);
@@ -104,6 +109,10 @@ async function requestClose() {
   font-size: 12px;
   line-height: 40px;
   color: var(--tmcl-text);
+}
+
+.titlebar-title:first-child {
+  padding-left: 16px;
 }
 
 .caption-buttons {

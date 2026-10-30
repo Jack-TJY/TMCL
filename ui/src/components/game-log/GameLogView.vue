@@ -1,13 +1,12 @@
 <script setup lang="ts">
-// 游戏日志窗口（PLAN.md M1-13）：实时滚动（停在底部时跟随新日志）、按关键字筛选、复制与导出，
-// 运行中可强制结束游戏。日志由后端脱敏后推送（M1-07），这里不再处理令牌。
+// 游戏日志（PLAN.md M1-13），显示在独立的日志窗口中：实时滚动（停在底部时跟随新日志）、
+// 按关键字筛选、复制与导出，运行中可强制结束游戏。日志由后端脱敏后推送（M1-07），这里不再处理令牌。
 import { Copy20Regular, Dismiss20Regular, Save20Regular, Search20Regular } from "@vicons/fluent";
 import {
   NAlert,
   NButton,
   NIcon,
   NInput,
-  NModal,
   NTag,
   NVirtualList,
   useMessage,
@@ -16,9 +15,10 @@ import {
 } from "naive-ui";
 import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { launchKill } from "../../api/launch";
 import { formatError } from "../../i18n";
 import { filterLines, logFileName, logText } from "./log";
-import { isActive, useGameSessions, type SessionStatus } from "./sessions";
+import { isActive, type GameSession, type SessionStatus } from "./sessions";
 
 /** 每行高度（像素），与样式中的 line-height 一致。 */
 const LINE_HEIGHT = 18;
@@ -30,28 +30,18 @@ const STATUS_TYPE: Record<SessionStatus, "default" | "info" | "success" | "error
   failed: "error",
 };
 
-const props = defineProps<{ instanceId: string | null }>();
-const emit = defineEmits<{ close: [] }>();
+const props = defineProps<{ session: GameSession | null }>();
 
 const { t } = useI18n();
 const message = useMessage();
-const games = useGameSessions();
 const theme = useThemeVars();
 
 const query = ref("");
 const follow = ref(true);
 const list = ref<VirtualListInst | null>(null);
 
-const session = computed(() => (props.instanceId ? games.sessions[props.instanceId] : undefined));
+const session = computed(() => props.session ?? undefined);
 const lines = computed(() => filterLines(session.value?.lines ?? [], query.value));
-
-watch(
-  () => props.instanceId,
-  () => {
-    query.value = "";
-    follow.value = true;
-  },
-);
 
 watch(
   () => [lines.value.length, session.value?.lines.at(-1)?.seq],
@@ -89,20 +79,20 @@ function save() {
 }
 
 async function kill() {
-  if (!props.instanceId) return;
-  await games.kill(props.instanceId).catch(() => message.error(t("gameLog.killFailed")));
+  if (!session.value) return;
+  await launchKill({ instance_id: session.value.instanceId }).catch(() =>
+    message.error(t("gameLog.killFailed")),
+  );
 }
 </script>
 
 <template>
-  <NModal
-    :show="instanceId !== null"
-    preset="card"
-    class="game-log"
-    :title="t('gameLog.title', { name: session?.name ?? '' })"
-    @update:show="(show: boolean) => !show && emit('close')"
-  >
-    <template #header-extra>
+  <div class="game-log">
+    <NAlert v-if="session?.error" type="error" class="launch-error" :title="t('gameLog.failed')">
+      {{ formatError(session.error) }}
+    </NAlert>
+
+    <div class="toolbar">
       <NTag v-if="session" size="small" :bordered="false" :type="STATUS_TYPE[session.status]">
         {{
           t(`gameLog.status.${session.status}`, {
@@ -110,13 +100,6 @@ async function kill() {
           })
         }}
       </NTag>
-    </template>
-
-    <NAlert v-if="session?.error" type="error" class="launch-error" :title="t('gameLog.failed')">
-      {{ formatError(session.error) }}
-    </NAlert>
-
-    <div class="toolbar">
       <NInput v-model:value="query" size="small" clearable :placeholder="t('gameLog.search')">
         <template #prefix
           ><NIcon><Search20Regular /></NIcon
@@ -163,15 +146,18 @@ async function kill() {
         </template>
       </NVirtualList>
     </div>
-  </NModal>
+  </div>
 </template>
 
 <style scoped>
 .game-log {
-  width: min(960px, calc(100vw - 64px));
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .launch-error {
+  flex-shrink: 0;
   margin-bottom: 12px;
 }
 
@@ -179,6 +165,7 @@ async function kill() {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
   margin-bottom: 8px;
 }
 
@@ -193,7 +180,8 @@ async function kill() {
 }
 
 .log {
-  height: min(480px, calc(100vh - 280px));
+  flex: 1;
+  min-height: 0;
   border: 1px solid var(--tmcl-stroke);
   border-radius: 4px;
   background: var(--tmcl-layer);

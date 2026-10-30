@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "game-log",
+  "description": "独立游戏日志窗口的权限：自绘标题栏、窗口材质，以及记住位置与大小",
+  "windows": ["game-log-*"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-minimize",
+    "core:window:allow-set-effects",
+    "core:window:allow-set-shadow",
+    "core:window:allow-set-theme",
+    "core:window:allow-set-title",
+    "core:window:allow-start-dragging",
+    "core:window:allow-toggle-maximize"
+  ]
+}
