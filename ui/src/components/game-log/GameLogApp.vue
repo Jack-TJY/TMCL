@@ -3,7 +3,7 @@
 // 设置在主窗口中修改，日志窗口获得焦点时重新读取，使主题与语言保持一致。
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { NConfigProvider, NMessageProvider } from "naive-ui";
+import { NConfigProvider, NDialogProvider, NMessageProvider } from "naive-ui";
 import { computed, onBeforeUnmount, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import { initLocale } from "../../i18n";
@@ -52,14 +52,17 @@ onBeforeUnmount(() => unlisten?.());
     class="config-root"
   >
     <NMessageProvider>
-      <AppBackground>
-        <div class="log-window">
-          <TitleBar :title="title" plain-close />
-          <main class="log-content">
-            <GameLogView :session="session" />
-          </main>
-        </div>
-      </AppBackground>
+      <!-- TitleBar 使用 useDialog，缺少 provider 时整个窗口挂载失败、显示为黑屏。 -->
+      <NDialogProvider>
+        <AppBackground>
+          <div class="log-window">
+            <TitleBar :title="title" plain-close />
+            <main class="log-content">
+              <GameLogView :session="session" />
+            </main>
+          </div>
+        </AppBackground>
+      </NDialogProvider>
     </NMessageProvider>
   </NConfigProvider>
 </template>
