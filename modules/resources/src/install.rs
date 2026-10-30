@@ -20,7 +20,8 @@ use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::{DownloadItem, Downloader, sha1_file};
 use ts_rs::TS;
 
-use crate::browse::{InstanceTarget, ResourceKind};
+use crate::browse::{InstanceTarget, ResourceKind, ResourcePlatform};
+use crate::curseforge::CurseForgeClient;
 use crate::deps::{self, Conflict, InstalledVersion, UnavailableDependency};
 use crate::modrinth::{HashAlgorithm, ModrinthClient};
 
@@ -33,7 +34,9 @@ pub const DISABLED_SUFFIX: &str = ".disabled";
 /// 要安装的版本。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstallRequest {
-    /// Modrinth 版本 ID。
+    /// 版本所在平台。
+    pub platform: ResourcePlatform,
+    /// Modrinth 版本 ID，或 CurseForge 文件 ID（十进制）。
     pub version_id: String,
     /// 资源种类。
     pub kind: ResourceKind,
@@ -194,16 +197,17 @@ pub fn is_resource_file(path: &Path) -> bool {
 #[derive(Debug, Clone)]
 pub struct ResourceInstaller {
     client: ModrinthClient,
+    curseforge: Option<CurseForgeClient>,
     downloader: Downloader,
     game_dir: PathBuf,
     target: InstanceTarget,
 }
 
 /// 计划及其对应的下载项与要删除的旧文件。
-struct Prepared {
-    plan: InstallPlan,
-    downloads: Vec<DownloadItem>,
-    replaced: Vec<PathBuf>,
+pub(crate) struct Prepared {
+    pub(crate) plan: InstallPlan,
+    pub(crate) downloads: Vec<DownloadItem>,
+    pub(crate) replaced: Vec<PathBuf>,
 }
 
 impl ResourceInstaller {
@@ -216,10 +220,18 @@ impl ResourceInstaller {
     ) -> Self {
         Self {
             client,
+            curseforge: None,
             downloader,
             game_dir,
             target,
         }
+    }
+
+    /// 设置 CurseForge 客户端；没有时安装 CurseForge 版本返回 `RESOURCES_CURSEFORGE_DISABLED`。
+    /// 下载引擎应由 [`crate::curseforge::with_cdn_key`] 创建。
+    pub fn with_curseforge(mut self, client: Option<CurseForgeClient>) -> Self {
+        self.curseforge = client;
+        self
     }
 
     /// 生成安装计划，不写任何文件。版本不存在或没有文件时返回 `RESOURCES_VERSION_NOT_FOUND`。
@@ -251,6 +263,21 @@ impl ResourceInstaller {
     }
 
     async fn prepare(&self, request: &InstallRequest, ctx: &TaskCtx) -> AppResult<Prepared> {
+        if request.platform == ResourcePlatform::Curseforge {
+            let client = self
+                .curseforge
+                .as_ref()
+                .ok_or_else(|| AppError::new(ErrorCode::ResourcesCurseforgeDisabled))?;
+            return crate::cf_install::prepare(
+                client,
+                &self.client,
+                &self.target,
+                &self.game_dir,
+                request,
+                ctx,
+            )
+            .await;
+        }
         let world = request.world.as_deref();
         let root_dir = kind_dir(&self.game_dir, request.kind, world)?;
         let root = self

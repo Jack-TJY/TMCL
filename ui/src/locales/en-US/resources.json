@@ -55,7 +55,14 @@
     "separator": ", ",
     "supports": "For {versions}",
     "supportsMore": "For {versions} and more ({count} versions)",
-    "requires": "Requires {loader}"
+    "requires": "Requires {loader}",
+    "searchAll": "Search Modrinth and CurseForge",
+    "platform": {
+      "all": "All platforms",
+      "modrinth": "Modrinth",
+      "curseforge": "CurseForge"
+    },
+    "platformFailed": "{platform} is unavailable right now; showing results from other platforms only"
   },
   "install": {
     "title": "Install \"{name}\"",
@@ -76,7 +83,8 @@
     "unknownProject": "Unknown project",
     "cancel": "Cancel",
     "confirm": "Install",
-    "started": "Installing \"{name}\". Check the task center for progress"
+    "started": "Installing \"{name}\". Check the task center for progress",
+    "source": "Source"
   },
   "channel": {
     "release": "Release",
@@ -147,5 +155,6 @@
     "confirm": "Create and download",
     "started": "Downloading \"{name}\"; installation continues when it finishes",
     "ready": "\"{name}\" is ready; continuing to install \"{title}\""
-  }
+  },
+  "creditBoth": "Data from Modrinth and CurseForge"
 }

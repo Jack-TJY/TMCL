@@ -194,6 +194,7 @@ fn installer(api: &MockServer, game: &Path) -> ResourceInstaller {
 
 fn request(version_id: &str, kind: ResourceKind, world: Option<&str>) -> InstallRequest {
     InstallRequest {
+        platform: tmcl_resources::ResourcePlatform::Modrinth,
         version_id: version_id.into(),
         kind,
         world: world.map(Into::into),

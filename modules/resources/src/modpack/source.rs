@@ -8,6 +8,7 @@ use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::{DownloadItem, Downloader};
 use ts_rs::TS;
 
+pub use crate::browse::ResourcePlatform;
 use crate::browse::{
     BrowseQuery, ResourceChannel, ResourceHit, ResourcePage, ResourceSort, ResourceVersion,
     is_not_found,
@@ -47,17 +48,6 @@ pub enum ModpackSource {
         /// 文件 ID。
         file_id: u32,
     },
-}
-
-/// 资源平台。
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
-pub enum ResourcePlatform {
-    /// Modrinth。
-    #[default]
-    Modrinth,
-    /// CurseForge；没有 API Key 的构建中不可用。
-    Curseforge,
 }
 
 /// 准备好的本地整合包文件。
@@ -105,6 +95,7 @@ pub async fn search(
         offset: response.offset,
         limit: response.limit,
         total_hits: response.total_hits,
+        failed: Vec::new(),
     })
 }
 
@@ -157,6 +148,7 @@ pub async fn search_curseforge(
         offset: page.pagination.index,
         limit: page.pagination.page_size,
         total_hits: page.pagination.total_count,
+        failed: Vec::new(),
     })
 }
 
@@ -195,6 +187,7 @@ pub fn hit_from_mod(project: curseforge::Mod) -> ResourceHit {
         .as_ref()
         .and_then(|l| l.thumbnail_url.clone().or_else(|| l.url.clone()));
     ResourceHit {
+        platform: ResourcePlatform::Curseforge,
         project_id: project.id.to_string(),
         author: project
             .authors
@@ -210,6 +203,7 @@ pub fn hit_from_mod(project: curseforge::Mod) -> ResourceHit {
         title: project.name,
         description: project.summary,
         date_modified: project.date_modified,
+        also_on: Vec::new(),
     }
 }
 
@@ -234,7 +228,7 @@ pub fn version_from_file(file: &curseforge::File) -> ResourceVersion {
     }
 }
 
-fn sort_field(sort: ResourceSort) -> SortField {
+pub(crate) fn sort_field(sort: ResourceSort) -> SortField {
     match sort {
         ResourceSort::Relevance => SortField::Featured,
         ResourceSort::Downloads => SortField::TotalDownloads,

@@ -10,6 +10,7 @@ import {
 
 function hit(categories: string[], game_versions: string[]): ResourceHit {
   return {
+    platform: "modrinth",
     project_id: "p",
     slug: "p",
     title: "P",
@@ -21,6 +22,7 @@ function hit(categories: string[], game_versions: string[]): ResourceHit {
     categories,
     game_versions,
     date_modified: "2026-10-01T00:00:00Z",
+    also_on: [],
   };
 }
 
