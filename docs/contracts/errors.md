@@ -63,6 +63,11 @@
 | `NET_REQUEST` | net | 其他 HTTP 请求错误（构造请求、读取响应、解码失败等） | `url`（可选） | 网络请求失败 {url} | Network request failed for {url} |
 | `NET_SIZE_MISMATCH` | net | 下载文件的大小与期望值不一致 | `url`、`expected`、`actual` | 文件大小不符 {url} | File size mismatch for {url} |
 | `NET_TIMEOUT` | net | 连接或读取超时 | `url` | 连接超时 {url} | Connection timed out: {url} |
+| `P2P_BINARY_INVALID` | p2p | EasyTier 安装包的 SHA-256 与内置值不符，或包内缺少所需文件 | `file`（缺文件时） | 联机组件 EasyTier 下载后校验失败，请重试 | The EasyTier networking component failed verification after download, please try again |
+| `P2P_NODE_INVALID` | p2p | EasyTier 节点地址无效（不是 `协议://主机[:端口]`，或协议不受支持） | `node` | 节点地址 {node} 无效，应为 tcp://主机:端口 这样的格式 | Node address {node} is invalid, expected something like tcp://host:port |
+| `P2P_ROOM_CODE_INVALID` | p2p | 房间码格式错误或校验不通过（Scaffolding `U/NNNN-NNNN-SSSS-SSSS`） | — | 房间码不正确，请检查后重新输入 | The room code is not valid, please check it and try again |
+| `P2P_TUNNEL_EXITED` | p2p | EasyTier 进程意外退出（启动失败或运行中崩溃） | `code`（有退出码时） | 联机组件意外退出，请重试 | The networking component stopped unexpectedly, please try again |
+| `P2P_UNSUPPORTED_PLATFORM` | p2p | 当前操作系统或 CPU 架构没有可用的 EasyTier 程序 | `platform` | 当前系统（{platform}）暂不支持 P2P 联机 | P2P multiplayer is not supported on this system ({platform}) |
 | `RESOURCES_CURSEFORGE_DISABLED` | resources | 本次构建没有 CurseForge API Key，CurseForge 来源不可用 | — | 此版本未启用 CurseForge | CurseForge is not enabled in this build |
 | `RESOURCES_DEPENDENCY_UNAVAILABLE` | resources | 必需前置在 Modrinth 上没有适用于该实例游戏版本与加载器的版本，或前置项目已不存在 | `project` | 找不到适用于此实例的前置 {project} | No version of the required dependency {project} fits this instance |
 | `RESOURCES_FILE_NOT_FOUND` | resources | 实例中找不到要启用、禁用或删除的资源文件（已被移走或文件名非法） | `file` | 找不到资源文件 {file}，请刷新列表 | Resource file {file} was not found, please refresh the list |

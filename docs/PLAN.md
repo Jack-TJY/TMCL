@@ -490,9 +490,10 @@ M1 可以拆成四条并行泳道（详见第 10 节）：**下载**（M1-01→0
 - **依赖**：无（可提前开展） · **规模**：M
 
 ### M2-12 P2P 直连实现
-- **文件**：`modules/net-p2p/src/{room.rs,signal.rs,punch.rs,tunnel.rs,relay.rs}`、`src-tauri/src/commands/p2p.rs`。
-- **功能**：房主开放局域网世界后，启动器读取端口（日志或手动输入）→ 生成房间码（含随机密钥）→ 成员输入房间码 → 打洞建立加密通道 → 成员本地监听一个端口转发到房主游戏端口，并提示“直接连接 127.0.0.1:<端口>”。`trait Relay` 定义但默认无实现；直连失败返回 `P2P_DIRECT_FAILED` 并建议使用樱花穿透。
-- **验收**：两台处于不同家庭宽带的电脑能联机；只转发游戏端口（安全测试）。
+- **方案**：M2-11 决定（`docs/research/p2p.md`）以 EasyTier 为底层、实现 Scaffolding 协议，与 HMCL、PCL-CE、陶瓦联机互通。分两步：M2-12a 联机底座，M2-12b Scaffolding 信令与完整房主 / 房客流程。
+- **文件**：`modules/net-p2p/src/`：`room.rs`（Scaffolding 房间码 `U/NNNN-NNNN-SSSS-SSSS` 生成与解析、联机中心主机名）、`easytier.rs`（运行时从官方 Releases 下载 EasyTier 并按内置 SHA-256 校验，LGPL-3.0，作为独立程序分发）、`nodes.rs`（默认公共节点与用户自定义节点）、`tunnel.rs`（`easytier-core` 子进程的启动 / 停止 / 状态与端口转发）、`punch.rs`（读取 EasyTier 的连接与 NAT 状态、查找联机中心）、`signal.rs`（M2-12b：Scaffolding 的 TCP 请求 / 响应，`c:ping`、`c:protocols`、`c:server_port`、玩家列表等）、`relay.rs`（`trait Relay`，默认无实现）；`src-tauri/src/commands/p2p.rs`。
+- **功能**：房主开放局域网世界后，启动器读取端口（日志或手动输入）→ 生成房间码（房间码即 EasyTier 网络名与密钥）→ 以 `--no-tun` 启动 EasyTier，主机名 `scaffolding-mc-server-<信令端口>`，并开启 Scaffolding 信令服务 → 成员输入房间码 → EasyTier 经公共节点打洞直连 → 成员找到联机中心、经信令取得游戏端口 → 用 EasyTier 端口转发在本地监听一个端口并提示“直接连接 127.0.0.1:<端口>”。默认公共节点与陶瓦联机相同，用户可在设置中追加或关闭默认节点。`trait Relay` 定义但默认无实现；直连失败返回 `P2P_DIRECT_FAILED` 并建议使用樱花穿透。
+- **验收**：两台处于不同家庭宽带的电脑能联机；能加入 HMCL / PCL-CE 创建的房间，反之亦然；房主只暴露 MC 端口与 Scaffolding 端口（安全测试，硬性验收项）。
 - **依赖**：M2-11 决策 · **规模**：L
 
 ### M2-13 SakuraFrp 调研

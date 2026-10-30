@@ -125,6 +125,16 @@ pub enum ErrorCode {
     NetSizeMismatch,
     /// 连接或读取超时。
     NetTimeout,
+    /// EasyTier 安装包的 SHA-256 与内置值不符，或包内缺少所需文件。
+    P2pBinaryInvalid,
+    /// EasyTier 节点地址无效（不是 `协议://主机[:端口]`，或协议不受支持）。
+    P2pNodeInvalid,
+    /// 房间码格式错误或校验不通过（Scaffolding `U/NNNN-NNNN-SSSS-SSSS`）。
+    P2pRoomCodeInvalid,
+    /// EasyTier 进程意外退出（启动失败或运行中崩溃）。
+    P2pTunnelExited,
+    /// 当前操作系统或 CPU 架构没有可用的 EasyTier 程序。
+    P2pUnsupportedPlatform,
     /// 本次构建没有 CurseForge API Key，CurseForge 来源不可用。
     ResourcesCurseforgeDisabled,
     /// 必需前置在 Modrinth 上没有适用于该实例的版本（或项目已不存在）。
@@ -233,6 +243,11 @@ impl ErrorCode {
             Self::NetRequest => "NET_REQUEST",
             Self::NetSizeMismatch => "NET_SIZE_MISMATCH",
             Self::NetTimeout => "NET_TIMEOUT",
+            Self::P2pBinaryInvalid => "P2P_BINARY_INVALID",
+            Self::P2pNodeInvalid => "P2P_NODE_INVALID",
+            Self::P2pRoomCodeInvalid => "P2P_ROOM_CODE_INVALID",
+            Self::P2pTunnelExited => "P2P_TUNNEL_EXITED",
+            Self::P2pUnsupportedPlatform => "P2P_UNSUPPORTED_PLATFORM",
             Self::ResourcesCurseforgeDisabled => "RESOURCES_CURSEFORGE_DISABLED",
             Self::ResourcesDependencyUnavailable => "RESOURCES_DEPENDENCY_UNAVAILABLE",
             Self::ResourcesFileNotFound => "RESOURCES_FILE_NOT_FOUND",
@@ -394,6 +409,11 @@ mod tests {
             ErrorCode::NetRequest,
             ErrorCode::NetSizeMismatch,
             ErrorCode::NetTimeout,
+            ErrorCode::P2pBinaryInvalid,
+            ErrorCode::P2pNodeInvalid,
+            ErrorCode::P2pRoomCodeInvalid,
+            ErrorCode::P2pTunnelExited,
+            ErrorCode::P2pUnsupportedPlatform,
             ErrorCode::ResourcesCurseforgeDisabled,
             ErrorCode::ResourcesDependencyUnavailable,
             ErrorCode::ResourcesFileNotFound,
