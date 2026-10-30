@@ -10,8 +10,8 @@ use std::time::{Duration, Instant};
 use tmcl_common::{AppResult, DataPaths, TaskCtx};
 use tmcl_net::{Downloader, HttpClient};
 use tmcl_p2p::{
-    DEFAULT_PUBLIC_NODES, PortForward, Proto, RoomCode, Tunnel, TunnelConfig, effective_nodes,
-    ensure_installed, find_center,
+    PortForward, Proto, RoomCode, Tunnel, TunnelConfig, effective_nodes, ensure_installed,
+    find_center,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -39,8 +39,14 @@ async fn main() -> AppResult<()> {
 
     let room = RoomCode::generate()?;
     println!("房间码 {}", room.code());
-    let peers = effective_nodes(true, &[]);
-    assert_eq!(peers.len(), DEFAULT_PUBLIC_NODES.len());
+    // TMCL_P2P_NODES：逗号分隔的额外节点，排在默认节点前面。
+    let custom: Vec<String> = std::env::var("TMCL_P2P_NODES")
+        .unwrap_or_default()
+        .split(',')
+        .map(str::to_owned)
+        .collect();
+    let peers = effective_nodes(true, &custom);
+    println!("节点：{peers:?}");
     let host = Tunnel::start(
         &bins,
         &TunnelConfig::host(&room, peers.clone(), signal, game),
@@ -71,6 +77,9 @@ async fn main() -> AppResult<()> {
                 host.recent_log().join("\n")
             );
             println!("房客日志：\n{}", guest.recent_log().join("\n"));
+            // process::exit 不会运行析构函数，先结束两个 EasyTier 进程。
+            guest.stop().await?;
+            host.stop().await?;
             std::process::exit(1);
         }
         tokio::time::sleep(Duration::from_secs(2)).await;
@@ -97,8 +106,15 @@ async fn main() -> AppResult<()> {
                 remote: SocketAddr::V4(SocketAddrV4::new(center.0, port)),
             })
             .await?;
-        tokio::time::sleep(Duration::from_millis(500)).await;
-        let reachable = echo_ok(local).await;
+        // 新转发规则和经节点建立的连接需要一点时间生效，最多试三次。
+        let mut reachable = false;
+        for _ in 0..3 {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            if echo_ok(local).await {
+                reachable = true;
+                break;
+            }
+        }
         println!("{name} 端口 {port} 经转发可达：{reachable}（期望 {expect}）");
         ok &= reachable == expect;
     }
