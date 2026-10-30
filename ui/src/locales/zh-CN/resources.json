@@ -55,7 +55,14 @@
     "separator": "、",
     "supports": "适用 {versions}",
     "supportsMore": "适用 {versions} 等 {count} 个版本",
-    "requires": "需要 {loader}"
+    "requires": "需要 {loader}",
+    "searchAll": "搜索 Modrinth 与 CurseForge",
+    "platform": {
+      "all": "全部平台",
+      "modrinth": "Modrinth",
+      "curseforge": "CurseForge"
+    },
+    "platformFailed": "{platform} 暂时无法访问，只显示其他平台的结果"
   },
   "install": {
     "title": "安装“{name}”",
@@ -76,7 +83,8 @@
     "unknownProject": "未知项目",
     "cancel": "取消",
     "confirm": "安装",
-    "started": "正在安装“{name}”，可在任务中心查看进度"
+    "started": "正在安装“{name}”，可在任务中心查看进度",
+    "source": "来源"
   },
   "channel": {
     "release": "正式版",
@@ -147,5 +155,6 @@
     "confirm": "创建并下载",
     "started": "已开始下载“{name}”，完成后会继续安装",
     "ready": "“{name}”已就绪，继续安装“{title}”"
-  }
+  },
+  "creditBoth": "数据来自 Modrinth 与 CurseForge"
 }

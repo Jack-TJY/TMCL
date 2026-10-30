@@ -10,6 +10,7 @@ use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_instance::InstanceStore;
 use tmcl_loader::LoaderInstaller;
 use tmcl_resources::browse::{self, BrowseQuery};
+use tmcl_resources::merged;
 use tmcl_resources::modpack::curseforge::{Fallbacks, MIRROR_BASE};
 use tmcl_resources::modpack::{detect, export, source};
 use tmcl_resources::modrinth::ModrinthClient;
@@ -60,6 +61,10 @@ pub struct ResourcesSearchArgs {
     #[serde(default)]
     #[ts(optional)]
     pub limit: Option<u32>,
+    /// 只搜索这些平台；省略或为空时搜索全部可用的平台（没有 CurseForge Key 时只有 Modrinth）。
+    #[serde(default)]
+    #[ts(optional)]
+    pub platforms: Option<Vec<ResourcePlatform>>,
 }
 
 /// `resources_search_any` 的参数。
@@ -82,6 +87,10 @@ pub struct ResourcesSearchAnyArgs {
     #[serde(default)]
     #[ts(optional)]
     pub limit: Option<u32>,
+    /// 只搜索这些平台；省略或为空时搜索全部可用的平台（没有 CurseForge Key 时只有 Modrinth）。
+    #[serde(default)]
+    #[ts(optional)]
+    pub platforms: Option<Vec<ResourcePlatform>>,
 }
 
 /// `resources_versions` 的参数。
@@ -91,8 +100,12 @@ pub struct ResourcesVersionsArgs {
     pub instance_id: String,
     /// 资源种类。
     pub kind: ResourceKind,
-    /// Modrinth 项目 ID。
+    /// 项目 ID（CurseForge 为十进制数字）。
     pub project_id: String,
+    /// 项目所在平台，默认 Modrinth。
+    #[serde(default)]
+    #[ts(optional)]
+    pub platform: Option<ResourcePlatform>,
 }
 
 /// `resources_versions` 的返回值。
@@ -109,8 +122,12 @@ pub struct ResourcesInstallArgs {
     pub instance_id: String,
     /// 资源种类，决定安装目录。
     pub kind: ResourceKind,
-    /// Modrinth 版本 ID，来自 `resources_versions`。
+    /// 版本 ID，来自 `resources_versions`（CurseForge 为文件 ID）。
     pub version_id: String,
+    /// 版本所在平台，默认 Modrinth。
+    #[serde(default)]
+    #[ts(optional)]
+    pub platform: Option<ResourcePlatform>,
     /// 数据包安装到的存档（`saves/` 下的目录名），其他种类忽略。
     #[serde(default)]
     #[ts(optional)]
@@ -120,6 +137,7 @@ pub struct ResourcesInstallArgs {
 impl ResourcesInstallArgs {
     fn request(&self) -> InstallRequest {
         InstallRequest {
+            platform: self.platform.unwrap_or_default(),
             version_id: self.version_id.clone(),
             kind: self.kind,
             world: self.world.clone(),
@@ -348,7 +366,7 @@ pub struct ResourcesModpackExportArgs {
     pub summary: Option<String>,
 }
 
-/// 按实例的游戏版本与加载器搜索资源。
+/// 按实例的游戏版本与加载器搜索资源，合并 Modrinth 与 CurseForge 的结果。
 #[tauri::command]
 pub async fn resources_search(
     state: State<'_, AppState>,
@@ -362,10 +380,18 @@ pub async fn resources_search(
         limit: args.limit.unwrap_or_default(),
     };
     let ctx = TaskCtx::noop("resources_search");
-    browse::search(state.modrinth()?, &target, args.kind, &query, &ctx).await
+    let only = args.platforms.unwrap_or_default();
+    merged::search(
+        platforms(&state, &only)?,
+        Some(&target),
+        args.kind,
+        &query,
+        &ctx,
+    )
+    .await
 }
 
-/// 不按实例过滤，搜索全部资源。
+/// 不按实例过滤，搜索全部资源，合并 Modrinth 与 CurseForge 的结果。
 #[tauri::command]
 pub async fn resources_search_any(
     state: State<'_, AppState>,
@@ -378,7 +404,8 @@ pub async fn resources_search_any(
         limit: args.limit.unwrap_or_default(),
     };
     let ctx = TaskCtx::noop("resources_search_any");
-    browse::search_any(state.modrinth()?, args.kind, &query, &ctx).await
+    let only = args.platforms.unwrap_or_default();
+    merged::search(platforms(&state, &only)?, None, args.kind, &query, &ctx).await
 }
 
 /// 列出项目中适用于该实例的版本。
@@ -389,14 +416,15 @@ pub async fn resources_versions(
 ) -> Result<ResourceVersionList, AppError> {
     let target = target(&state, &args.instance_id)?;
     let ctx = TaskCtx::noop("resources_versions");
-    let versions = browse::versions(
-        state.modrinth()?,
-        &target,
-        args.kind,
-        &args.project_id,
-        &ctx,
-    )
-    .await?;
+    let (kind, id) = (args.kind, &args.project_id);
+    let versions = match args.platform.unwrap_or_default() {
+        ResourcePlatform::Modrinth => {
+            browse::versions(state.modrinth()?, &target, kind, id, &ctx).await?
+        }
+        ResourcePlatform::Curseforge => {
+            merged::versions_curseforge(state.curseforge()?, &target, kind, id, &ctx).await?
+        }
+    };
     Ok(ResourceVersionList { versions })
 }
 
@@ -713,12 +741,22 @@ fn installer(state: &AppState, instance_id: &str) -> AppResult<ResourceInstaller
     let target = target(state, instance_id)?;
     let game_dir = state.data()?.instance_game_dir(instance_id);
     let client: ModrinthClient = state.modrinth()?.clone();
-    Ok(ResourceInstaller::new(
-        client,
-        state.downloader()?,
-        game_dir,
-        target,
-    ))
+    Ok(
+        ResourceInstaller::new(client, state.downloader()?, game_dir, target)
+            .with_curseforge(state.curseforge.clone()),
+    )
+}
+
+/// 合并搜索使用的客户端；没有 CurseForge Key 时只搜 Modrinth。
+fn platforms<'a>(
+    state: &'a AppState,
+    only: &'a [ResourcePlatform],
+) -> AppResult<merged::Platforms<'a>> {
+    Ok(merged::Platforms {
+        modrinth: state.modrinth()?,
+        curseforge: state.curseforge.as_ref(),
+        only,
+    })
 }
 
 fn manager(

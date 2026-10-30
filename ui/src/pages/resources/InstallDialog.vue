@@ -1,7 +1,18 @@
 <script setup lang="ts">
-// 安装一个 Modrinth 项目：选择版本（默认最新正式版），展示安装计划（前置、替换的旧文件、
-// 冲突与缺少的前置），确认后以 resources_install 任务安装。
-import { NAlert, NButton, NModal, NSelect, NSpin, NTag, useMessage } from "naive-ui";
+// 安装一个 Modrinth 或 CurseForge 项目：同一项目在两个平台都有时可选来源；选择版本（默认最新
+// 正式版），展示安装计划（前置、替换的旧文件、冲突与缺少的前置），确认后以 resources_install
+// 任务安装。
+import {
+  NAlert,
+  NButton,
+  NModal,
+  NRadioButton,
+  NRadioGroup,
+  NSelect,
+  NSpin,
+  NTag,
+  useMessage,
+} from "naive-ui";
 import { computed, h, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { toAppError } from "../../api/invoke";
@@ -14,6 +25,7 @@ import {
   type InstallPlan,
   type ResourceHit,
   type ResourceKind,
+  type ResourcePlatform,
   type ResourceVersion,
   type UnavailableDependency,
 } from "../../api/resources";
@@ -45,38 +57,65 @@ const plan = ref<InstallPlan | null>(null);
 const planning = ref(false);
 const planError = ref<AppError | null>(null);
 const busy = ref(false);
+/** 从哪个平台安装；默认搜索结果本身的平台。 */
+const platform = ref<ResourcePlatform>("modrinth");
+
+/** 该项目所在的各平台及其项目 ID。 */
+const sources = computed(() => {
+  const hit = props.hit;
+  if (!hit) return [];
+  return [
+    { platform: hit.platform, projectId: hit.project_id },
+    ...hit.also_on.map((r) => ({ platform: r.platform, projectId: r.project_id })),
+  ];
+});
+const projectId = computed(
+  () => sources.value.find((s) => s.platform === platform.value)?.projectId ?? null,
+);
 
 function args(id: string) {
   return {
     instance_id: props.instanceId,
     kind: props.kind,
     version_id: id,
+    platform: platform.value,
     world: props.world ?? undefined,
   };
 }
 
 watch(
   () => props.hit,
-  async (hit) => {
+  (hit) => {
+    if (hit) platform.value = hit.platform;
+  },
+  { immediate: true },
+);
+
+watch(
+  [() => props.hit, platform],
+  async ([hit, from]) => {
     versions.value = [];
     versionId.value = null;
     versionError.value = null;
     plan.value = null;
-    if (!hit) return;
+    const id = projectId.value;
+    if (!hit || !id) return;
+    const current = () => props.hit === hit && platform.value === from;
     loadingVersions.value = true;
     try {
       const list = await resourcesVersions({
         instance_id: props.instanceId,
         kind: props.kind,
-        project_id: hit.project_id,
+        project_id: id,
+        platform: from,
       });
-      if (props.hit !== hit) return;
+      if (!current()) return;
       versions.value = list;
       versionId.value = defaultVersion(list)?.id ?? null;
     } catch (err) {
-      if (props.hit === hit) versionError.value = toAppError(err);
+      if (current()) versionError.value = toAppError(err);
     } finally {
-      if (props.hit === hit) loadingVersions.value = false;
+      if (current()) loadingVersions.value = false;
     }
   },
   { immediate: true },
@@ -119,7 +158,7 @@ function conflictText(c: Conflict): string {
 
 /** `required_by` 是项目 ID，尽量换成计划里的标题。 */
 function titleOf(projectId: string): string {
-  if (projectId === props.hit?.project_id) return props.hit.title;
+  if (props.hit && sources.value.some((s) => s.projectId === projectId)) return props.hit.title;
   return plan.value?.files.find((f) => f.project_id === projectId)?.title ?? projectId;
 }
 
@@ -163,6 +202,14 @@ async function confirm() {
     :closable="!busy"
     @update:show="(show: boolean) => !show && emit('close')"
   >
+    <div v-if="sources.length > 1" class="field">
+      <span class="field-label">{{ t("resources.install.source") }}</span>
+      <NRadioGroup v-model:value="platform" size="small" :disabled="busy">
+        <NRadioButton v-for="s in sources" :key="s.platform" :value="s.platform">
+          {{ t(`resources.browse.platform.${s.platform}`) }}
+        </NRadioButton>
+      </NRadioGroup>
+    </div>
     <NSpin :show="loadingVersions">
       <NAlert v-if="versionError" type="error" :title="t('resources.install.loadFailed')">
         {{ formatError(versionError) }}

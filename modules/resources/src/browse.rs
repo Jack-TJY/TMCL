@@ -1,6 +1,7 @@
 //! 统一的资源浏览：按实例的游戏版本与加载器搜索 mod、资源包、光影与数据包，并列出可安装的版本。
 //!
-//! 只做 Modrinth（CurseForge 见 M2-02）。过滤规则见 [`InstanceTarget`]。
+//! 本模块只查 Modrinth，过滤规则见 [`InstanceTarget`]；合并 Modrinth 与 CurseForge 的搜索见
+//! [`crate::merged`]。
 
 use serde::{Deserialize, Serialize};
 use tmcl_common::{AppResult, TaskCtx};
@@ -118,10 +119,35 @@ pub struct BrowseQuery {
     pub limit: u32,
 }
 
+/// 资源平台。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+pub enum ResourcePlatform {
+    /// Modrinth。
+    #[default]
+    Modrinth,
+    /// CurseForge；没有 API Key 的构建中不可用。
+    Curseforge,
+}
+
+/// 同一项目在另一个平台上的条目。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct ResourceRef {
+    /// 平台。
+    pub platform: ResourcePlatform,
+    /// 该平台上的项目 ID（CurseForge 为十进制数字）。
+    pub project_id: String,
+    /// 该平台上的短名。
+    pub slug: String,
+}
+
 /// 搜索结果中的一个项目。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct ResourceHit {
-    /// Modrinth 项目 ID。
+    /// 来源平台。
+    #[serde(default)]
+    pub platform: ResourcePlatform,
+    /// 项目 ID（CurseForge 为十进制数字）。
     pub project_id: String,
     /// 短名，用于拼项目页地址。
     pub slug: String,
@@ -145,11 +171,15 @@ pub struct ResourceHit {
     pub game_versions: Vec<String>,
     /// 最近更新时间（RFC 3339）。
     pub date_modified: String,
+    /// 合并搜索时被并入本条的、其他平台上的同一项目。
+    #[serde(default)]
+    pub also_on: Vec<ResourceRef>,
 }
 
 impl From<SearchHit> for ResourceHit {
     fn from(hit: SearchHit) -> Self {
         Self {
+            platform: ResourcePlatform::Modrinth,
             project_id: hit.project_id,
             slug: hit.slug,
             title: hit.title,
@@ -161,6 +191,7 @@ impl From<SearchHit> for ResourceHit {
             categories: hit.categories,
             game_versions: hit.versions,
             date_modified: hit.date_modified,
+            also_on: Vec::new(),
         }
     }
 }
@@ -174,9 +205,12 @@ pub struct ResourcePage {
     pub offset: u32,
     /// 本页最大条数。
     pub limit: u32,
-    /// 符合条件的总数。
+    /// 符合条件的总数；合并搜索时为各平台中较大的那个，按 `limit` 分页仍然正确。
     #[ts(type = "number")]
     pub total_hits: u64,
+    /// 合并搜索时本次查询失败的平台（其余平台的结果照常返回）。
+    #[serde(default)]
+    pub failed: Vec<ResourcePlatform>,
 }
 
 /// 版本的发布渠道。
@@ -245,7 +279,7 @@ impl ResourceVersion {
 }
 
 /// 默认每页条数。
-const DEFAULT_LIMIT: u32 = 20;
+pub(crate) const DEFAULT_LIMIT: u32 = 20;
 
 /// 按实例过滤后搜索 `kind` 类资源。
 pub async fn search(
@@ -275,6 +309,7 @@ pub async fn search(
         offset: response.offset,
         limit: response.limit,
         total_hits: response.total_hits,
+        failed: Vec::new(),
     })
 }
 
@@ -309,6 +344,7 @@ pub async fn search_any(
         offset: response.offset,
         limit: response.limit,
         total_hits: response.total_hits,
+        failed: Vec::new(),
     })
 }
 
