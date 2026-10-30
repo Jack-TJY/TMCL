@@ -205,6 +205,7 @@ pub fn hit_from_mod(project: curseforge::Mod) -> ResourceHit {
         downloads: project.download_count.max(0.0) as u64,
         follows: 0,
         categories: project.categories.iter().map(|c| c.slug.clone()).collect(),
+        game_versions: project.game_versions(),
         slug: project.slug,
         title: project.name,
         description: project.summary,
