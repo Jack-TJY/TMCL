@@ -19,6 +19,7 @@ use crate::commands::appearance::{AppearanceImageArgs, AppearanceImportArgs, App
 use crate::commands::auth::{
     AuthAddAuthlibArgs, AuthAddOfflineArgs, AuthAuthlibServerArgs, AuthIdArgs, AuthMsOpenArgs,
 };
+use crate::commands::diagnostics::{DiagnosticsExportArgs, DiagnosticsExported};
 use crate::commands::game::{GameInstallArgs, GameVersionList, GameVersionListArgs};
 use crate::commands::instance::{
     InstanceCreateArgs, InstanceDuplicateArgs, InstanceExportArgs, InstanceGameEntries,
@@ -86,6 +87,9 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     AuthAuthlibServerArgs::export_all(&cfg)?;
     AuthIdArgs::export_all(&cfg)?;
     AuthMsOpenArgs::export_all(&cfg)?;
+    // diagnostics
+    DiagnosticsExportArgs::export_all(&cfg)?;
+    DiagnosticsExported::export_all(&cfg)?;
     // game
     GameInstallArgs::export_all(&cfg)?;
     GameVersionList::export_all(&cfg)?;

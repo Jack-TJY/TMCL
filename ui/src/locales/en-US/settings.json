@@ -49,6 +49,13 @@
     "label": "Data folder",
     "open": "Open folder"
   },
+  "diagnostics": {
+    "label": "Export diagnostics",
+    "description": "Bundle launcher logs, system info and the instance list into a zip to attach to bug reports. Tokens, player names, account IDs and user names in paths are removed",
+    "export": "Export",
+    "done": "Diagnostics exported",
+    "filter": "Diagnostics bundle"
+  },
   "about": {
     "version": "Version {version} · {os}/{arch}",
     "versionUnknown": "Version information unavailable",
