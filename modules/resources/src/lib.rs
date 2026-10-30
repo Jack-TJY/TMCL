@@ -25,7 +25,8 @@ pub use browse::{
 pub use deps::{Conflict, InstalledVersion, Resolution, Resolved, UnavailableDependency};
 pub use install::{InstallPlan, InstallRequest, PlannedFile, ResourceInstaller};
 pub use modpack::{
-    ModpackExport, ModpackFormat, ModpackInfo, ModpackInstaller, ModpackSource, ResourcePlatform,
+    ModpackExport, ModpackFormat, ModpackInfo, ModpackInstaller, ModpackSource, PackKind,
+    ResourcePlatform,
 };
 pub use update::{
     InstalledList, InstalledResource, ResourceImportResult, ResourceImportSkip,

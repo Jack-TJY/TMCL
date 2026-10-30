@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 实例页（PLAN.md M1-13）：实例卡片按分组展示，可按最近游玩或名称排序；
 // 详情抽屉编辑配置，菜单中复制、重命名、导出、删除，工具栏导入；卡片上启动游戏并查看日志，
-// 崩溃时弹出提示。
+// 崩溃时弹出提示。拖入整合包或实例包时按内容识别类型，打开对应的安装 / 导入对话框。
 import {
   Add20Regular,
   ArrowClockwise20Regular,
@@ -20,11 +20,13 @@ import {
   useDialog,
   useMessage,
 } from "naive-ui";
-import { computed, onMounted, ref, watch } from "vue";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { instanceDelete, instanceList, instanceOpenDir, instanceRefresh } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
+import { resourcesPackDetect } from "../../api/resources";
 import type { AppError } from "../../bindings/AppError";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import type { TaskId } from "../../bindings/TaskId";
@@ -69,6 +71,10 @@ const naming = ref<{ mode: "rename" | "duplicate"; instance: InstanceSummary } |
 const exporting = ref<InstanceSummary | null>(null);
 const importing = ref(false);
 const installingModpack = ref(false);
+/** 拖入的文件：整合包交给整合包对话框，实例包交给导入对话框。 */
+const droppedModpack = ref<string | null>(null);
+const droppedPack = ref<string | null>(null);
+const dragging = ref(false);
 const { importMods } = useModImport();
 /** 打开日志窗口的实例 ID；也可经 `?log=<id>` 打开（崩溃提示在其他页面时跳转过来）。 */
 const logFor = ref<string | null>(null);
@@ -112,7 +118,60 @@ async function load(reconcile = false) {
   }
 }
 
-onMounted(() => load());
+/** 识别拖入的文件并打开对应对话框；识别失败时提示原因。 */
+async function onDrop(paths: string[]) {
+  const [path] = paths;
+  if (!path) return;
+  if (paths.length > 1) message.info(t("instances.drop.multiple"));
+  const file = path.split(/[\\/]/).pop() ?? path;
+  try {
+    switch (await resourcesPackDetect({ path })) {
+      case "mrpack":
+      case "curseforge":
+        droppedModpack.value = path;
+        installingModpack.value = true;
+        break;
+      case "tmclpack":
+        droppedPack.value = path;
+        importing.value = true;
+        break;
+      case "multimc":
+        message.warning(t("instances.drop.multimc", { file }), { duration: 6000 });
+        break;
+      case "unknown":
+        message.error(t("instances.drop.unknown", { file }), { duration: 6000 });
+        break;
+    }
+  } catch (err) {
+    showError(err);
+  }
+}
+
+let unlistenDrop: (() => void) | null = null;
+let unmounted = false;
+
+onMounted(async () => {
+  void load();
+  try {
+    const unlisten = await getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type === "enter" || payload.type === "over") dragging.value = true;
+      else if (payload.type === "leave") dragging.value = false;
+      else {
+        dragging.value = false;
+        void onDrop(payload.paths);
+      }
+    });
+    if (unmounted) unlisten();
+    else unlistenDrop = unlisten;
+  } catch {
+    // 不在 Tauri 中（例如浏览器调试）时没有拖放事件。
+  }
+});
+
+onBeforeUnmount(() => {
+  unmounted = true;
+  unlistenDrop?.();
+});
 
 const groups = computed(() =>
   groupInstances(
@@ -210,13 +269,13 @@ function onAction(instance: InstanceSummary, action: CardAction) {
         ></template>
         {{ t("instances.refresh") }}
       </NButton>
-      <NButton secondary @click="importing = true">
+      <NButton secondary @click="((droppedPack = null), (importing = true))">
         <template #icon
           ><NIcon><ArrowImport20Regular /></NIcon
         ></template>
         {{ t("instances.import.action") }}
       </NButton>
-      <NButton secondary @click="installingModpack = true">
+      <NButton secondary @click="((droppedModpack = null), (installingModpack = true))">
         <template #icon
           ><NIcon><BoxMultiple20Regular /></NIcon
         ></template>
@@ -296,17 +355,30 @@ function onAction(instance: InstanceSummary, action: CardAction) {
     />
     <ExportDialog :instance="exporting" @close="exporting = null" />
     <GameLogWindow :instance-id="logFor" @close="closeLog" />
-    <ImportDialog :show="importing" @close="importing = false" @started="reloadAfter" />
+    <ImportDialog
+      :show="importing"
+      :path="droppedPack"
+      @close="importing = false"
+      @started="reloadAfter"
+    />
     <ModpackDialog
       :show="installingModpack"
+      :file="droppedModpack"
       @close="installingModpack = false"
       @started="reloadAfter"
     />
+
+    <div v-if="dragging" class="drop-overlay">
+      <NIcon size="40"><BoxMultiple20Regular /></NIcon>
+      <span class="drop-title">{{ t("instances.drop.title") }}</span>
+      <span class="drop-hint">{{ t("instances.drop.hint") }}</span>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .instances-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -376,5 +448,30 @@ function onAction(instance: InstanceSummary, action: CardAction) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 8px;
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed var(--tmcl-accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tmcl-card) 85%, transparent);
+  color: var(--tmcl-accent);
+  pointer-events: none;
+}
+
+.drop-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.drop-hint {
+  color: var(--tmcl-text-secondary);
 }
 </style>

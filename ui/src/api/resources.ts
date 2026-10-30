@@ -1,7 +1,9 @@
 // `resources_*` 命令封装（PLAN.md M2-03、M2-04、M2-06）。
+import type { DetectedPack } from "../bindings/DetectedPack";
 import type { InstallPlan } from "../bindings/InstallPlan";
 import type { InstalledList } from "../bindings/InstalledList";
 import type { ModpackInfo } from "../bindings/ModpackInfo";
+import type { PackKind } from "../bindings/PackKind";
 import type { ResourceImportResult } from "../bindings/ResourceImportResult";
 import type { ResourcePage } from "../bindings/ResourcePage";
 import type { ResourceUpdate } from "../bindings/ResourceUpdate";
@@ -15,6 +17,7 @@ import type { ResourcesModpackInstallArgs } from "../bindings/ResourcesModpackIn
 import type { ResourcesModpackSearchArgs } from "../bindings/ResourcesModpackSearchArgs";
 import type { ResourcesModpackVersionsArgs } from "../bindings/ResourcesModpackVersionsArgs";
 import type { ResourcesOpenPageArgs } from "../bindings/ResourcesOpenPageArgs";
+import type { ResourcesPackDetectArgs } from "../bindings/ResourcesPackDetectArgs";
 import type { ResourcesRemoveArgs } from "../bindings/ResourcesRemoveArgs";
 import type { ResourcesSearchAnyArgs } from "../bindings/ResourcesSearchAnyArgs";
 import type { ResourcesSearchArgs } from "../bindings/ResourcesSearchArgs";
@@ -46,6 +49,7 @@ export type {
 };
 export type { ManualDownload } from "../bindings/ManualDownload";
 export type { ModpackSource } from "../bindings/ModpackSource";
+export type { PackKind } from "../bindings/PackKind";
 export type { Conflict } from "../bindings/Conflict";
 export type { InstalledResource } from "../bindings/InstalledResource";
 export type { PlannedFile } from "../bindings/PlannedFile";
@@ -154,6 +158,11 @@ export async function resourcesModpackVersions(
 /** 读取并校验本地整合包（`.mrpack` 或 CurseForge zip），返回概要。 */
 export function resourcesModpackInspect(args: ResourcesModpackInspectArgs): Promise<ModpackInfo> {
   return invoke<ModpackInfo>("resources_modpack_inspect", { args });
+}
+
+/** 识别本地压缩包类型：整合包、TMCL 实例包或其他启动器的实例。 */
+export async function resourcesPackDetect(args: ResourcesPackDetectArgs): Promise<PackKind> {
+  return (await invoke<DetectedPack>("resources_pack_detect", { args })).kind;
 }
 
 /** 把整合包安装为新实例，返回任务 ID。 */

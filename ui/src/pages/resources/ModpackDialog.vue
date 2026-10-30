@@ -49,7 +49,8 @@ import { defaultVersion, formatCount, formatSize } from "./resources";
 type Platform = "modrinth" | "curseforge";
 type Mode = Platform | "file";
 
-const props = defineProps<{ show: boolean }>();
+// `file`：打开时直接检查这个本地整合包（实例页拖入文件时使用）。
+const props = defineProps<{ show: boolean; file?: string | null }>();
 const emit = defineEmits<{ close: []; started: [taskId: TaskId] }>();
 
 const { t, locale } = useI18n();
@@ -126,7 +127,10 @@ watch(
     filePath.value = null;
     info.value = null;
     inspectError.value = null;
-    if (hits.value.length === 0) void search();
+    if (props.file) {
+      mode.value = "file";
+      void inspectFile(props.file);
+    } else if (hits.value.length === 0) void search();
   },
 );
 
@@ -170,7 +174,10 @@ async function chooseFile() {
   const filters = [{ name: "Modrinth", extensions: ["mrpack"] }];
   if (curseforge.value) filters.push({ name: "CurseForge", extensions: ["zip"] });
   const path = await pickFile(filters).catch(() => null);
-  if (!path) return;
+  if (path) await inspectFile(path);
+}
+
+async function inspectFile(path: string) {
   filePath.value = path;
   info.value = null;
   inspectError.value = null;

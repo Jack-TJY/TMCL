@@ -71,6 +71,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_modpack_search,
         commands::resources::resources_modpack_versions,
         commands::resources::resources_open_page,
+        commands::resources::resources_pack_detect,
         commands::resources::resources_remove,
         commands::resources::resources_search,
         commands::resources::resources_search_any,
