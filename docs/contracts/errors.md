@@ -72,6 +72,15 @@
 | `RESOURCES_MODPACK_UNSUPPORTED` | resources | 整合包的格式版本、游戏或依赖（加载器）不受支持 | `name` | 不支持此整合包：{name} | This modpack is not supported: {name} |
 | `RESOURCES_VERSION_NOT_FOUND` | resources | Modrinth 上找不到要安装的版本，或该版本没有文件 | `version` | 找不到资源版本 {version} | Resource version {version} was not found |
 | `RESOURCES_WORLD_NOT_FOUND` | resources | 数据包要安装到的存档不存在或名称非法 | `world` | 找不到存档 {world} | World {world} was not found |
+| `SAKURA_ACCOUNT_BANNED` | sakura | SakuraFrp 账号已被冻结（`/user/info` 返回 `ban`） | — | 你的樱花穿透账号已被冻结，请到 SakuraFrp 官网查看原因 | Your SakuraFrp account is suspended. Check the reason on the SakuraFrp website |
+| `SAKURA_API_ERROR` | sakura | SakuraFrp 接口拒绝请求（4xx，如隧道数已满、节点权限不足），`msg` 为服务端返回的说明，原样显示 | `msg`、`status` | 樱花穿透返回错误：{msg} | SakuraFrp returned an error: {msg} |
+| `SAKURA_FRPC_FAILED` | sakura | frpc 无法启动、提前退出，或 60 秒内没有给出联机地址；详情为脱敏后的最后几行日志 | — | 穿透客户端启动失败，请稍后重试或换一个节点 | The tunnel client failed to start. Try again later or pick another node |
+| `SAKURA_FRPC_UNAVAILABLE` | sakura | 官方下载信息中没有适用于当前平台的 frpc | `platform` | 樱花穿透暂不支持 {platform} | SakuraFrp does not support {platform} yet |
+| `SAKURA_KEY_INVALID` | sakura | SakuraFrp 访问密钥格式不对、无效或已被重置（接口返回 401） | — | 访问密钥无效，请到 SakuraFrp 官网的用户信息页复制最新的访问密钥 | The access key is invalid. Copy the current access key from your SakuraFrp user page |
+| `SAKURA_KEY_MISSING` | sakura | 还没有保存 SakuraFrp 访问密钥 | — | 请先填写樱花穿透的访问密钥 | Please enter your SakuraFrp access key first |
+| `SAKURA_NODE_NOT_PUBLIC` | sakura | 公开房间选了不允许穿透公开游戏服务器的节点（`flag & 2048` 为 0 且名称不含“多线”） | `node` | 公开的服务器只能使用允许公开游戏的节点，{node} 不行，请换一个 | Public servers may only use nodes that allow public games, and {node} does not. Pick another node |
+| `SAKURA_NODE_UNAVAILABLE` | sakura | 所选节点不存在、离线或已满载 | `node` | 节点 {node} 暂时不可用，请换一个 | Node {node} is not available right now. Pick another node |
+| `SAKURA_REALNAME_REQUIRED` | sakura | SakuraFrp 账号未完成实名认证（`/user/info` 的 `realname` 不大于 0）；TMCL 不收集身份信息 | — | 樱花穿透账号还没有实名认证，请先到 SakuraFrp 官网完成实名 | Your SakuraFrp account is not verified yet. Complete identity verification on the SakuraFrp website first |
 | `SKIN_INVALID_IMAGE` | skin | 皮肤文件不是 PNG，或尺寸不是 64×64 / 64×32；正版上传时服务器拒收（400）也用此码 | `width`、`height`（可识别时） | 皮肤必须是 64×64 或 64×32 像素的 PNG 图片 | A skin must be a 64×64 or 64×32 PNG image |
 | `SKIN_NOT_FOUND` | skin | 本地皮肤库中没有该皮肤（已被删除或 ID 无效） | `id` | 皮肤库中没有这个皮肤，请刷新列表 | This skin is not in the library, please refresh the list |
 | `SYNC_MASTER_INVALID` | sync | 设置同步主配置无效：`master.json` 损坏或格式版本不受支持，或要保存的选项键/值非法 | — | 设置同步的主配置无效，请重新采集或编辑 | The settings sync master profile is invalid. Capture or edit it again |

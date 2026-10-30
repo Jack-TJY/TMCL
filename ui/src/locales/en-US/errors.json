@@ -66,5 +66,14 @@
   "SYNC_NO_MASTER": "No settings sync master profile yet. Capture one from an instance or edit it first",
   "SYNC_SOURCE_NO_OPTIONS": "Instance {id} has no game settings yet. Launch the game once first",
   "RESOURCES_CURSEFORGE_DISABLED": "CurseForge is not enabled in this build",
-  "RESOURCES_MANUAL_DOWNLOAD": "The author of {name} does not allow third-party downloads, please download it from the CurseForge page"
+  "RESOURCES_MANUAL_DOWNLOAD": "The author of {name} does not allow third-party downloads, please download it from the CurseForge page",
+  "SAKURA_ACCOUNT_BANNED": "Your SakuraFrp account is suspended. Check the reason on the SakuraFrp website",
+  "SAKURA_API_ERROR": "SakuraFrp returned an error: {msg}",
+  "SAKURA_FRPC_FAILED": "The tunnel client failed to start. Try again later or pick another node",
+  "SAKURA_FRPC_UNAVAILABLE": "SakuraFrp does not support {platform} yet",
+  "SAKURA_KEY_INVALID": "The access key is invalid. Copy the current access key from your SakuraFrp user page",
+  "SAKURA_KEY_MISSING": "Please enter your SakuraFrp access key first",
+  "SAKURA_NODE_NOT_PUBLIC": "Public servers may only use nodes that allow public games, and {node} does not. Pick another node",
+  "SAKURA_NODE_UNAVAILABLE": "Node {node} is not available right now. Pick another node",
+  "SAKURA_REALNAME_REQUIRED": "Your SakuraFrp account is not verified yet. Complete identity verification on the SakuraFrp website first"
 }

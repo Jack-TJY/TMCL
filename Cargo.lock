@@ -4692,6 +4692,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmcl-sakura"
+version = "0.1.0"
+dependencies = [
+ "md-5",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tmcl-auth",
+ "tmcl-common",
+ "tmcl-net",
+ "tokio",
+ "tracing",
+ "ts-rs",
+]
+
+[[package]]
 name = "tmcl-skin"
 version = "0.1.0"
 dependencies = [

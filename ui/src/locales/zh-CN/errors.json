@@ -66,5 +66,14 @@
   "SYNC_NO_MASTER": "还没有设置同步的主配置，请先从实例采集或手动编辑",
   "SYNC_SOURCE_NO_OPTIONS": "实例 {id} 还没有游戏设置，请先启动一次游戏",
   "RESOURCES_CURSEFORGE_DISABLED": "此版本未启用 CurseForge",
-  "RESOURCES_MANUAL_DOWNLOAD": "{name} 的作者不允许第三方下载，请在 CurseForge 网页上手动下载"
+  "RESOURCES_MANUAL_DOWNLOAD": "{name} 的作者不允许第三方下载，请在 CurseForge 网页上手动下载",
+  "SAKURA_ACCOUNT_BANNED": "你的樱花穿透账号已被冻结，请到 SakuraFrp 官网查看原因",
+  "SAKURA_API_ERROR": "樱花穿透返回错误：{msg}",
+  "SAKURA_FRPC_FAILED": "穿透客户端启动失败，请稍后重试或换一个节点",
+  "SAKURA_FRPC_UNAVAILABLE": "樱花穿透暂不支持 {platform}",
+  "SAKURA_KEY_INVALID": "访问密钥无效，请到 SakuraFrp 官网的用户信息页复制最新的访问密钥",
+  "SAKURA_KEY_MISSING": "请先填写樱花穿透的访问密钥",
+  "SAKURA_NODE_NOT_PUBLIC": "公开的服务器只能使用允许公开游戏的节点，{node} 不行，请换一个",
+  "SAKURA_NODE_UNAVAILABLE": "节点 {node} 暂时不可用，请换一个",
+  "SAKURA_REALNAME_REQUIRED": "樱花穿透账号还没有实名认证，请先到 SakuraFrp 官网完成实名"
 }
