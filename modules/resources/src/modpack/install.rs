@@ -25,6 +25,7 @@ pub struct ModpackInstaller {
     loader: LoaderInstaller,
     game: InstallOptions,
     curseforge: Option<CurseForgeClient>,
+    fallbacks: cf_pack::Fallbacks,
 }
 
 /// 读取、校验并解析好的整合包。
@@ -34,6 +35,8 @@ pub struct PreparedPack {
     pub info: ModpackInfo,
     /// 要下载的文件。
     pub files: Vec<PackFile>,
+    /// 尝试下载、失败也不影响安装的文件（CurseForge 镜像），附手动下载说明。
+    pub optional: Vec<(PackFile, cf_pack::ManualDownload)>,
     /// 要依次解压到 `game/` 的包内目录。
     pub overrides: Vec<String>,
 }
@@ -45,6 +48,7 @@ impl ModpackInstaller {
             loader,
             game,
             curseforge: None,
+            fallbacks: cf_pack::Fallbacks::default(),
         }
     }
 
@@ -53,6 +57,12 @@ impl ModpackInstaller {
     /// 下载引擎应由 [`crate::curseforge::with_cdn_key`] 创建，否则 CDN 会拒绝下载。
     pub fn with_curseforge(mut self, client: Option<CurseForgeClient>) -> Self {
         self.curseforge = client;
+        self
+    }
+
+    /// CurseForge 整合包中作者禁止第三方分发的文件的备选来源，见 [`cf_pack::Fallbacks`]。
+    pub fn with_fallbacks(mut self, fallbacks: cf_pack::Fallbacks) -> Self {
+        self.fallbacks = fallbacks;
         self
     }
 
@@ -78,6 +88,7 @@ impl ModpackInstaller {
                 return Ok(PreparedPack {
                     info: pack.info,
                     files: pack.files,
+                    optional: Vec::new(),
                     overrides: mrpack::OVERRIDE_DIRS.map(str::to_owned).to_vec(),
                 });
             }
@@ -87,7 +98,7 @@ impl ModpackInstaller {
             AppError::new(ErrorCode::ResourcesModpackUnsupported).with_param("name", "curseforge")
         })?;
         let ctx = TaskCtx::noop("modpack_inspect");
-        let resolved = cf_pack::resolve(&manifest, client, &ctx).await?;
+        let resolved = cf_pack::resolve(&manifest, client, &self.fallbacks, &ctx).await?;
         let info = ModpackInfo {
             format: ModpackFormat::Curseforge,
             name: manifest.name.clone(),
@@ -98,10 +109,12 @@ impl ModpackInstaller {
             file_count: u32::try_from(resolved.files.len()).unwrap_or(u32::MAX),
             download_size: resolved.files.iter().map(|f| f.size).sum(),
             manual_downloads: resolved.manual,
+            redirected_downloads: resolved.redirected,
         };
         Ok(PreparedPack {
             info,
             files: resolved.files,
+            optional: resolved.optional,
             overrides: cf_pack::override_dirs(&manifest),
         })
     }
@@ -179,6 +192,23 @@ impl ModpackInstaller {
             .downloader()
             .download_all(items, FILES_STAGE, ctx)
             .await?;
+        for (file, manual) in &parsed.optional {
+            ctx.check_cancelled()?;
+            let item = file.download_item(&game_dir);
+            if let Some(dir) = item.path.parent() {
+                std::fs::create_dir_all(dir).map_err(|e| crate::install::io_error(dir, &e))?;
+            }
+            match self.loader.downloader().download_one(&item, ctx).await {
+                Ok(_) => {}
+                Err(err) if err.is_cancelled() => return Err(err),
+                Err(err) => tracing::warn!(
+                    %err,
+                    file = %manual.file_name,
+                    page = %manual.page_url,
+                    "镜像下载失败，需要手动下载"
+                ),
+            }
+        }
 
         let (pack, dir, task) = (pack.to_owned(), game_dir.clone(), ctx.clone());
         let overrides = parsed.overrides.clone();
