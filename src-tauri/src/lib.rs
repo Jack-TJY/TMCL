@@ -63,7 +63,12 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::loader::loader_install,
         commands::loader::loader_list,
         // p2p
+        commands::p2p::p2p_host,
         commands::p2p::p2p_info,
+        commands::p2p::p2p_join,
+        commands::p2p::p2p_lan_worlds,
+        commands::p2p::p2p_status,
+        commands::p2p::p2p_stop,
         // resources
         commands::resources::resources_check_updates,
         commands::resources::resources_import,
@@ -143,9 +148,10 @@ pub fn run() {
         // 游戏日志等辅助窗口依赖主窗口提供数据：主窗口关闭即退出应用，不留下孤立的窗口。
         .on_window_event(|window, event| {
             if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
-                // 退出前结束 frpc 并删除樱花临时隧道。
+                // 退出前结束 frpc 并删除樱花临时隧道，结束 EasyTier。
                 if let Some(state) = tauri::Manager::try_state::<AppState>(window) {
                     commands::sakura::stop_on_exit(&state.sakura, &state.sakura_api);
+                    commands::p2p::stop_on_exit(&state.p2p);
                 }
                 tauri::Manager::app_handle(window).exit(0);
             }
@@ -161,6 +167,7 @@ pub fn run() {
         os = std::env::consts::OS,
         "TMCL 启动"
     );
+    commands::p2p::cleanup_on_start(&state);
     setup(builder, state)
         .run(tauri::generate_context!())
         .expect("error while running TMCL");
@@ -2119,6 +2126,52 @@ fov:0.0
                 ErrorCode::AuthAccountNotFound
             );
         }
+    }
+
+    #[test]
+    fn p2p_validation_and_idle_status_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(DataPaths::at(dir.path()))));
+        let code = |err: Value| serde_json::from_value::<AppError>(err).unwrap().code;
+
+        let status = invoke(&webview, "p2p_status", json!({})).unwrap();
+        assert_eq!(
+            status,
+            json!({ "starting": false, "running": false, "room": null })
+        );
+        invoke(&webview, "p2p_stop", json!({})).unwrap();
+
+        // 无效输入在启动任务之前就被拒绝，不会下载 EasyTier。
+        let err = invoke(
+            &webview,
+            "p2p_join",
+            json!({ "args": { "room_code": "U/YNZE-U61D-2206-HXRH", "player_name": "Alex" } }),
+        )
+        .unwrap_err();
+        assert_eq!(code(err), ErrorCode::P2pRoomCodeInvalid);
+        for name in ["", "   ", &"x".repeat(65)] {
+            let err = invoke(
+                &webview,
+                "p2p_join",
+                json!({ "args": { "room_code": "U/YNZE-U61D-2206-HXRG", "player_name": name } }),
+            )
+            .unwrap_err();
+            assert_eq!(code(err), ErrorCode::CommonInternal, "{name:?}");
+        }
+        let err = invoke(
+            &webview,
+            "p2p_host",
+            json!({ "args": { "mc_port": 0, "player_name": "Alex" } }),
+        )
+        .unwrap_err();
+        assert_eq!(code(err), ErrorCode::CommonInternal);
+        assert!(
+            !dir.path().join("cache").exists()
+                || std::fs::read_dir(dir.path().join("cache"))
+                    .unwrap()
+                    .next()
+                    .is_none()
+        );
     }
 
     #[test]
