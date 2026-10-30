@@ -17,5 +17,6 @@
     "exited": "已退出（{code}）",
     "crashed": "已崩溃（{code}）",
     "failed": "启动失败"
-  }
+  },
+  "openFailed": "无法打开日志窗口"
 }

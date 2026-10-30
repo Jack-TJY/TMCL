@@ -17,5 +17,6 @@
     "exited": "Exited ({code})",
     "crashed": "Crashed ({code})",
     "failed": "Launch failed"
-  }
+  },
+  "openFailed": "Couldn't open the log window"
 }

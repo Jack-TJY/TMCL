@@ -23,15 +23,15 @@ import {
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { instanceDelete, instanceList, instanceOpenDir, instanceRefresh } from "../../api/instance";
 import { toAppError } from "../../api/invoke";
 import { resourcesPackDetect } from "../../api/resources";
 import type { AppError } from "../../bindings/AppError";
 import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import type { TaskId } from "../../bindings/TaskId";
-import GameLogWindow from "../../components/game-log/GameLogWindow.vue";
 import { useGameSessions } from "../../components/game-log/sessions";
+import { openLogWindow } from "../../components/game-log/window";
 import { formatError } from "../../i18n";
 import ModpackDialog from "../resources/ModpackDialog.vue";
 import { useTasksStore } from "../../stores/tasks";
@@ -56,7 +56,6 @@ const { t, locale } = useI18n();
 const message = useMessage();
 const dialog = useDialog();
 const router = useRouter();
-const route = useRoute();
 const games = useGameSessions();
 const tasks = useTasksStore();
 
@@ -76,33 +75,22 @@ const droppedModpack = ref<string | null>(null);
 const droppedPack = ref<string | null>(null);
 const dragging = ref(false);
 const { importMods } = useModImport();
-/** 打开日志窗口的实例 ID；也可经 `?log=<id>` 打开（崩溃提示在其他页面时跳转过来）。 */
-const logFor = ref<string | null>(null);
-
-watch(
-  () => route.query.log,
-  (id) => {
-    if (typeof id === "string" && games.sessions[id]) logFor.value = id;
-  },
-  { immediate: true },
-);
-
-function closeLog() {
-  logFor.value = null;
-  if (route.query.log) void router.replace({ query: {} });
+/** 在独立窗口中打开实例的游戏日志。 */
+function openLog(id: string) {
+  const name = games.sessions[id]?.name ?? "";
+  openLogWindow(id, t("gameLog.title", { name })).catch(() =>
+    message.error(t("gameLog.openFailed")),
+  );
 }
 
-// 对话框挂在应用级的 provider 上，离开本页后仍能弹出；“查看日志”经路由回到本页。
+// 对话框挂在应用级的 provider 上，离开本页后仍能弹出。
 games.setCrashHandler((session) => {
   dialog.error({
     title: t("instances.crash.title", { name: session.name }),
     content: t("instances.crash.content", { code: session.exitCode ?? "-" }),
     positiveText: t("instances.crash.viewLog"),
     negativeText: t("instances.crash.close"),
-    onPositiveClick: () => {
-      logFor.value = session.instanceId;
-      void router.push({ name: "instances", query: { log: session.instanceId } });
-    },
+    onPositiveClick: () => openLog(session.instanceId),
   });
 });
 
@@ -281,13 +269,7 @@ function onAction(instance: InstanceSummary, action: CardAction) {
         ></template>
         {{ t("resources.modpack.action") }}
       </NButton>
-      <LaunchButton
-        v-if="recent"
-        :instance="recent"
-        primary
-        @launched="load()"
-        @log="(id: string) => (logFor = id)"
-      />
+      <LaunchButton v-if="recent" :instance="recent" primary @launched="load()" @log="openLog" />
       <NButton :type="recent ? 'default' : 'primary'" @click="router.push({ name: 'download' })">
         <template #icon
           ><NIcon><Add20Regular /></NIcon
@@ -328,11 +310,7 @@ function onAction(instance: InstanceSummary, action: CardAction) {
             @action="(action: CardAction) => onAction(instance, action)"
           >
             <template v-if="!instance.error" #actions>
-              <LaunchButton
-                :instance="instance"
-                @launched="load()"
-                @log="(id: string) => (logFor = id)"
-              />
+              <LaunchButton :instance="instance" @launched="load()" @log="openLog" />
             </template>
           </InstanceCard>
         </div>
@@ -354,7 +332,6 @@ function onAction(instance: InstanceSummary, action: CardAction) {
       @started="reloadAfter"
     />
     <ExportDialog :instance="exporting" @close="exporting = null" />
-    <GameLogWindow :instance-id="logFor" @close="closeLog" />
     <ImportDialog
       :show="importing"
       :path="droppedPack"

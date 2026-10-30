@@ -124,7 +124,14 @@ fn setup<R: Runtime>(builder: tauri::Builder<R>, state: AppState) -> tauri::Buil
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 文件对话框：导入导出实例时由前端经 `ui/src/api/dialog.ts` 调用，只开放打开与保存两项权限。
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        // 游戏日志等辅助窗口依赖主窗口提供数据：主窗口关闭即退出应用，不留下孤立的窗口。
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                tauri::Manager::app_handle(window).exit(0);
+            }
+        });
     setup(builder, AppState::new())
         .run(tauri::generate_context!())
         .expect("error while running TMCL");
