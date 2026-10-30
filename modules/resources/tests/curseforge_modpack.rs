@@ -20,6 +20,8 @@ use tmcl_net::{DownloadOptions, Downloader, HttpClient, RetryPolicy};
 use tmcl_resources::ModpackInstaller;
 use tmcl_resources::curseforge::CurseForgeClient;
 use tmcl_resources::modpack::ModpackFormat;
+use tmcl_resources::modpack::curseforge::{self as cf_pack, DownloadVia, Fallbacks};
+use tmcl_resources::modrinth::ModrinthClient;
 use zip::write::SimpleFileOptions;
 
 fn sha1_hex(data: &[u8]) -> String {
@@ -86,7 +88,9 @@ struct Env {
     pack: PathBuf,
     installer: ModpackInstaller,
     api: MockServer,
-    _cdn: TestServer,
+    cdn: TestServer,
+    options: InstallOptions,
+    client: CurseForgeClient,
 }
 
 async fn env(mod_a: &'static [u8]) -> Env {
@@ -142,6 +146,7 @@ async fn env(mod_a: &'static [u8]) -> Env {
         CurseForgeClient::with_base(&HttpClient::new().unwrap(), &api.url("/v1"), "test-api-key")
             .unwrap()
             .with_retry(RetryPolicy::with_delays([Duration::ZERO; 3]));
+    let (options_copy, client_copy) = (options.clone(), client.clone());
     let installer = ModpackInstaller::new(loader, options).with_curseforge(Some(client));
     Env {
         _dir: dir,
@@ -149,7 +154,9 @@ async fn env(mod_a: &'static [u8]) -> Env {
         pack,
         installer,
         api,
-        _cdn: cdn,
+        cdn,
+        options: options_copy,
+        client: client_copy,
     }
 }
 
@@ -349,8 +356,21 @@ async fn online_fetch_and_inspect_popular_pack() {
         LoaderInstaller::new(downloader, paths),
         InstallOptions::default(),
     )
-    .with_curseforge(Some(client));
+    .with_curseforge(Some(client))
+    .with_fallbacks(Fallbacks {
+        modrinth: Some(ModrinthClient::new(&http).unwrap()),
+        mirror: Some(cf_pack::MIRROR_BASE.to_owned()),
+    });
     let prepared = installer.inspect(&fetched.path).await.unwrap();
+    eprintln!(
+        "redirected: {:?}",
+        prepared
+            .info
+            .redirected_downloads
+            .iter()
+            .map(|r| (r.file.file_name.as_str(), r.via))
+            .collect::<Vec<_>>()
+    );
     eprintln!(
         "{} {}: {} files, {} manual, loader {:?}",
         pack.name,
@@ -361,4 +381,126 @@ async fn online_fetch_and_inspect_popular_pack() {
     );
     assert_eq!(prepared.info.format, ModpackFormat::Curseforge);
     assert!(prepared.info.file_count > 0);
+}
+
+impl Env {
+    /// 换一个带备选来源的安装器（`blocked.jar` 由作者禁止分发）。
+    fn with_fallbacks(&self, fallbacks: Fallbacks) -> ModpackInstaller {
+        let downloader = Downloader::new(
+            HttpClient::new().unwrap(),
+            DownloadOptions {
+                retry: RetryPolicy::none(),
+                ..DownloadOptions::default()
+            },
+        );
+        let loader = LoaderInstaller::new(downloader, self.paths.clone())
+            .with_game_options(self.options.clone());
+        ModpackInstaller::new(loader, self.options.clone())
+            .with_curseforge(Some(self.client.clone()))
+            .with_fallbacks(fallbacks)
+    }
+}
+
+/// 只认识 `blocked.jar` 的模拟 Modrinth；`known` 为 `false` 时什么都查不到。
+async fn modrinth(cdn: &TestServer, known: bool) -> (MockServer, ModrinthClient) {
+    let hash = sha1_hex(b"blocked");
+    let version = json!({
+        "id": "v1", "project_id": "BLK", "name": "1.0", "version_number": "1.0",
+        "version_type": "release",
+        "files": [{"hashes": {"sha1": hash}, "url": cdn.url("/modrinth/blocked.jar"),
+            "filename": "blocked.jar", "primary": true, "size": 7}],
+    });
+    let body = if known {
+        json!({ hash: version })
+    } else {
+        json!({})
+    };
+    let body = body.to_string().into_bytes();
+    let server = MockServer::start(move |req, _| {
+        if req.method == "POST" && req.path() == "/v2/version_files" {
+            Response::json(&body)
+        } else {
+            Response::status(404)
+        }
+    })
+    .await;
+    let client = ModrinthClient::with_base(&HttpClient::new().unwrap(), &server.url("/v2"))
+        .unwrap()
+        .with_retry(RetryPolicy::with_delays([Duration::ZERO; 3]));
+    (server, client)
+}
+
+#[test]
+fn mirror_url_follows_forgecdn_layout() {
+    assert_eq!(
+        cf_pack::mirror_url(
+            "https://mod.mcimirror.top",
+            7_194_089,
+            "Screen Tweak 1.20.1.zip"
+        )
+        .unwrap(),
+        "https://mod.mcimirror.top/files/7194/89/Screen%20Tweak%201.20.1.zip"
+    );
+    assert_eq!(
+        cf_pack::mirror_url("https://m.example/", 33, "a.jar").unwrap(),
+        "https://m.example/files/0/33/a.jar"
+    );
+}
+
+#[tokio::test]
+async fn blocked_file_found_on_modrinth_is_downloaded_from_there() {
+    let env = env(b"mod a").await;
+    env.cdn.route("/modrinth/blocked.jar", b"blocked".to_vec());
+    let (_api, client) = modrinth(&env.cdn, true).await;
+    let installer = env.with_fallbacks(Fallbacks {
+        modrinth: Some(client),
+        mirror: None,
+    });
+    let info = installer.inspect(&env.pack).await.unwrap().info;
+    assert!(info.manual_downloads.is_empty());
+    assert_eq!(info.redirected_downloads.len(), 1);
+    assert_eq!(info.redirected_downloads[0].via, DownloadVia::Modrinth);
+    assert_eq!(info.file_count, 3);
+
+    let config = installer
+        .install(&env.pack, None, &TaskCtx::noop("install"))
+        .await
+        .unwrap();
+    let game = env.paths.instance_game_dir(&config.id);
+    assert_eq!(
+        std::fs::read(game.join("mods/blocked.jar")).unwrap(),
+        b"blocked"
+    );
+}
+
+#[tokio::test]
+async fn blocked_file_falls_back_to_mirror_then_manual() {
+    let env = env(b"mod a").await;
+    let (_api, client) = modrinth(&env.cdn, false).await;
+    let fallbacks = Fallbacks {
+        modrinth: Some(client),
+        mirror: Some(env.cdn.url("/mirror")),
+    };
+    let installer = env.with_fallbacks(fallbacks.clone());
+    let info = installer.inspect(&env.pack).await.unwrap().info;
+    assert!(info.manual_downloads.is_empty());
+    assert_eq!(info.redirected_downloads[0].via, DownloadVia::Mirror);
+    assert_eq!(info.file_count, 2);
+
+    // 镜像上没有：安装照常成功，只是缺这个文件。
+    let ctx = TaskCtx::noop("install");
+    let config = installer.install(&env.pack, None, &ctx).await.unwrap();
+    let game = env.paths.instance_game_dir(&config.id);
+    assert!(game.join("mods/a.jar").is_file());
+    assert!(!game.join("mods/blocked.jar").exists());
+
+    // 镜像上有：下载并按 SHA1 校验。
+    env.cdn
+        .route("/mirror/files/0/33/blocked.jar", b"blocked".to_vec());
+    let config = installer.install(&env.pack, None, &ctx).await.unwrap();
+    let game = env.paths.instance_game_dir(&config.id);
+    assert_eq!(
+        std::fs::read(game.join("mods/blocked.jar")).unwrap(),
+        b"blocked"
+    );
 }

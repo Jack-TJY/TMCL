@@ -2,7 +2,9 @@
 //!
 //! `manifest.json` 只列出 `projectID` / `fileID`，下载地址、SHA1 与目标目录要向 CurseForge API
 //! 查询（[`resolve`]）。作者禁止第三方分发的文件（`downloadUrl` 为空）不下载，列入
-//! [`ManualDownload`]，由界面提供网页链接让用户手动下载后放进对应目录。
+//! 依次尝试：Modrinth 上 SHA1 相同的同一文件 → CurseForge 文件镜像（[`MIRROR_BASE`]，
+//! 维护者已知悉这会绕过作者的分发设置）→ 列入 [`ManualDownload`]，由界面提供网页链接让用户
+//! 手动下载后放进对应目录。
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -17,6 +19,7 @@ use zip::ZipArchive;
 
 use super::mrpack::{PackFile, is_safe_segment, safe_relative};
 use crate::curseforge::{ClassId, CurseForgeClient, Mod};
+use crate::modrinth::{HashAlgorithm, ModrinthClient};
 
 /// 包内清单文件名。
 pub const MANIFEST_FILE: &str = "manifest.json";
@@ -56,11 +59,46 @@ pub struct Manifest {
     pub overrides: String,
 }
 
+/// 作者禁止第三方分发的文件改从哪里下载。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+pub enum DownloadVia {
+    /// Modrinth 上 SHA1 相同的同一文件。
+    Modrinth,
+    /// CurseForge 镜像（MCIM）；镜像不可用时需要手动下载。
+    Mirror,
+}
+
+/// 作者禁止第三方分发、改从其他来源下载的文件。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct RedirectedDownload {
+    /// 文件信息（镜像下载失败时按它手动下载）。
+    pub file: ManualDownload,
+    /// 下载来源。
+    pub via: DownloadVia,
+}
+
+/// 作者禁止第三方分发的文件的备选来源，按顺序尝试；都为 `None` 时全部列为手动下载。
+#[derive(Debug, Clone, Default)]
+pub struct Fallbacks {
+    /// 按 SHA1 在 Modrinth 查找同一文件。
+    pub modrinth: Option<ModrinthClient>,
+    /// CurseForge 文件镜像的根地址，如 [`MIRROR_BASE`]。
+    pub mirror: Option<String>,
+}
+
+/// MCIM 提供的 CurseForge 文件镜像（`edge.forgecdn.net` → `mod.mcimirror.top`）。
+pub const MIRROR_BASE: &str = "https://mod.mcimirror.top";
+
 /// 按 API 解析出的文件。
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Resolved {
-    /// 可以直接下载的文件。
+    /// 必须下载成功的文件（含从 Modrinth 补下载的）。
     pub files: Vec<PackFile>,
+    /// 从镜像尝试下载的文件；失败时只记录，按对应的说明手动下载。
+    pub optional: Vec<(PackFile, ManualDownload)>,
+    /// 改从 Modrinth 或镜像下载的文件。
+    pub redirected: Vec<RedirectedDownload>,
     /// 需要手动下载的文件。
     pub manual: Vec<ManualDownload>,
 }
@@ -210,6 +248,7 @@ fn parse_loader(id: &str) -> AppResult<LoaderSpec> {
 pub async fn resolve(
     manifest: &Manifest,
     client: &CurseForgeClient,
+    fallbacks: &Fallbacks,
     ctx: &TaskCtx,
 ) -> AppResult<Resolved> {
     let file_ids: Vec<u32> = manifest.files.iter().map(|&(_, f)| f).collect();
@@ -230,6 +269,8 @@ pub async fn resolve(
     }
 
     let mut out = Resolved::default();
+    // 作者禁止第三方分发的文件：(包内路径, 文件, 需手动下载时的说明)。
+    let mut blocked = Vec::new();
     for &(project_id, file_id) in &manifest.files {
         let file = files
             .get(&file_id)
@@ -254,17 +295,103 @@ pub async fn resolve(
                     Some(p) => p.file_page_url(file_id),
                     None => format!("https://www.curseforge.com/projects/{project_id}"),
                 };
-                out.manual.push(ManualDownload {
+                let manual = ManualDownload {
                     project_name: project
                         .map_or_else(|| file.display_name.clone(), |p| p.name.clone()),
                     file_name: file.file_name.clone(),
                     page_url,
                     target_dir: dir.to_owned(),
-                });
+                };
+                blocked.push((path, file, manual));
             }
         }
     }
+
+    // 1. 同一文件（SHA1 相同）也发布在 Modrinth 上的，从 Modrinth 下载。
+    let mut on_modrinth = HashMap::new();
+    if let Some(modrinth) = &fallbacks.modrinth {
+        let hashes: Vec<String> = blocked.iter().filter_map(|(_, f, _)| f.sha1()).collect();
+        for chunk in hashes.chunks(LOOKUP_BATCH) {
+            match modrinth
+                .versions_from_hashes(chunk, HashAlgorithm::Sha1, ctx)
+                .await
+            {
+                Ok(found) => {
+                    for (hash, version) in found {
+                        let hash = hash.to_ascii_lowercase();
+                        let file = version
+                            .files
+                            .into_iter()
+                            .find(|f| f.hashes.sha1.eq_ignore_ascii_case(&hash))
+                            // 下载后按 SHA1 校验，http 也可以接受。
+                            .filter(|f| f.url.starts_with("https://") || f.url.starts_with("http://"));
+                        if let Some(file) = file {
+                            on_modrinth.insert(hash, file.url);
+                        }
+                    }
+                }
+                Err(err) if err.is_cancelled() => return Err(err),
+                // Modrinth 查询失败不影响安装，相关文件继续走镜像或手动下载。
+                Err(err) => tracing::warn!(%err, "在 Modrinth 按哈希查找禁止分发的文件失败"),
+            }
+        }
+    }
+
+    for (path, file, manual) in blocked {
+        let sha1 = file.sha1();
+        if let Some(url) = sha1.as_ref().and_then(|h| on_modrinth.get(h)) {
+            out.files.push(PackFile {
+                path,
+                url: url.clone(),
+                sha1: sha1.clone().unwrap_or_default(),
+                size: file.file_length,
+            });
+            out.redirected.push(RedirectedDownload {
+                file: manual,
+                via: DownloadVia::Modrinth,
+            });
+            continue;
+        }
+        // 2. 镜像：只用于有 SHA1 的文件，下载后按 SHA1 校验；镜像失败时不影响安装。
+        let mirror = fallbacks
+            .mirror
+            .as_deref()
+            .zip(sha1)
+            .and_then(|(base, sha1)| Some((mirror_url(base, file.id, &file.file_name)?, sha1)));
+        match mirror {
+            Some((url, sha1)) => {
+                out.optional.push((
+                    PackFile {
+                        path,
+                        url,
+                        sha1,
+                        size: file.file_length,
+                    },
+                    manual.clone(),
+                ));
+                out.redirected.push(RedirectedDownload {
+                    file: manual,
+                    via: DownloadVia::Mirror,
+                });
+            }
+            // 3. 都没有：手动下载。
+            None => out.manual.push(manual),
+        }
+    }
     Ok(out)
+}
+
+/// 镜像上的文件地址：`<base>/files/<id 前 4 位>/<id 后 3 位，去掉前导 0>/<文件名>`，
+/// 与 `edge.forgecdn.net` 的路径规则相同。
+pub fn mirror_url(base: &str, file_id: u32, file_name: &str) -> Option<String> {
+    let mut url = reqwest::Url::parse(base).ok()?;
+    url.path_segments_mut().ok()?.pop_if_empty().extend([
+        "files",
+        &(file_id / 1000).to_string(),
+        &(file_id % 1000).to_string(),
+        file_name,
+    ]);
+    Some(url.into())
 }
 
 /// 文件按项目的顶级类别放进 `game/` 下的目录；未知类别按 mod 处理。

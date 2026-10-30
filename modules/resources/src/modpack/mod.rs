@@ -12,7 +12,7 @@ pub mod install;
 pub mod mrpack;
 pub mod source;
 
-pub use curseforge::ManualDownload;
+pub use curseforge::{DownloadVia, Fallbacks, ManualDownload, RedirectedDownload};
 pub use export::{ExportSummary, ModpackExport};
 pub use install::{ModpackInstaller, PreparedPack};
 pub use mrpack::{ModpackFormat, ModpackInfo, Mrpack, PackFile};

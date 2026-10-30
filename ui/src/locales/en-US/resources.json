@@ -110,7 +110,9 @@
     "manualHint": "A few files whose authors forbid third-party downloads must be downloaded manually after installing. Download the pack and install it as a local file to see the list in advance.",
     "manualTitle": "{count} files must be downloaded manually",
     "manualBody": "The authors of these files do not allow third-party launchers to download them. After installing, download them from CurseForge and put them into the matching folder of the instance.",
-    "openPage": "Open page"
+    "openPage": "Open page",
+    "redirectedTitle": "Files whose authors forbid third-party downloads: {modrinth} from Modrinth, {mirror} from a mirror",
+    "redirectedBody": "Files from Modrinth are identical (same hash). Mirror downloads are hash-checked; if one fails the install still finishes and the files listed below need to be downloaded manually."
   },
   "global": {
     "title": "Resources",

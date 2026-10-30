@@ -2,6 +2,7 @@
 import type { LoaderSpec } from "./LoaderSpec";
 import type { ManualDownload } from "./ManualDownload";
 import type { ModpackFormat } from "./ModpackFormat";
+import type { RedirectedDownload } from "./RedirectedDownload";
 
 /**
  * 整合包概要，用于安装前展示。
@@ -42,4 +43,8 @@ download_size: number,
 /**
  * 作者禁止第三方分发、需要用户手动下载的文件（只有 CurseForge 整合包会有）。
  */
-manual_downloads: Array<ManualDownload>, };
+manual_downloads: Array<ManualDownload>, 
+/**
+ * 作者禁止第三方分发、改从 Modrinth 或镜像下载的文件（只有 CurseForge 整合包会有）。
+ */
+redirected_downloads: Array<RedirectedDownload>, };
