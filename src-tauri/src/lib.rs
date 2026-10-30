@@ -11,6 +11,7 @@ mod tasks;
 
 use tauri::Runtime;
 use tauri::ipc::Invoke;
+use tmcl_common::{LogOptions, init_logging};
 
 use crate::state::AppState;
 
@@ -134,7 +135,18 @@ pub fn run() {
                 tauri::Manager::app_handle(window).exit(0);
             }
         });
-    setup(builder, AppState::new())
+    let state = AppState::new();
+    // 守卫持有到 `run` 返回；数据目录不可用时没有文件日志，相关命令会各自返回错误。
+    let _log_guard = state
+        .data()
+        .ok()
+        .and_then(|paths| init_logging(&paths.logs_dir(), &LogOptions::default()).ok());
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        os = std::env::consts::OS,
+        "TMCL 启动"
+    );
+    setup(builder, state)
         .run(tauri::generate_context!())
         .expect("error while running TMCL");
 }
