@@ -9,7 +9,7 @@ use md5::{Digest, Md5};
 use tmcl_auth::{MemorySecretStore, SecretStore};
 use tmcl_common::{ErrorCode, TaskCtx};
 use tmcl_net::HttpClient;
-use tmcl_sakura::tunnel::{self, KEY_SECRET, TEMP_NOTE};
+use tmcl_sakura::tunnel::{self, KEY_SECRET};
 use tmcl_sakura::{SakuraClient, Session, StartRequest, ensure_frpc, frpc};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
@@ -134,6 +134,8 @@ const USER: &str = r#"{"id":10,"name":"DemoUser","avatar":"","token":"x","speed"
 const NODES: &str = r#"{"5":{"name":"某地 BGP","host":"a.natfrp.test","description":"","vip":0,"flag":4},
 "7":{"name":"某地多线","host":"b.natfrp.test","description":"","vip":0,"flag":4},
 "9":{"name":"离线节点","host":"c.natfrp.test","description":"","vip":0,"flag":516}}"#;
+/// 隧道 1 是上次残留的临时隧道，隧道 2 是用户自己的。
+#[cfg(unix)]
 const TUNNELS: &str = r#"[{"id":1,"name":"old","type":"tcp","node":5,"online":false,"status":0,"status_reason":"",
 "note":"TMCL temporary tunnel","extra":"","remote":"","local_ip":"127.0.0.1","local_port":1,"export":""},
 {"id":2,"name":"mine","type":"tcp","node":5,"online":false,"status":0,"status_reason":"",
@@ -439,7 +441,7 @@ async fn session_creates_tunnel_runs_frpc_and_cleans_up() {
     assert_eq!(created["node"], 7);
     assert_eq!(created["local_ip"], "127.0.0.1");
     assert_eq!(created["local_port"], 25565);
-    assert_eq!(created["note"], TEMP_NOTE);
+    assert_eq!(created["note"], tunnel::TEMP_NOTE);
 
     session.stop(&server.api(), &ctx()).await.unwrap();
     let deletes = server.requests("POST /tunnel/delete");
