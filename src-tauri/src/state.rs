@@ -49,6 +49,10 @@ pub struct AppState {
     pub minecraft_api: String,
     /// 皮肤与披风图片的材质服务器根地址；测试中指向本地服务器。
     pub textures_base: String,
+    /// SakuraFrp API 根地址；测试中指向本地服务器。
+    pub sakura_api: String,
+    /// 当前的樱花穿透联机会话，同一时间最多一个。
+    pub sakura: Arc<Mutex<Option<tmcl_sakura::Session>>>,
 }
 
 impl AppState {
@@ -85,6 +89,8 @@ impl AppState {
             curseforge: build_curseforge(),
             minecraft_api: tmcl_skin::mojang::API_BASE.to_owned(),
             textures_base: tmcl_skin::texture::TEXTURES_BASE.to_owned(),
+            sakura_api: tmcl_sakura::api::API_BASE.to_owned(),
+            sakura: Arc::new(Mutex::new(None)),
         }
     }
 

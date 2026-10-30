@@ -75,5 +75,6 @@
   "SAKURA_KEY_MISSING": "请先填写樱花穿透的访问密钥",
   "SAKURA_NODE_NOT_PUBLIC": "公开的服务器只能使用允许公开游戏的节点，{node} 不行，请换一个",
   "SAKURA_NODE_UNAVAILABLE": "节点 {node} 暂时不可用，请换一个",
-  "SAKURA_REALNAME_REQUIRED": "樱花穿透账号还没有实名认证，请先到 SakuraFrp 官网完成实名"
+  "SAKURA_REALNAME_REQUIRED": "樱花穿透账号还没有实名认证，请先到 SakuraFrp 官网完成实名",
+  "SAKURA_ALREADY_RUNNING": "已经在联机中，请先停止当前房间"
 }

@@ -35,6 +35,7 @@ pub const FLAG_PUBLIC_GAME: u32 = 1 << 11;
 /// 账号信息（`GET /user/info`）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct SakuraUser {
+    #[ts(type = "number")]
     pub id: u64,
     pub name: String,
     /// 用户组（套餐）名称。
@@ -78,6 +79,7 @@ impl SakuraNode {
 /// 一条隧道（`GET /tunnels`）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SakuraTunnel {
+    #[ts(type = "number")]
     pub id: u64,
     pub name: String,
     /// 隧道类型，例如 `tcp`。

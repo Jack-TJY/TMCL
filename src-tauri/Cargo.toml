@@ -33,6 +33,7 @@ tmcl-launch = { path = "../core/launch" }
 tmcl-loader = { path = "../core/loader" }
 tmcl-net = { path = "../core/net" }
 tmcl-resources = { path = "../modules/resources" }
+tmcl-sakura = { path = "../modules/net-sakura" }
 tmcl-skin = { path = "../modules/skin" }
 tmcl-sync = { path = "../modules/sync" }
 tokio = { workspace = true, features = ["sync"] }

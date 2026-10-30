@@ -145,6 +145,8 @@ pub enum ErrorCode {
     ResourcesWorldNotFound,
     /// SakuraFrp 账号已被冻结（`/user/info` 返回 `ban`）。
     SakuraAccountBanned,
+    /// 已在樱花穿透联机中，同一时间只能有一个房间。
+    SakuraAlreadyRunning,
     /// SakuraFrp 接口拒绝请求（4xx），`msg` 为服务端给出的说明。
     SakuraApiError,
     /// frpc 无法启动、提前退出或超时没有给出联机地址。
@@ -241,6 +243,7 @@ impl ErrorCode {
             Self::ResourcesVersionNotFound => "RESOURCES_VERSION_NOT_FOUND",
             Self::ResourcesWorldNotFound => "RESOURCES_WORLD_NOT_FOUND",
             Self::SakuraAccountBanned => "SAKURA_ACCOUNT_BANNED",
+            Self::SakuraAlreadyRunning => "SAKURA_ALREADY_RUNNING",
             Self::SakuraApiError => "SAKURA_API_ERROR",
             Self::SakuraFrpcFailed => "SAKURA_FRPC_FAILED",
             Self::SakuraFrpcUnavailable => "SAKURA_FRPC_UNAVAILABLE",
@@ -401,6 +404,7 @@ mod tests {
             ErrorCode::ResourcesVersionNotFound,
             ErrorCode::ResourcesWorldNotFound,
             ErrorCode::SakuraAccountBanned,
+            ErrorCode::SakuraAlreadyRunning,
             ErrorCode::SakuraApiError,
             ErrorCode::SakuraFrpcFailed,
             ErrorCode::SakuraFrpcUnavailable,

@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use tmcl_auth::AccountList;
 use tmcl_common::{AppError, TaskFinished, TaskProgress};
 use tmcl_resources::{InstallPlan, InstalledList, ModpackInfo, ResourceImportResult, ResourcePage};
+use tmcl_sakura::{SakuraPolicy, SakuraUser, StartRequest};
 use tmcl_sync::AutoSync;
 use ts_rs::{Config, ExportError, TS};
 
@@ -38,6 +39,7 @@ use crate::commands::resources::{
     ResourcesRemoveArgs, ResourcesSearchAnyArgs, ResourcesSearchArgs, ResourcesSetEnabledArgs,
     ResourcesSetEnabledResult, ResourcesUpdateArgs, ResourcesVersionsArgs, ResourcesWorldsArgs,
 };
+use crate::commands::sakura::{SakuraKeyArgs, SakuraNodeList, SakuraStatus};
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
@@ -145,6 +147,13 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ResourcesUpdateArgs::export_all(&cfg)?;
     ResourcesVersionsArgs::export_all(&cfg)?;
     ResourcesWorldsArgs::export_all(&cfg)?;
+    // sakura（SakuraNodeInfo、SakuraNode 随 SakuraNodeList，SakuraRoom 随 SakuraStatus 一并导出）
+    SakuraKeyArgs::export_all(&cfg)?;
+    SakuraNodeList::export_all(&cfg)?;
+    SakuraPolicy::export_all(&cfg)?;
+    SakuraStatus::export_all(&cfg)?;
+    SakuraUser::export_all(&cfg)?;
+    StartRequest::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
     SettingsSetArgs::export_all(&cfg)?;

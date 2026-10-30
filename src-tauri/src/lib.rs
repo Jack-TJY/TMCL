@@ -83,6 +83,15 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_update,
         commands::resources::resources_versions,
         commands::resources::resources_worlds,
+        // sakura
+        commands::sakura::sakura_clear_key,
+        commands::sakura::sakura_nodes,
+        commands::sakura::sakura_save_key,
+        commands::sakura::sakura_start,
+        commands::sakura::sakura_status,
+        commands::sakura::sakura_stop,
+        commands::sakura::sakura_terms,
+        commands::sakura::sakura_user,
         // settings
         commands::settings::settings_get,
         commands::settings::settings_get_language,
@@ -132,6 +141,10 @@ pub fn run() {
         // 游戏日志等辅助窗口依赖主窗口提供数据：主窗口关闭即退出应用，不留下孤立的窗口。
         .on_window_event(|window, event| {
             if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                // 退出前结束 frpc 并删除樱花临时隧道。
+                if let Some(state) = tauri::Manager::try_state::<AppState>(window) {
+                    commands::sakura::stop_on_exit(&state.sakura, &state.sakura_api);
+                }
                 tauri::Manager::app_handle(window).exit(0);
             }
         });
@@ -2104,5 +2117,71 @@ fov:0.0
                 ErrorCode::AuthAccountNotFound
             );
         }
+    }
+
+    #[test]
+    fn sakura_key_nodes_and_start_over_ipc() {
+        let user = br#"{"id":10,"name":"DemoUser","speed":"10 Mbps","tunnels":2,"realname":1,
+            "group":{"name":"g","level":0,"expires":0},"traffic":[0,1024]}"#;
+        let nodes = r#"{"5":{"name":"BGP","host":"a.test","description":"","vip":0,"flag":4},
+            "7":{"name":"多线","host":"b.test","description":"","vip":0,"flag":516}}"#;
+        let terms = r##"{"updated":"2024/02/13","alert":"","content":"# 服务条款"}"##;
+        let server = tauri::async_runtime::block_on(TestServer::start([
+            ("/user/info", user.to_vec()),
+            ("/nodes", nodes.as_bytes().to_vec()),
+            ("/system/policy?type=tos", terms.as_bytes().to_vec()),
+        ]));
+        let dir = tempfile::tempdir().unwrap();
+        let (mut state, secrets) = state_with_memory_secrets(dir.path());
+        state.sakura_api = server.url("");
+        let (app, webview) = mock_app_with(state);
+        let finished_rx = finished_events(&app);
+        let code = |err: Value| serde_json::from_value::<AppError>(err).unwrap().code;
+
+        let status = invoke(&webview, "sakura_status", json!({})).unwrap();
+        assert_eq!(
+            status,
+            json!({ "has_key": false, "room": null, "running": false, "starting": false })
+        );
+        let err = invoke(&webview, "sakura_user", json!({})).unwrap_err();
+        assert_eq!(code(err), ErrorCode::SakuraKeyMissing);
+
+        let saved = invoke(
+            &webview,
+            "sakura_save_key",
+            json!({ "args": { "key": "test-key" } }),
+        )
+        .unwrap();
+        assert_eq!(saved["name"], "DemoUser");
+        assert_eq!(saved["verified"], true);
+        assert_eq!(secrets.keys(), ["tmcl:sakura:access-key"]);
+        let status = invoke(&webview, "sakura_status", json!({})).unwrap();
+        assert_eq!(status["has_key"], true);
+
+        let list = invoke(&webview, "sakura_nodes", json!({})).unwrap();
+        let nodes = list["nodes"].as_array().unwrap();
+        assert_eq!(nodes[0]["id"], 5);
+        assert_eq!(nodes[0]["available"], true);
+        assert_eq!(nodes[0]["public_game"], false);
+        assert_eq!(nodes[1]["available"], false);
+        assert_eq!(nodes[1]["public_game"], true);
+        let terms = invoke(&webview, "sakura_terms", json!({})).unwrap();
+        assert_eq!(terms["updated"], "2024/02/13");
+
+        // 下载信息取不到且本地没有 frpc：任务失败，不留下会话。
+        let finished = run_task(
+            &webview,
+            &finished_rx,
+            "sakura_start",
+            json!({ "args": { "local_port": 25565, "node": 5, "public": false } }),
+        );
+        assert_eq!(finished.state, TaskState::Failed);
+        assert_eq!(finished.error.unwrap().code, ErrorCode::NetHttpStatus);
+        let status = invoke(&webview, "sakura_status", json!({})).unwrap();
+        assert_eq!(status["room"], Value::Null);
+
+        invoke(&webview, "sakura_stop", json!({})).unwrap();
+        invoke(&webview, "sakura_clear_key", json!({})).unwrap();
+        assert!(secrets.keys().is_empty());
     }
 }
