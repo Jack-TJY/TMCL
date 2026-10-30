@@ -1,8 +1,11 @@
-//! 把实例的 `game/` 导出为 Modrinth 整合包（`.mrpack`）。
+//! 把实例的 `game/` 导出为 Modrinth 整合包（`.mrpack`）或 CurseForge 整合包（zip）。
 //!
-//! 步骤：收集选中的 `game/` 顶层条目 → 计算 `mods/`、`resourcepacks/`、`shaderpacks/` 下文件的 SHA1
+//! `.mrpack` 步骤：收集选中的 `game/` 顶层条目 → 计算 `mods/`、`resourcepacks/`、`shaderpacks/` 下文件的 SHA1
 //! → 批量向 Modrinth 查询（`POST /version_files`）→ 查到的文件写成 `files[]` 下载链接，
 //! 其余文件放进 `overrides/` → 写出 `<dest>.part`，完成后改名为 `dest`。失败或取消时删除半成品。
+//!
+//! CurseForge 格式（[`export_curseforge`]）相同，只是改用文件指纹向 CurseForge 查询
+//! （`POST /fingerprints/432`），查到的文件写进 `manifest.json` 的 `files[]`。
 
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -15,7 +18,9 @@ use tmcl_instance::{LoaderKind, LoaderSpec};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
+use super::curseforge::MANIFEST_FILE;
 use super::mrpack::{INDEX_FILE, safe_relative};
+use crate::curseforge::{CurseForgeClient, fingerprint};
 use crate::modrinth::{HashAlgorithm, ModrinthClient, VersionFile};
 
 /// 计算哈希阶段名。
@@ -156,7 +161,7 @@ async fn run(
 
     {
         let (game_dir, part, ctx) = (game_dir.to_owned(), part.to_owned(), ctx.clone());
-        blocking(move || write_zip(&part, &index, &game_dir, &overrides, &ctx)).await?;
+        blocking(move || write_zip(&part, INDEX_FILE, &index, &game_dir, &overrides, &ctx)).await?;
     }
     fs::rename(part, dest).map_err(|e| io_error(dest, &e))?;
     tracing::info!(
@@ -165,6 +170,174 @@ async fn run(
         "已导出整合包"
     );
     Ok(summary)
+}
+
+/// 把 `game_dir` 导出为 CurseForge 整合包 `dest`（zip，`manifest.json` + `overrides/`）。
+///
+/// 能按指纹在 CurseForge 找到的 `mods/`、`resourcepacks/`、`shaderpacks/` 文件写进清单，
+/// 其余文件放进 `overrides/`。错误处理同 [`export`]。
+pub async fn export_curseforge(
+    client: &CurseForgeClient,
+    game_dir: &Path,
+    dest: &Path,
+    pack: &ModpackExport,
+    ctx: &TaskCtx,
+) -> AppResult<ExportSummary> {
+    let part = part_path(dest);
+    let result = run_curseforge(client, game_dir, dest, &part, pack, ctx).await;
+    if result.is_err() {
+        let _ = fs::remove_file(&part);
+    }
+    result
+}
+
+async fn run_curseforge(
+    client: &CurseForgeClient,
+    game_dir: &Path,
+    dest: &Path,
+    part: &Path,
+    pack: &ModpackExport,
+    ctx: &TaskCtx,
+) -> AppResult<ExportSummary> {
+    let files = {
+        let (game_dir, include) = (game_dir.to_owned(), pack.include.clone());
+        let skip = [dest.to_owned(), part.to_owned()];
+        blocking(move || collect(&game_dir, &include, &skip)).await?
+    };
+
+    let candidates: Vec<&LocalFile> = files.iter().filter(|f| is_candidate(&f.name)).collect();
+    let total = candidates.len() as u64;
+    ctx.report(ProgressUpdate::new(HASH_STAGE).items(0, total));
+    let mut prints = HashMap::new();
+    for (done, file) in candidates.iter().enumerate() {
+        ctx.check_cancelled()?;
+        let path = game_dir.join(&file.rel);
+        let print = blocking(move || fingerprint::of_file(&path)).await?;
+        prints.insert(file.name.clone(), print);
+        ctx.report(ProgressUpdate::new(HASH_STAGE).items(done as u64 + 1, total));
+    }
+
+    let linked = lookup_curseforge(client, prints, ctx).await?;
+    let (listed, overrides): (Vec<_>, Vec<_>) = files
+        .into_iter()
+        .partition(|f| linked.contains_key(&f.name));
+    let summary = ExportSummary {
+        linked: count(listed.len()),
+        overrides: count(overrides.len()),
+    };
+    let mut entries: Vec<ManifestFile> = listed
+        .iter()
+        .filter_map(|f| linked.get(&f.name).copied())
+        .map(|(project_id, file_id)| ManifestFile {
+            project_id,
+            file_id,
+            required: true,
+        })
+        .collect();
+    entries.sort_by_key(|f| (f.project_id, f.file_id));
+    entries.dedup();
+    let manifest = manifest_json(pack, entries)?;
+
+    {
+        let (game_dir, part, ctx) = (game_dir.to_owned(), part.to_owned(), ctx.clone());
+        blocking(move || write_zip(&part, MANIFEST_FILE, &manifest, &game_dir, &overrides, &ctx))
+            .await?;
+    }
+    fs::rename(part, dest).map_err(|e| io_error(dest, &e))?;
+    tracing::info!(
+        linked = summary.linked,
+        overrides = summary.overrides,
+        "已导出 CurseForge 整合包"
+    );
+    Ok(summary)
+}
+
+/// 按指纹批量查询，返回“包内路径 → (projectID, fileID)”。
+async fn lookup_curseforge(
+    client: &CurseForgeClient,
+    prints: HashMap<String, u32>,
+    ctx: &TaskCtx,
+) -> AppResult<HashMap<String, (u32, u32)>> {
+    let mut all: Vec<u32> = prints.values().copied().collect();
+    all.sort_unstable();
+    all.dedup();
+    let batches = all.len().div_ceil(LOOKUP_BATCH) as u64;
+    let mut found = HashMap::new();
+    ctx.report(ProgressUpdate::new(LOOKUP_STAGE).items(0, batches));
+    for (done, batch) in all.chunks(LOOKUP_BATCH).enumerate() {
+        ctx.check_cancelled()?;
+        let matches = client.match_fingerprints(batch, ctx).await?;
+        for m in matches.exact_matches {
+            if m.file.is_available {
+                found.insert(m.file.file_fingerprint, (m.file.mod_id, m.file.id));
+            }
+        }
+        ctx.report(ProgressUpdate::new(LOOKUP_STAGE).items(done as u64 + 1, batches));
+    }
+    Ok(prints
+        .into_iter()
+        .filter_map(|(name, print)| found.get(&print).map(|&ids| (name, ids)))
+        .collect())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Manifest<'a> {
+    minecraft: ManifestMinecraft,
+    manifest_type: &'static str,
+    manifest_version: u32,
+    name: &'a str,
+    version: &'a str,
+    author: &'a str,
+    files: Vec<ManifestFile>,
+    overrides: &'static str,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ManifestMinecraft {
+    version: String,
+    mod_loaders: Vec<ManifestLoader>,
+}
+
+#[derive(Serialize)]
+struct ManifestLoader {
+    id: String,
+    primary: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+struct ManifestFile {
+    #[serde(rename = "projectID")]
+    project_id: u32,
+    #[serde(rename = "fileID")]
+    file_id: u32,
+    required: bool,
+}
+
+fn manifest_json(pack: &ModpackExport, files: Vec<ManifestFile>) -> AppResult<String> {
+    let mod_loaders = pack
+        .loader
+        .iter()
+        .map(|l| ManifestLoader {
+            id: format!("{}-{}", l.kind.as_str(), l.version),
+            primary: true,
+        })
+        .collect();
+    let manifest = Manifest {
+        minecraft: ManifestMinecraft {
+            version: pack.game_version.clone(),
+            mod_loaders,
+        },
+        manifest_type: "minecraftModpack",
+        manifest_version: 1,
+        name: &pack.name,
+        version: &pack.version,
+        author: "",
+        files,
+        overrides: "overrides",
+    };
+    serde_json::to_string_pretty(&manifest).map_err(AppError::from)
 }
 
 /// 按 SHA1 批量查询，返回“包内路径 → Modrinth 上的同一文件”。
@@ -306,6 +479,7 @@ fn read_dir_names(dir: &Path) -> AppResult<Vec<String>> {
 
 fn write_zip(
     part: &Path,
+    index_name: &str,
     index: &str,
     game_dir: &Path,
     overrides: &[LocalFile],
@@ -318,7 +492,7 @@ fn write_zip(
     let mut zip = ZipWriter::new(BufWriter::new(file));
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
-    zip.start_file(INDEX_FILE, options).map_err(zip_error)?;
+    zip.start_file(index_name, options).map_err(zip_error)?;
     io::Write::write_all(&mut zip, index.as_bytes()).map_err(|e| io_error(part, &e))?;
     ctx.report(
         ProgressUpdate::new(EXPORT_STAGE)
