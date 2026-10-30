@@ -4,11 +4,12 @@ use std::sync::{Arc, Mutex as StdMutex, RwLock};
 
 use tmcl_auth::{KeyringStore, MsClient, SecretStore};
 use tmcl_common::config::DownloadConfig;
-use tmcl_common::{AppResult, Config, DataPaths, Db};
+use tmcl_common::{AppError, AppResult, Config, DataPaths, Db, ErrorCode};
 use tmcl_game::InstallOptions;
 use tmcl_instance::InstanceStore;
 use tmcl_loader::Endpoints;
 use tmcl_net::{Downloader, HttpClient};
+use tmcl_resources::curseforge::{self, CurseForgeClient};
 use tmcl_resources::modrinth::ModrinthClient;
 use tokio::sync::Mutex;
 
@@ -42,6 +43,8 @@ pub struct AppState {
     pub ms: AppResult<MsClient>,
     /// Modrinth 客户端，克隆体共享速率限制状态；测试中指向本地服务器。
     pub modrinth: AppResult<ModrinthClient>,
+    /// CurseForge 客户端；构建时没有 API Key 时为 `None`（CurseForge 来源隐藏）。测试中指向本地服务器。
+    pub curseforge: Option<CurseForgeClient>,
     /// Minecraft 服务根地址（皮肤与披风接口）；测试中指向本地服务器。
     pub minecraft_api: String,
     /// 皮肤与披风图片的材质服务器根地址；测试中指向本地服务器。
@@ -79,6 +82,7 @@ impl AppState {
             secrets: Arc::new(KeyringStore),
             ms: MsClient::from_build(),
             modrinth: HttpClient::new().and_then(|http| ModrinthClient::new(&http)),
+            curseforge: build_curseforge(),
             minecraft_api: tmcl_skin::mojang::API_BASE.to_owned(),
             textures_base: tmcl_skin::texture::TEXTURES_BASE.to_owned(),
         }
@@ -120,6 +124,13 @@ impl AppState {
         self.modrinth.as_ref().map_err(Clone::clone)
     }
 
+    /// CurseForge 客户端；没有 API Key 的构建返回 `RESOURCES_CURSEFORGE_DISABLED`。
+    pub fn curseforge(&self) -> AppResult<&CurseForgeClient> {
+        self.curseforge
+            .as_ref()
+            .ok_or_else(|| AppError::new(ErrorCode::ResourcesCurseforgeDisabled))
+    }
+
     /// 当前的下载引擎；克隆体共享同一个连接数上限。
     pub fn downloader(&self) -> AppResult<Downloader> {
         self.downloader
@@ -142,6 +153,25 @@ fn open_db(paths: &DataPaths) -> AppResult<Db> {
     Ok(db)
 }
 
+/// 下载 CurseForge CDN（`forgecdn.net`）的文件需要带 API Key，没有 key 时与普通客户端相同。
 fn build_downloader(download: &DownloadConfig) -> AppResult<Downloader> {
-    Ok(Downloader::from_config(HttpClient::new()?, download))
+    let http = curseforge::with_cdn_key(&HttpClient::new()?)?;
+    Ok(Downloader::from_config(http, download))
+}
+
+fn build_curseforge() -> Option<CurseForgeClient> {
+    let http = match HttpClient::new() {
+        Ok(http) => http,
+        Err(err) => {
+            tracing::warn!(error = %err, "创建 CurseForge 客户端失败");
+            return None;
+        }
+    };
+    match CurseForgeClient::from_build(&http)? {
+        Ok(client) => Some(client),
+        Err(err) => {
+            tracing::warn!(error = %err, "创建 CurseForge 客户端失败");
+            None
+        }
+    }
 }

@@ -1,7 +1,8 @@
-//! 从本地 `.mrpack` 安装为新实例。
+//! 从本地 `.mrpack` 或 CurseForge 整合包 zip 安装为新实例。
 //!
-//! 步骤：读取并校验索引 → 新建实例 → 补全原版并安装加载器 → 并行下载 `files`（按 SHA1 校验）
-//! → 解压 `overrides/`、`client-overrides/`。任一步失败或取消时删除新实例（回滚），
+//! 步骤：读取并校验索引（CurseForge 整合包还要向 API 查询文件）→ 新建实例 → 补全原版并安装加载器 → 并行下载 `files`（按 SHA1 校验）
+//! → 解压 `overrides/`、`client-overrides/`（CurseForge 为清单指定的目录）。
+//! CurseForge 整合包中作者禁止第三方分发的文件不下载，见 [`ModpackInfo::manual_downloads`]。任一步失败或取消时删除新实例（回滚），
 //! 已下载到 `shared/` 的原版与加载器文件保留以便重试。
 
 use std::path::{Path, PathBuf};
@@ -11,7 +12,9 @@ use tmcl_game::{InstallOptions, install_version};
 use tmcl_instance::{InstanceConfig, InstanceStore, LoaderSpec};
 use tmcl_loader::LoaderInstaller;
 
-use super::mrpack::{self, Mrpack};
+use super::curseforge as cf_pack;
+use super::mrpack::{self, ModpackFormat, ModpackInfo, PackFile};
+use crate::curseforge::CurseForgeClient;
 
 /// 下载阶段名。
 pub const FILES_STAGE: &str = "modpack_files";
@@ -21,18 +24,86 @@ pub const FILES_STAGE: &str = "modpack_files";
 pub struct ModpackInstaller {
     loader: LoaderInstaller,
     game: InstallOptions,
+    curseforge: Option<CurseForgeClient>,
+}
+
+/// 读取、校验并解析好的整合包。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreparedPack {
+    /// 概要。
+    pub info: ModpackInfo,
+    /// 要下载的文件。
+    pub files: Vec<PackFile>,
+    /// 要依次解压到 `game/` 的包内目录。
+    pub overrides: Vec<String>,
 }
 
 impl ModpackInstaller {
     /// `loader` 提供下载引擎、数据目录与加载器端点；`game` 为补全原版的选项。
     pub fn new(loader: LoaderInstaller, game: InstallOptions) -> Self {
-        Self { loader, game }
+        Self {
+            loader,
+            game,
+            curseforge: None,
+        }
     }
 
-    /// 读取并校验整合包，不写任何文件。
-    pub async fn inspect(&self, pack: &Path) -> AppResult<Mrpack> {
-        let pack = pack.to_owned();
-        blocking(move || mrpack::read(&pack)).await
+    /// 支持 CurseForge 整合包；没有设置时安装 CurseForge 整合包返回 `RESOURCES_MODPACK_UNSUPPORTED`。
+    ///
+    /// 下载引擎应由 [`crate::curseforge::with_cdn_key`] 创建，否则 CDN 会拒绝下载。
+    pub fn with_curseforge(mut self, client: Option<CurseForgeClient>) -> Self {
+        self.curseforge = client;
+        self
+    }
+
+    /// 读取并校验整合包，CurseForge 整合包还会向 API 查询文件；不写任何文件。
+    ///
+    /// 按包内是否有 `modrinth.index.json` / `manifest.json` 判断格式，都没有时返回
+    /// `RESOURCES_MODPACK_INVALID`。
+    pub async fn inspect(&self, pack: &Path) -> AppResult<PreparedPack> {
+        let path = pack.to_owned();
+        let parsed = blocking(move || match mrpack::read(&path) {
+            Ok(pack) => Ok(Ok(pack)),
+            Err(err) if err.code == ErrorCode::ResourcesModpackInvalid => {
+                match cf_pack::read(&path)? {
+                    Some(manifest) => Ok(Err(manifest)),
+                    None => Err(err),
+                }
+            }
+            Err(err) => Err(err),
+        })
+        .await?;
+        let manifest = match parsed {
+            Ok(pack) => {
+                return Ok(PreparedPack {
+                    info: pack.info,
+                    files: pack.files,
+                    overrides: mrpack::OVERRIDE_DIRS.map(str::to_owned).to_vec(),
+                });
+            }
+            Err(manifest) => manifest,
+        };
+        let client = self.curseforge.as_ref().ok_or_else(|| {
+            AppError::new(ErrorCode::ResourcesModpackUnsupported).with_param("name", "curseforge")
+        })?;
+        let ctx = TaskCtx::noop("modpack_inspect");
+        let resolved = cf_pack::resolve(&manifest, client, &ctx).await?;
+        let info = ModpackInfo {
+            format: ModpackFormat::Curseforge,
+            name: manifest.name.clone(),
+            version: manifest.version.clone(),
+            summary: None,
+            game_version: manifest.game_version.clone(),
+            loader: manifest.loader.clone(),
+            file_count: u32::try_from(resolved.files.len()).unwrap_or(u32::MAX),
+            download_size: resolved.files.iter().map(|f| f.size).sum(),
+            manual_downloads: resolved.manual,
+        };
+        Ok(PreparedPack {
+            info,
+            files: resolved.files,
+            overrides: cf_pack::override_dirs(&manifest),
+        })
     }
 
     /// 把 `pack` 安装为新实例，返回实例配置；`name` 省略时使用整合包名称。
@@ -68,7 +139,7 @@ impl ModpackInstaller {
     async fn fill(
         &self,
         config: &InstanceConfig,
-        parsed: &Mrpack,
+        parsed: &PreparedPack,
         pack: &Path,
         ctx: &TaskCtx,
     ) -> AppResult<InstanceConfig> {
@@ -110,7 +181,8 @@ impl ModpackInstaller {
             .await?;
 
         let (pack, dir, task) = (pack.to_owned(), game_dir.clone(), ctx.clone());
-        blocking(move || mrpack::extract_overrides(&pack, &dir, &task)).await?;
+        let overrides = parsed.overrides.clone();
+        blocking(move || mrpack::extract_dirs(&pack, &overrides, &dir, &task)).await?;
         ctx.check_cancelled()?;
 
         let (id, loader) = (config.id.clone(), info.loader.clone());

@@ -3,6 +3,7 @@
   "back": "Back to instances",
   "loadFailed": "Couldn't read the instance",
   "credit": "Data from Modrinth",
+  "creditCurseforge": "Data from CurseForge",
   "kind": {
     "mod": "Mods",
     "resourcepack": "Resource packs",
@@ -98,13 +99,18 @@
     "search": "Search Modrinth modpacks",
     "change": "Choose another",
     "supports": "Game versions {versions} · Loaders {loaders}",
-    "choose": "Choose .mrpack file…",
+    "choose": "Choose a modpack file…",
     "none": "No file chosen",
     "invalid": "Couldn't read the modpack",
     "name": "Modpack",
     "download": "Download",
     "started": "Installing modpack \"{name}\". It will appear in the instance list when done",
-    "action": "Install modpack"
+    "action": "Install modpack",
+    "searchCurseforge": "Search CurseForge modpacks",
+    "manualHint": "A few files whose authors forbid third-party downloads must be downloaded manually after installing. Download the pack and install it as a local file to see the list in advance.",
+    "manualTitle": "{count} files must be downloaded manually",
+    "manualBody": "The authors of these files do not allow third-party launchers to download them. After installing, download them from CurseForge and put them into the matching folder of the instance.",
+    "openPage": "Open page"
   },
   "global": {
     "title": "Resources",

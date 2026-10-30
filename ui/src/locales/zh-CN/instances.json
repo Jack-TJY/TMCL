@@ -88,11 +88,13 @@
     "format": "格式",
     "tmclpack": "TMCL 实例包（.tmclpack）",
     "mrpack": "Modrinth 整合包（.mrpack）",
+    "curseforge": "CurseForge 整合包（.zip）",
     "packName": "整合包名称",
     "packVersion": "版本",
     "summary": "简介",
     "summaryPlaceholder": "可选",
-    "mrpackHint": "能在 Modrinth 上找到的 mod、资源包和光影只写下载链接，其余文件直接打包。需要联网。"
+    "mrpackHint": "能在 Modrinth 上找到的 mod、资源包和光影只写下载链接，其余文件直接打包。需要联网。",
+    "curseforgeHint": "能在 CurseForge 上找到的 mod、资源包和光影只写进清单，其余文件直接打包。需要联网。"
   },
   "import": {
     "action": "导入",

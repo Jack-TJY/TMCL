@@ -125,12 +125,16 @@ pub enum ErrorCode {
     NetSizeMismatch,
     /// 连接或读取超时。
     NetTimeout,
+    /// 本次构建没有 CurseForge API Key，CurseForge 来源不可用。
+    ResourcesCurseforgeDisabled,
     /// 必需前置在 Modrinth 上没有适用于该实例的版本（或项目已不存在）。
     ResourcesDependencyUnavailable,
     /// 实例中找不到要启用、禁用或删除的资源文件。
     ResourcesFileNotFound,
     /// 要安装的资源与已安装或同批安装的资源不兼容（`incompatible` 依赖）。
     ResourcesIncompatible,
+    /// CurseForge 上的作者禁止第三方下载该文件，需要用户在网页上手动下载。
+    ResourcesManualDownload,
     /// 整合包文件无效：不是 zip、缺少或损坏 `modrinth.index.json`，或其中的文件路径、哈希、下载地址非法。
     ResourcesModpackInvalid,
     /// 整合包的格式版本、游戏或依赖（加载器）不受支持。
@@ -209,9 +213,11 @@ impl ErrorCode {
             Self::NetRequest => "NET_REQUEST",
             Self::NetSizeMismatch => "NET_SIZE_MISMATCH",
             Self::NetTimeout => "NET_TIMEOUT",
+            Self::ResourcesCurseforgeDisabled => "RESOURCES_CURSEFORGE_DISABLED",
             Self::ResourcesDependencyUnavailable => "RESOURCES_DEPENDENCY_UNAVAILABLE",
             Self::ResourcesFileNotFound => "RESOURCES_FILE_NOT_FOUND",
             Self::ResourcesIncompatible => "RESOURCES_INCOMPATIBLE",
+            Self::ResourcesManualDownload => "RESOURCES_MANUAL_DOWNLOAD",
             Self::ResourcesModpackInvalid => "RESOURCES_MODPACK_INVALID",
             Self::ResourcesModpackUnsupported => "RESOURCES_MODPACK_UNSUPPORTED",
             Self::ResourcesVersionNotFound => "RESOURCES_VERSION_NOT_FOUND",
@@ -358,9 +364,11 @@ mod tests {
             ErrorCode::NetRequest,
             ErrorCode::NetSizeMismatch,
             ErrorCode::NetTimeout,
+            ErrorCode::ResourcesCurseforgeDisabled,
             ErrorCode::ResourcesDependencyUnavailable,
             ErrorCode::ResourcesFileNotFound,
             ErrorCode::ResourcesIncompatible,
+            ErrorCode::ResourcesManualDownload,
             ErrorCode::ResourcesModpackInvalid,
             ErrorCode::ResourcesModpackUnsupported,
             ErrorCode::ResourcesVersionNotFound,

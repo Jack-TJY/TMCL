@@ -5,6 +5,6 @@
  */
 export type ResourcesModpackInspectArgs = { 
 /**
- * 本地 `.mrpack` 文件的绝对路径。
+ * 本地 `.mrpack` 或 CurseForge 整合包 zip 的绝对路径。
  */
 path: string, };

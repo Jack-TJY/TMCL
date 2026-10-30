@@ -16,6 +16,8 @@ use tmcl_net::DownloadItem;
 use ts_rs::TS;
 use zip::ZipArchive;
 
+use super::curseforge::ManualDownload;
+
 /// 包内索引文件名。
 pub const INDEX_FILE: &str = "modrinth.index.json";
 
@@ -23,11 +25,23 @@ pub const INDEX_FILE: &str = "modrinth.index.json";
 pub const OVERRIDES_STAGE: &str = "modpack_overrides";
 
 /// 先解压 `overrides/`，再解压 `client-overrides/`（同名文件以后者为准）。
-const OVERRIDE_DIRS: [&str; 2] = ["overrides", "client-overrides"];
+pub const OVERRIDE_DIRS: [&str; 2] = ["overrides", "client-overrides"];
+
+/// 整合包格式。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+pub enum ModpackFormat {
+    /// Modrinth `.mrpack`。
+    Mrpack,
+    /// CurseForge zip（`manifest.json`）。
+    Curseforge,
+}
 
 /// 整合包概要，用于安装前展示。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct ModpackInfo {
+    /// 格式。
+    pub format: ModpackFormat,
     /// 整合包名称。
     pub name: String,
     /// 整合包版本号（`versionId`）。
@@ -43,6 +57,8 @@ pub struct ModpackInfo {
     /// 要下载的总字节数。
     #[ts(type = "number")]
     pub download_size: u64,
+    /// 作者禁止第三方分发、需要用户手动下载的文件（只有 CurseForge 整合包会有）。
+    pub manual_downloads: Vec<ManualDownload>,
 }
 
 /// 要下载到实例 `game/` 下的一个文件。
@@ -52,7 +68,7 @@ pub struct PackFile {
     pub path: PathBuf,
     /// 下载地址（优先第一个 `https` 地址）。
     pub url: String,
-    /// SHA1（小写十六进制）。
+    /// SHA1（小写十六进制）；为空表示来源没有提供，只按大小校验。
     pub sha1: String,
     /// 大小（字节）。
     pub size: u64,
@@ -64,8 +80,8 @@ impl PackFile {
         DownloadItem {
             url: self.url.clone(),
             path: game_dir.join(&self.path),
-            size: Some(self.size),
-            sha1: Some(self.sha1.clone()),
+            size: (self.size > 0).then_some(self.size),
+            sha1: (!self.sha1.is_empty()).then(|| self.sha1.clone()),
         }
     }
 }
@@ -189,6 +205,7 @@ pub fn parse_index(text: &str) -> AppResult<Mrpack> {
     }
 
     let info = ModpackInfo {
+        format: ModpackFormat::Mrpack,
         name: raw.name,
         version: raw.version_id,
         summary: raw.summary.filter(|s| !s.trim().is_empty()),
@@ -196,6 +213,7 @@ pub fn parse_index(text: &str) -> AppResult<Mrpack> {
         loader,
         file_count: u32::try_from(files.len()).unwrap_or(u32::MAX),
         download_size: files.iter().map(|f| f.size).sum(),
+        manual_downloads: Vec::new(),
     };
     Ok(Mrpack { info, files })
 }
@@ -204,9 +222,21 @@ pub fn parse_index(text: &str) -> AppResult<Mrpack> {
 ///
 /// 路径不安全的条目和符号链接被跳过；已存在的文件被覆盖。
 pub fn extract_overrides(pack: &Path, game_dir: &Path, ctx: &TaskCtx) -> AppResult<u64> {
+    extract_dirs(pack, &OVERRIDE_DIRS, game_dir, ctx)
+}
+
+/// 依次把包内 `dirs` 各目录的内容解压到 `game_dir`（同名文件以后面的目录为准），返回写入的文件数。
+///
+/// 路径不安全的条目和符号链接被跳过；已存在的文件被覆盖。
+pub fn extract_dirs<S: AsRef<str>>(
+    pack: &Path,
+    dirs: &[S],
+    game_dir: &Path,
+    ctx: &TaskCtx,
+) -> AppResult<u64> {
     let mut archive = open(pack)?;
     let mut targets = Vec::new();
-    for prefix in OVERRIDE_DIRS {
+    for prefix in dirs.iter().map(AsRef::as_ref) {
         targets.extend(override_entries(&mut archive, prefix)?);
     }
     let total = targets.iter().filter(|(_, _, is_dir)| !is_dir).count() as u64;
@@ -273,7 +303,7 @@ pub fn safe_relative(path: &str) -> Option<PathBuf> {
 }
 
 /// 版本号会出现在 URL 与目录名中：拒绝空串、路径分隔符与 `..`。
-fn is_safe_segment(value: &str) -> bool {
+pub(crate) fn is_safe_segment(value: &str) -> bool {
     !value.trim().is_empty()
         && value.len() <= 64
         && !value.contains(['/', '\\', ':', '?', '#'])

@@ -88,11 +88,13 @@
     "format": "Format",
     "tmclpack": "TMCL instance pack (.tmclpack)",
     "mrpack": "Modrinth modpack (.mrpack)",
+    "curseforge": "CurseForge modpack (.zip)",
     "packName": "Modpack name",
     "packVersion": "Version",
     "summary": "Summary",
     "summaryPlaceholder": "Optional",
-    "mrpackHint": "Mods, resource packs and shaders found on Modrinth are saved as download links; everything else is packed as is. Needs an internet connection."
+    "mrpackHint": "Mods, resource packs and shaders found on Modrinth are saved as download links; everything else is packed as is. Needs an internet connection.",
+    "curseforgeHint": "Mods, resource packs and shaders found on CurseForge are only listed in the manifest; everything else is packed as is. Requires an internet connection."
   },
   "import": {
     "action": "Import",

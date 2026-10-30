@@ -3,6 +3,7 @@
   "back": "返回实例",
   "loadFailed": "无法读取实例",
   "credit": "数据来自 Modrinth",
+  "creditCurseforge": "数据来自 CurseForge",
   "kind": {
     "mod": "Mod",
     "resourcepack": "资源包",
@@ -98,13 +99,18 @@
     "search": "搜索 Modrinth 整合包",
     "change": "重新选择",
     "supports": "游戏版本 {versions} · 加载器 {loaders}",
-    "choose": "选择 .mrpack 文件…",
+    "choose": "选择整合包文件…",
     "none": "未选择文件",
     "invalid": "无法读取整合包",
     "name": "整合包",
     "download": "下载",
     "started": "正在安装整合包“{name}”，完成后会出现在实例列表中",
-    "action": "安装整合包"
+    "action": "安装整合包",
+    "searchCurseforge": "搜索 CurseForge 整合包",
+    "manualHint": "作者禁止第三方下载的少数文件需要在安装后手动下载；先把整合包下载到本地、用“本地文件”安装，可以提前看到清单。",
+    "manualTitle": "{count} 个文件需要手动下载",
+    "manualBody": "这些文件的作者不允许第三方启动器下载。安装完成后，请在 CurseForge 网页上下载，并放进实例的对应目录。",
+    "openPage": "打开网页"
   },
   "global": {
     "title": "资源下载",

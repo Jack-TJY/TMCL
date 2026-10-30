@@ -90,6 +90,7 @@ describe("names and paths", () => {
     expect(packFileName('a/b:c*"d')).toBe("a_b_c__d.tmclpack");
     expect(packFileName("  ")).toBe("instance.tmclpack");
     expect(packFileName("生存", "mrpack")).toBe("生存.mrpack");
+    expect(packFileName("生存", "curseforge")).toBe("生存.zip");
   });
 
   it("swaps the pack extension", () => {
@@ -97,12 +98,15 @@ describe("names and paths", () => {
     expect(withPackExtension("/out/a.MRPACK", "tmclpack")).toBe("/out/a.tmclpack");
     expect(withPackExtension("/out/a", "mrpack")).toBe("/out/a.mrpack");
     expect(withPackExtension("", "mrpack")).toBe("");
+    expect(withPackExtension("/out/a.mrpack", "curseforge")).toBe("/out/a.zip");
+    expect(withPackExtension("/out/a.zip", "mrpack")).toBe("/out/a.mrpack");
   });
 
   it("leaves saves out of modpacks by default", () => {
     const entries = ["config", "logs", "mods", "saves", "screenshots"];
     expect(defaultInclude(entries, "tmclpack")).toEqual(["config", "mods", "saves"]);
     expect(defaultInclude(entries, "mrpack")).toEqual(["config", "mods"]);
+    expect(defaultInclude(entries, "curseforge")).toEqual(["config", "mods"]);
   });
 
   it("joins with the directory's separator", () => {
