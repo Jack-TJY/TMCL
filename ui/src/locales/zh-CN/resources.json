@@ -110,7 +110,9 @@
     "manualHint": "作者禁止第三方下载的少数文件需要在安装后手动下载；先把整合包下载到本地、用“本地文件”安装，可以提前看到清单。",
     "manualTitle": "{count} 个文件需要手动下载",
     "manualBody": "这些文件的作者不允许第三方启动器下载。安装完成后，请在 CurseForge 网页上下载，并放进实例的对应目录。",
-    "openPage": "打开网页"
+    "openPage": "打开网页",
+    "redirectedTitle": "作者禁止第三方下载的文件：{modrinth} 个改从 Modrinth 下载，{mirror} 个从镜像下载",
+    "redirectedBody": "从 Modrinth 下载的是同一文件（哈希一致）。镜像下载会按哈希校验，失败时安装照常完成，下面列出的文件需要再手动下载。"
   },
   "global": {
     "title": "资源下载",

@@ -10,6 +10,7 @@ use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_instance::InstanceStore;
 use tmcl_loader::LoaderInstaller;
 use tmcl_resources::browse::{self, BrowseQuery};
+use tmcl_resources::modpack::curseforge::{Fallbacks, MIRROR_BASE};
 use tmcl_resources::modpack::{export, source};
 use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::update;
@@ -663,7 +664,14 @@ fn modpack_installer(state: &AppState) -> AppResult<ModpackInstaller> {
     let loader = LoaderInstaller::new(state.downloader()?, state.data()?.clone())
         .with_endpoints(state.loader.clone())
         .with_game_options(state.game.clone());
-    Ok(ModpackInstaller::new(loader, state.game.clone()).with_curseforge(state.curseforge.clone()))
+    // CurseForge 作者禁止分发的文件：先找 Modrinth 上的同一文件，再试 MCIM 镜像（维护者已知悉风险）。
+    let fallbacks = Fallbacks {
+        modrinth: state.modrinth().ok().cloned(),
+        mirror: Some(MIRROR_BASE.to_owned()),
+    };
+    Ok(ModpackInstaller::new(loader, state.game.clone())
+        .with_curseforge(state.curseforge.clone())
+        .with_fallbacks(fallbacks))
 }
 
 /// 读取实例的游戏版本与加载器；实例不存在返回 `INSTANCE_NOT_FOUND`。

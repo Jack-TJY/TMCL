@@ -211,6 +211,10 @@ const source = computed<ModpackSource | null>(() => {
 });
 
 const manual = computed<ManualDownload[]>(() => info.value?.manual_downloads ?? []);
+const redirected = computed(() => info.value?.redirected_downloads ?? []);
+function redirectedVia(via: "modrinth" | "mirror"): ManualDownload[] {
+  return redirected.value.filter((r) => r.via === via).map((r) => r.file);
+}
 
 async function openPage(item: ManualDownload) {
   try {
@@ -367,6 +371,30 @@ async function confirm() {
           {{ t("resources.modpack.manualBody") }}
           <NList size="small" class="manual">
             <NListItem v-for="item in manual" :key="item.page_url">
+              <span class="manual-name">{{ item.project_name }}</span>
+              <span class="manual-file">{{ item.file_name }} → {{ item.target_dir }}/</span>
+              <template #suffix>
+                <NButton size="tiny" @click="openPage(item)">
+                  {{ t("resources.modpack.openPage") }}
+                </NButton>
+              </template>
+            </NListItem>
+          </NList>
+        </NAlert>
+        <NAlert
+          v-if="redirected.length > 0"
+          type="info"
+          class="block"
+          :title="
+            t('resources.modpack.redirectedTitle', {
+              modrinth: redirectedVia('modrinth').length,
+              mirror: redirectedVia('mirror').length,
+            })
+          "
+        >
+          {{ t("resources.modpack.redirectedBody") }}
+          <NList v-if="redirectedVia('mirror').length > 0" size="small" class="manual">
+            <NListItem v-for="item in redirectedVia('mirror')" :key="item.page_url">
               <span class="manual-name">{{ item.project_name }}</span>
               <span class="manual-file">{{ item.file_name }} → {{ item.target_dir }}/</span>
               <template #suffix>

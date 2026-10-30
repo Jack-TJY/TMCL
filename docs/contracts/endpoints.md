@@ -32,6 +32,7 @@
 | 用途 | 地址 | 说明 | 核实 |
 | --- | --- | --- | --- |
 | CurseForge API v1 | `https://api.curseforge.com/v1` | 搜索 `/mods/search`、项目 `/mods/{id}`、`POST /mods`、文件 `/mods/{id}/files`、`/mods/{modId}/files/{fileId}`、`POST /mods/files`、按指纹查询 `POST /fingerprints/432`。请求头 `x-api-key`（构建期注入，见 AGENTS.md §11）；`User-Agent` 与 Modrinth 相同。按第三方 API 条款，响应不缓存到磁盘 | 2026-10-30 实测 200 |
+| CurseForge 文件镜像（MCIM） | `https://mod.mcimirror.top/files/<id/1000>/<id%1000>/<filename>` | 只用于整合包中作者禁止第三方分发（`downloadUrl` 为空）、且 Modrinth 上按 SHA1 找不到同一文件的文件；路径与 `edge.forgecdn.net` 相同（后半段不补 0），实际 302 到 `mediafilez.forgecdn.net`。按 CurseForge 给出的 SHA1 校验；失败不影响安装，改为手动下载。不发送我们的 `x-api-key`。维护者已知悉这会绕过作者的分发设置并可能违反 CurseForge 第三方条款（2026-10-30）。MCIM 要求启动器提交 UA 到其白名单（mcmod-info-mirror/mcim#4），需维护者自行提交 | 2026-10-30 实测 BeeFix、entityculling、shotsfired 与两个资源包均 200 |
 | CurseForge 文件 CDN | `https://edge.forgecdn.net/files/<a>/<b>/<filename>` | 由文件的 `downloadUrl` 给出，不在代码中拼接；对 `forgecdn.net` 的请求同样带 `x-api-key`（CurseForge 2025 年起要求）；按 `hashes`（algo 1 = SHA1）与 `fileLength` 校验。`downloadUrl` 为空表示作者禁止第三方分发，只能打开 `<websiteUrl>/files/<fileId>` 让用户手动下载 | 2026-10-30 下载 jei-1.20.1-forge-15.74.0.232.jar，SHA1 与指纹（MurmurHash2）都一致 |
 
 ## auth（M1-08）
