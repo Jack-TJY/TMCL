@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 实例详情抽屉：版本、加载器（可更换）、分组、Java、内存、JVM / 游戏参数、窗口；可打开游戏目录，
+// 实例详情抽屉：版本、加载器（可更换）、分组、Java、内存（跟随全局或自定义）、JVM / 游戏参数、窗口；可打开游戏目录，
 // 可进入资源管理，装有加载器的实例可导入 Mod。
 import { Apps20Regular, FolderOpen20Regular, PuzzlePiece20Regular } from "@vicons/fluent";
 import {
@@ -32,6 +32,7 @@ import type { InstanceSummary } from "../../bindings/InstanceSummary";
 import type { TaskId } from "../../bindings/TaskId";
 import LoaderChangeDialog from "../../components/loader-picker/LoaderChangeDialog.vue";
 import { formatError } from "../../i18n";
+import { useSettingsStore } from "../../stores/settings";
 import { useTasksStore } from "../../stores/tasks";
 import { formatArgs, parseArgs } from "./instances";
 import { useModImport } from "./modImport";
@@ -45,6 +46,7 @@ const emit = defineEmits<{ close: []; saved: []; openDir: [id: string] }>();
 const { t, locale } = useI18n();
 const message = useMessage();
 const tasks = useTasksStore();
+const settings = useSettingsStore();
 const router = useRouter();
 const { importing: importingMods, importMods } = useModImport();
 
@@ -142,6 +144,7 @@ async function save() {
   // 数字框被清空时值为 null，回退到读取时的值。
   const max = orElse(current.memory.max_mb, loaded.memory.max_mb);
   const memory = {
+    follow_global: current.memory.follow_global,
     min_mb: Math.min(orElse(current.memory.min_mb, loaded.memory.min_mb), max),
     max_mb: max,
   };
@@ -240,28 +243,61 @@ async function save() {
                 />
               </div>
             </NFormItem>
-            <NFormItem :label="t('instances.detail.memory')">
-              <div class="row">
-                <NInputNumber
-                  v-model:value="config.memory.min_mb"
-                  :min="MEMORY_MIN_MB"
-                  :max="config.memory.max_mb"
-                  :step="256"
-                  :show-button="false"
-                >
-                  <template #prefix>{{ t("instances.detail.memoryMin") }}</template>
-                  <template #suffix>MB</template>
-                </NInputNumber>
-                <NInputNumber
-                  v-model:value="config.memory.max_mb"
-                  :min="MEMORY_MIN_MB"
-                  :max="MEMORY_MAX_MB"
-                  :step="256"
-                  :show-button="false"
-                >
-                  <template #prefix>{{ t("instances.detail.memoryMax") }}</template>
-                  <template #suffix>MB</template>
-                </NInputNumber>
+            <NFormItem
+              :label="t('instances.detail.memory')"
+              :feedback="
+                config.memory.follow_global ? t('instances.detail.memoryGlobalHint') : undefined
+              "
+            >
+              <div class="stack">
+                <NRadioGroup v-model:value="config.memory.follow_global" size="small">
+                  <NRadioButton :value="true">{{
+                    t("instances.detail.memoryGlobal")
+                  }}</NRadioButton>
+                  <NRadioButton :value="false">{{
+                    t("instances.detail.memoryCustom")
+                  }}</NRadioButton>
+                </NRadioGroup>
+                <div v-if="config.memory.follow_global" class="row">
+                  <NInputNumber
+                    :value="settings.settings.memory.min_mb"
+                    disabled
+                    :show-button="false"
+                  >
+                    <template #prefix>{{ t("instances.detail.memoryMin") }}</template>
+                    <template #suffix>MB</template>
+                  </NInputNumber>
+                  <NInputNumber
+                    :value="settings.settings.memory.max_mb"
+                    disabled
+                    :show-button="false"
+                  >
+                    <template #prefix>{{ t("instances.detail.memoryMax") }}</template>
+                    <template #suffix>MB</template>
+                  </NInputNumber>
+                </div>
+                <div v-else class="row">
+                  <NInputNumber
+                    v-model:value="config.memory.min_mb"
+                    :min="MEMORY_MIN_MB"
+                    :max="config.memory.max_mb"
+                    :step="256"
+                    :show-button="false"
+                  >
+                    <template #prefix>{{ t("instances.detail.memoryMin") }}</template>
+                    <template #suffix>MB</template>
+                  </NInputNumber>
+                  <NInputNumber
+                    v-model:value="config.memory.max_mb"
+                    :min="MEMORY_MIN_MB"
+                    :max="MEMORY_MAX_MB"
+                    :step="256"
+                    :show-button="false"
+                  >
+                    <template #prefix>{{ t("instances.detail.memoryMax") }}</template>
+                    <template #suffix>MB</template>
+                  </NInputNumber>
+                </div>
               </div>
             </NFormItem>
             <NFormItem :label="t('instances.detail.jvmArgs')">

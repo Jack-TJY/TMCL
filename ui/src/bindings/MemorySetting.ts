@@ -5,10 +5,14 @@
  */
 export type MemorySetting = { 
 /**
- * `-Xms`。
+ * 使用 `config.json` 中的全局内存；为 `false` 时使用下面的自定义值。
+ */
+follow_global: boolean, 
+/**
+ * 自定义的 `-Xms`。
  */
 min_mb: number, 
 /**
- * `-Xmx`。
+ * 自定义的 `-Xmx`。
  */
 max_mb: number, };

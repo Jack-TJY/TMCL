@@ -13,7 +13,8 @@ use tauri::{AppHandle, Manager, Runtime, State};
 use tmcl_auth::accounts::{self, Account, AccountKind};
 use tmcl_auth::yggdrasil::Yggdrasil;
 use tmcl_auth::{MsClient, OfflineAccount, SecretStore, authlib, store};
-use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, TaskCtx};
+use tmcl_common::config::MemoryConfig;
+use tmcl_common::{AppError, AppResult, Config, DataPaths, ErrorCode, TaskCtx};
 use tmcl_game::InstallOptions;
 use tmcl_instance::{InstanceConfig, InstanceStore};
 use tmcl_java::RuntimeInstaller;
@@ -175,8 +176,12 @@ pub async fn launch_start<R: Runtime>(
     args: LaunchStartArgs,
 ) -> Result<TaskStarted, AppError> {
     let paths = state.data()?.clone();
-    let instance =
+    let mut instance =
         state.with_db(|paths, db| InstanceStore::new(paths, db).get(&args.instance_id))?;
+    // `prepare` 直接读取 `min_mb` / `max_mb`，先换成实际使用的值。
+    let (min_mb, max_mb) = instance.memory.effective(&global_memory(&paths));
+    instance.memory.min_mb = min_mb;
+    instance.memory.max_mb = max_mb;
     let account = state.with_db(|_, db| launch_account(db, &args.account))?;
     let secrets = state.secrets.clone();
     let ms = state.ms.clone();
@@ -235,6 +240,15 @@ fn offline(name: &str) -> AppResult<LaunchAccount> {
         &account.name,
         &account.uuid.simple().to_string(),
     ))
+}
+
+/// `config.json` 中的全局内存；文件缺失或损坏时用默认值（只读，不备份）。
+fn global_memory(paths: &DataPaths) -> MemoryConfig {
+    std::fs::read(paths.config_file())
+        .ok()
+        .and_then(|bytes| Config::parse(&bytes).ok())
+        .map(|config| config.memory)
+        .unwrap_or_default()
 }
 
 fn launch_account(db: &tmcl_common::Db, args: &LaunchAccountArgs) -> AppResult<ResolvedAccount> {

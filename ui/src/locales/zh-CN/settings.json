@@ -32,8 +32,12 @@
     "description": "同时进行的下载任务数量（1–64）"
   },
   "memory": {
-    "label": "默认最大内存",
-    "description": "新建实例时分配给游戏的最大内存"
+    "label": "最大内存",
+    "description": "跟随全局设置的实例分配给游戏的最大内存（-Xmx）"
+  },
+  "memoryMin": {
+    "label": "最小内存",
+    "description": "跟随全局设置的实例启动时预先分配的内存（-Xms），不超过最大内存"
   },
   "java": {
     "label": "Java",

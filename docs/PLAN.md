@@ -147,17 +147,17 @@ pub struct TaskCtx {
 
 数据根目录固定为**启动器安装目录下的 `tmcl-data/`**：Windows / Linux 为 exe 所在目录，macOS 为 `TMCL.app` 所在目录（不写进应用包，避免破坏签名）。不使用系统应用数据目录（如 `%LOCALAPPDATA%`），也不设便携模式。因此安装目录必须可写：Windows 采用 NSIS 当前用户模式安装，安装到 Program Files 的 MSI 不适用；AppImage 的挂载目录只读，需要特殊处理，留到 M1-16 解决。安装目录不可写时返回 `COMMON_DATA_DIR_UNAVAILABLE`。详见 [contracts/data-layout.md](contracts/data-layout.md)。
 
-`instance.json`（schema 1）：
+`instance.json`（schema 2）：
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "id": "0b6f…（UUID v4）",
   "name": "生存 1.20.1",
   "game_version": "1.20.1",
   "loader": { "kind": "fabric", "version": "0.16.5" },
   "java": { "mode": "auto" },
-  "memory": { "min_mb": 1024, "max_mb": 4096 },
+  "memory": { "follow_global": true, "min_mb": 1024, "max_mb": 4096 },
   "jvm_args": [],
   "game_args": [],
   "window": { "width": 854, "height": 480, "fullscreen": false },
@@ -167,7 +167,9 @@ pub struct TaskCtx {
 }
 ```
 
-`loader` 为 `null` 表示原版；`kind` 取值 `fabric | quilt | forge | neoforge`；`java.mode` 取值 `auto | path`（`path` 时带 `"path"` 字段）。
+`loader` 为 `null` 表示原版；`kind` 取值 `fabric | quilt | forge | neoforge`；`java.mode` 取值 `auto | path`（`path` 时带 `"path"` 字段）。`memory.follow_global` 为 `true` 时启动使用 `config.json` 的全局内存（新建实例默认如此），为 `false` 时使用本实例的 `min_mb` / `max_mb`。
+
+`instance.json` 迁移历史：1 → 2 新增 `memory.follow_global`；内存仍为旧默认值（1024 / 4096）的实例迁移为跟随全局，改过内存的实例保留为自定义。
 
 ### 3.6 敏感数据
 
