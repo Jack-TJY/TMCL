@@ -33,6 +33,8 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::auth::auth_ms_open_verification,
         commands::auth::auth_remove,
         commands::auth::auth_set_default,
+        // diagnostics
+        commands::diagnostics::diagnostics_export,
         // game
         commands::game::game_install,
         commands::game::game_version_list,

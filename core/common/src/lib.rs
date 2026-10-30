@@ -4,6 +4,7 @@
 
 pub mod config;
 pub mod db;
+pub mod diagnostics;
 pub mod error;
 pub mod log;
 pub mod paths;

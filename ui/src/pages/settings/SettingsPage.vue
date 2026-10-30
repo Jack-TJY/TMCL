@@ -2,6 +2,8 @@
 // 设置页（PLAN.md M1-11）：外观（背景与透明度见 appearance/，M1-19）、下载、游戏、存储与关于。
 // 下载源与 Java 列表暂由 api/__mocks__ 提供，见该文件说明。
 import {
+  ArrowDownload24Regular,
+  Bug24Regular,
   Color24Regular,
   DarkTheme24Regular,
   DeveloperBoard24Regular,
@@ -19,6 +21,8 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { mockJavaList, type DownloadSource, type JavaInstall } from "../../api/__mocks__/settings";
 import { appInfo } from "../../api/app";
+import { pickSavePath } from "../../api/dialog";
+import { diagnosticsExport } from "../../api/diagnostics";
 import { toAppError } from "../../api/invoke";
 import { settingsOpenDataDir } from "../../api/settings";
 import type { AppInfo } from "../../bindings/AppInfo";
@@ -111,6 +115,35 @@ function setMemoryMin(value: number | null) {
 
 function openDataDir() {
   settingsOpenDataDir().catch(showError);
+}
+
+const exporting = ref(false);
+
+/** 默认文件名，例如 `tmcl-diagnostics-20261030-1903.zip`。 */
+function diagnosticsFileName(now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  return `tmcl-diagnostics-${date}-${pad(now.getHours())}${pad(now.getMinutes())}.zip`;
+}
+
+async function exportDiagnostics() {
+  const dest = await pickSavePath(
+    [{ name: t("settings.diagnostics.filter"), extensions: ["zip"] }],
+    diagnosticsFileName(),
+  ).catch((err: unknown) => {
+    showError(err);
+    return null;
+  });
+  if (!dest) return;
+  exporting.value = true;
+  try {
+    await diagnosticsExport({ dest });
+    message.success(t("settings.diagnostics.done"));
+  } catch (err) {
+    showError(err);
+  } finally {
+    exporting.value = false;
+  }
 }
 
 function setConcurrency(value: number | null) {
@@ -274,6 +307,16 @@ function setConcurrency(value: number | null) {
         <NButton :disabled="!store.dataDir" @click="openDataDir">
           <template #icon><FolderOpen24Regular /></template>
           {{ t("settings.dataDir.open") }}
+        </NButton>
+      </SettingRow>
+      <SettingRow
+        :icon="Bug24Regular"
+        :title="t('settings.diagnostics.label')"
+        :description="t('settings.diagnostics.description')"
+      >
+        <NButton :loading="exporting" @click="exportDiagnostics">
+          <template #icon><ArrowDownload24Regular /></template>
+          {{ t("settings.diagnostics.export") }}
         </NButton>
       </SettingRow>
     </section>

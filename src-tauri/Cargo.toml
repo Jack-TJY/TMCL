@@ -40,8 +40,12 @@ tokio-util = { workspace = true }
 tracing = { workspace = true }
 ts-rs = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+winreg = { workspace = true }
+
 [dev-dependencies]
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 tmcl-net = { path = "../core/net", features = ["test-util"] }
+uuid = { workspace = true }
 zip = { workspace = true }

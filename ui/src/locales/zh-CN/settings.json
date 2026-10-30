@@ -49,6 +49,13 @@
     "label": "数据目录",
     "open": "打开文件夹"
   },
+  "diagnostics": {
+    "label": "导出诊断信息",
+    "description": "把启动器日志、系统信息和实例列表打包成 zip，反馈问题时附上。令牌、玩家名、账号 ID 和路径中的用户名会被替换",
+    "export": "导出",
+    "done": "已导出诊断信息",
+    "filter": "诊断信息包"
+  },
   "about": {
     "version": "版本 {version} · {os}/{arch}",
     "versionUnknown": "版本信息不可用",

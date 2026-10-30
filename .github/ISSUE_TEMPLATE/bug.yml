@@ -72,3 +72,15 @@ body:
       label: 日志
       description: 启动器日志或游戏日志的相关片段（已脱敏）
       render: text
+  - type: markdown
+    attributes:
+      value: |
+        **诊断信息包 / Diagnostics bundle**：在 TMCL 的“设置 → 存储 → 导出诊断信息”中导出一个 zip，直接拖到下方“附件”框里上传。
+        包里有启动器日志（最近 7 天）、系统信息、实例列表与 Java 列表；令牌、玩家名、玩家 UUID、账号 ID、路径中的用户名和邮箱都已替换。上传前可以解压检查。
+        In TMCL, open Settings → Storage → Export diagnostics, then drag the zip into the attachments box below. Tokens, player names, UUIDs, account IDs, user names in paths and emails are removed.
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: 诊断信息包 / Diagnostics bundle
+      description: 拖入导出的 zip 文件（可选，但能大大加快排查）
+      placeholder: 把 tmcl-diagnostics-*.zip 拖到这里
