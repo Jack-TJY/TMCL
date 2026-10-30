@@ -100,7 +100,7 @@
 | `appearance.background.card_opacity` | 整数 0–100 | `85` | 卡片与内容区底色不透明度（%），低于 100 时显示毛玻璃 |
 | `memory.max_mb` | 正整数 | `4096` | 新建实例的默认最大内存（MiB），512–32768 |
 | `download.max_concurrency` | 正整数 | `16` | 同时下载数 |
-| `download.source` | `"auto"` \| `"official"` \| 镜像名（如 `"bmclapi"`） | `"auto"` | 下载源。`auto`：Forge、NeoForge、Fabric 先走 BMCLAPI（`bmclapi-loaders`），其余文件走官方源，失败都回退官方源。`bmclapi`：所有文件先走 BMCLAPI 再回退官方源。未知名称按 `auto` 处理 |
+| `download.source` | `"auto"` \| `"official"` \| 镜像名（如 `"bmclapi"`） | `"auto"` | 下载源。`auto`：Forge、NeoForge、Fabric 先走 BMCLAPI（`bmclapi-loaders`），Modrinth 与 CurseForge 的文件（`cdn.modrinth.com`、`edge.forgecdn.net`）先走 MCIM（`mcim`），其余文件走官方源，失败都回退官方源。`bmclapi`：BMCLAPI 提供的文件先走 BMCLAPI，Modrinth 与 CurseForge 的文件先走 MCIM，再回退官方源。`mcim`：只有 Modrinth 与 CurseForge 的文件走 MCIM。`official`：全部走官方源。未知名称按 `auto` 处理 |
 
 读写规则：
 

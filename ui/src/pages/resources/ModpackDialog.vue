@@ -43,6 +43,7 @@ import type { TaskId } from "../../bindings/TaskId";
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import ChannelTag from "./ChannelTag.vue";
+import MirrorNote from "./MirrorNote.vue";
 import ResourceIcon from "./ResourceIcon.vue";
 import { defaultVersion, formatCount, formatSize } from "./resources";
 
@@ -412,6 +413,8 @@ async function confirm() {
       <span class="field-label">{{ t("instances.name") }}</span>
       <NInput v-model:value="name" :maxlength="64" :disabled="busy" />
     </div>
+
+    <MirrorNote loaders />
 
     <template #footer>
       <div class="dialog-actions">

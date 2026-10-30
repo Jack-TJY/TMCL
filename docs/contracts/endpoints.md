@@ -26,6 +26,7 @@
 | --- | --- | --- | --- |
 | Modrinth API v2 | `https://api.modrinth.com/v2` | 搜索 `/search`、项目 `/project/{id}`、`/projects`、版本 `/project/{id}/version`、`/version/{id}`、`/versions`、依赖 `/project/{id}/dependencies`、按哈希查询 `/version_file/{hash}`、`POST /version_files`、`POST /version_files/update`。`User-Agent` 必须为 `Jack-TJY/TMCL/<版本>`；速率限制 300 次/分钟，读 `X-Ratelimit-Limit/Remaining/Reset`，429 时等待后重试 | 2026-10-24 实测 200，响应头含 `X-Ratelimit-Limit: 300` |
 | Modrinth 文件 CDN | `https://cdn.modrinth.com/data/<project_id>/versions/<version_id>/<filename>` | 由版本的 `files[].url` 给出，不在代码中拼接；按 `hashes.sha1` 与 `size` 校验 | 2026-10-24 下载 Sodium mc1.20.1-0.5.13-fabric 并校验 SHA1 成功 |
+| Modrinth / CurseForge 文件镜像（MCIM，下载加速） | `https://mod.mcimirror.top/<路径>` | `core/net` 的内置镜像 `mcim`：`https://cdn.modrinth.com` 与 `https://edge.forgecdn.net` 换成 `https://mod.mcimirror.top`，路径不变（按 MCIM 文档不改写 `mediafilez.forgecdn.net`）。`download.source` 不是 `official` 时先走镜像，失败或校验不一致时回退官方源；按官方元数据中的 SHA1 校验。不发送 `x-api-key`（该头只发给 `forgecdn.net`）。MCIM 条款要求在下载界面标明来源，并建议启动器提交 UA（mcmod-info-mirror/mcim-rust-api#12，原 mcim#4 已归档） | 待实测 |
 
 ## resources · CurseForge（M2-02）
 

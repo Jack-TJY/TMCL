@@ -19,6 +19,8 @@ pub const AUTO: &str = "auto";
 pub const BMCLAPI: &str = "bmclapi";
 /// 只镜像模组加载器（Forge、NeoForge、Fabric）的 BMCLAPI 镜像名称。
 pub const BMCLAPI_LOADERS: &str = "bmclapi-loaders";
+/// MCIM 镜像（Modrinth 与 CurseForge 的资源文件）的名称。
+pub const MCIM: &str = "mcim";
 
 /// `auto` 策略使用的默认镜像：只让加载器走 BMCLAPI，Mojang 的文件走官方源。
 ///
@@ -27,7 +29,13 @@ pub const BMCLAPI_LOADERS: &str = "bmclapi-loaders";
 /// 但 Mojang 的小文件常超时。维护者于 2026-10-23 选定。
 pub const DEFAULT_MIRROR: Option<&str> = Some(BMCLAPI_LOADERS);
 
+/// 非 `official` 策略下，首选镜像不提供的文件再交给的资源镜像：Modrinth 与
+/// CurseForge 的 mod、资源包等文件先走 MCIM，失败回退官方源。
+pub const RESOURCE_MIRROR: Option<&str> = Some(MCIM);
+
 const BMCLAPI_ROOT: &str = "https://bmclapi2.bangbang93.com";
+
+const MCIM_ROOT: &str = "https://mod.mcimirror.top";
 
 /// 一个下载源。
 pub trait DownloadSource: Debug + Send + Sync {
@@ -99,6 +107,19 @@ impl PrefixMirror {
     pub fn bmclapi_loaders() -> Self {
         Self::new(BMCLAPI_LOADERS, loader_rules())
     }
+
+    /// MCIM（<https://github.com/mcmod-info-mirror/mcim-rust-api>）的文件镜像：
+    /// `cdn.modrinth.com` 与 `edge.forgecdn.net` 换成 `mod.mcimirror.top`，路径不变。
+    /// 按其文档不改写 `mediafilez.forgecdn.net`。
+    pub fn mcim() -> Self {
+        Self::new(
+            MCIM,
+            [
+                ("https://cdn.modrinth.com", MCIM_ROOT),
+                ("https://edge.forgecdn.net", MCIM_ROOT),
+            ],
+        )
+    }
 }
 
 /// BMCLAPI 中 Forge、NeoForge、Fabric 的改写规则。
@@ -155,6 +176,7 @@ pub struct Candidate {
 pub struct Sources {
     policy: String,
     default_mirror: Option<String>,
+    resource_mirror: Option<String>,
     mirrors: Vec<Arc<dyn DownloadSource>>,
 }
 
@@ -171,9 +193,11 @@ impl Sources {
         Self {
             policy: policy.into(),
             default_mirror: DEFAULT_MIRROR.map(str::to_owned),
+            resource_mirror: RESOURCE_MIRROR.map(str::to_owned),
             mirrors: vec![
                 Arc::new(PrefixMirror::bmclapi()),
                 Arc::new(PrefixMirror::bmclapi_loaders()),
+                Arc::new(PrefixMirror::mcim()),
             ],
         }
     }
@@ -206,9 +230,18 @@ impl Sources {
         self.default_mirror = name.map(str::to_owned);
     }
 
+    /// 设置非 `official` 策略下补充使用的资源镜像。
+    pub fn set_resource_mirror(&mut self, name: Option<&str>) {
+        self.resource_mirror = name.map(str::to_owned);
+    }
+
     /// 已登记的镜像名称。
     pub fn mirror_names(&self) -> impl Iterator<Item = &str> {
         self.mirrors.iter().map(|m| m.name())
+    }
+
+    fn mirror(&self, name: &str) -> Option<&dyn DownloadSource> {
+        self.mirrors.iter().find(|m| m.name() == name).map(|m| &**m)
     }
 
     /// 当前策略下优先使用的镜像。策略为未知名称时按 `auto` 处理。
@@ -218,21 +251,30 @@ impl Sources {
             AUTO => self.default_mirror.as_deref()?,
             name => name,
         };
-        let found = self.mirrors.iter().find(|m| m.name() == name);
+        let found = self.mirror(name);
         if found.is_none() && self.policy != AUTO {
             tracing::warn!(source = %self.policy, "未知的下载源，按 auto 处理");
-            let fallback = self.default_mirror.as_deref()?;
-            return self
-                .mirrors
-                .iter()
-                .find(|m| m.name() == fallback)
-                .map(|m| &**m);
+            return self.mirror(self.default_mirror.as_deref()?);
         }
-        found.map(|m| &**m)
+        found
     }
 
-    /// 按尝试顺序给出 `url` 的候选地址：首选镜像（若它提供该文件）在前，
-    /// 官方源总在最后。无法解析的 URL 只返回原地址。
+    /// 按顺序尝试的镜像：首选镜像，再是资源镜像；`official` 策略下为空。
+    fn mirror_chain(&self) -> Vec<&dyn DownloadSource> {
+        if self.policy == OFFICIAL {
+            return Vec::new();
+        }
+        let preferred = self.preferred();
+        let resource = self
+            .resource_mirror
+            .as_deref()
+            .filter(|name| preferred.is_none_or(|p| p.name() != *name))
+            .and_then(|name| self.mirror(name));
+        preferred.into_iter().chain(resource).collect()
+    }
+
+    /// 按尝试顺序给出 `url` 的候选地址：第一个提供该文件的镜像（首选镜像，
+    /// 其次资源镜像）在前，官方源总在最后。无法解析的 URL 只返回原地址。
     pub fn candidates(&self, url: &str) -> Vec<Candidate> {
         let official = Candidate {
             source: OFFICIAL.to_owned(),
@@ -242,9 +284,10 @@ impl Sources {
             return vec![official];
         };
         let mirrored = self
-            .preferred()
-            .and_then(|m| Some((m.name(), m.rewrite(&parsed)?)))
-            .filter(|(_, rewritten)| rewritten.as_str() != url);
+            .mirror_chain()
+            .into_iter()
+            .filter_map(|m| Some((m.name(), m.rewrite(&parsed)?)))
+            .find(|(_, rewritten)| rewritten.as_str() != url);
         match mirrored {
             Some((name, rewritten)) => vec![
                 Candidate {
@@ -435,7 +478,7 @@ mod tests {
         ));
         assert_eq!(
             s.mirror_names().collect::<Vec<_>>(),
-            [BMCLAPI, BMCLAPI_LOADERS, "local"]
+            [BMCLAPI, BMCLAPI_LOADERS, MCIM, "local"]
         );
         assert_eq!(
             s.candidates(LIB)[0].url,
@@ -456,5 +499,62 @@ mod tests {
                 url: "not a url".to_owned()
             }]
         );
+    }
+
+    const MODRINTH_FILE: &str = "https://cdn.modrinth.com/data/AANobbMI/versions/OihdIimA/sodium-fabric-0.5.13%2Bmc1.20.1.jar";
+
+    const CURSEFORGE_FILE: &str = "https://edge.forgecdn.net/files/4587/214/jei-1.20.1.jar";
+
+    #[test]
+    fn mcim_rewrite_table() {
+        let mcim = PrefixMirror::mcim();
+        let rewrite = |url: &str| mcim.rewrite(&Url::parse(url).unwrap()).map(String::from);
+        assert_eq!(
+            rewrite(MODRINTH_FILE).as_deref(),
+            Some(
+                "https://mod.mcimirror.top/data/AANobbMI/versions/OihdIimA/sodium-fabric-0.5.13%2Bmc1.20.1.jar"
+            )
+        );
+        assert_eq!(
+            rewrite(CURSEFORGE_FILE).as_deref(),
+            Some("https://mod.mcimirror.top/files/4587/214/jei-1.20.1.jar")
+        );
+        assert_eq!(
+            rewrite("https://mediafilez.forgecdn.net/files/1/2/a.jar"),
+            None
+        );
+        assert_eq!(rewrite("https://api.modrinth.com/v2/search"), None);
+        assert_eq!(rewrite("https://cdn.modrinth.com.evil.example/a.jar"), None);
+    }
+
+    #[test]
+    fn resource_files_go_through_mcim_unless_official() {
+        for policy in [AUTO, BMCLAPI, "nope"] {
+            let s = Sources::new(policy);
+            for url in [MODRINTH_FILE, CURSEFORGE_FILE] {
+                let c = s.candidates(url);
+                assert_eq!(sources(&c), [MCIM, OFFICIAL], "{policy} {url}");
+                assert!(c[0].url.starts_with("https://mod.mcimirror.top/"));
+            }
+        }
+        assert_eq!(
+            sources(&Sources::official_only().candidates(MODRINTH_FILE)),
+            [OFFICIAL]
+        );
+        // 首选镜像提供的文件仍只走首选镜像。
+        assert_eq!(
+            sources(&Sources::new(AUTO).candidates(FORGE)),
+            [BMCLAPI_LOADERS, OFFICIAL]
+        );
+    }
+
+    #[test]
+    fn resource_mirror_can_be_disabled_or_chosen_directly() {
+        let mut s = Sources::new(AUTO);
+        s.set_resource_mirror(None);
+        assert_eq!(sources(&s.candidates(MODRINTH_FILE)), [OFFICIAL]);
+        let s = Sources::new(MCIM);
+        assert_eq!(sources(&s.candidates(CURSEFORGE_FILE)), [MCIM, OFFICIAL]);
+        assert_eq!(sources(&s.candidates(LIB)), [OFFICIAL]);
     }
 }

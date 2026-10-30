@@ -147,5 +147,9 @@
     "confirm": "创建并下载",
     "started": "已开始下载“{name}”，完成后会继续安装",
     "ready": "“{name}”已就绪，继续安装“{title}”"
+  },
+  "mirror": {
+    "mcim": "Mod、资源包等文件由 MCIM 镜像（mcmod-info-mirror，mod.mcimirror.top）加速，失败或校验不一致时自动回退官方源；文件版权归原作者所有。",
+    "loaders": "加载器由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）加速。"
   }
 }
