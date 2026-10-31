@@ -359,7 +359,7 @@ pub fn stop_on_exit(sessions: &Mutex<Option<Session>>, api_base: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::AsyncWriteExt;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
     #[test]
@@ -390,7 +390,11 @@ mod tests {
         let live_port = live.local_addr().unwrap().port();
         tokio::spawn(async move {
             while let Ok((mut stream, _)) = live.accept().await {
+                // 像真实服务器一样先读完请求再回应；不读就关闭的话 Windows 会发 RST，客户端读到的是错误。
+                let mut request = [0u8; 64];
+                let _ = stream.read(&mut request).await;
                 let _ = stream.write_all(&[1, 0]).await;
+                let _ = stream.shutdown().await;
             }
         });
         assert!(game_responds("127.0.0.1", live_port).await);
