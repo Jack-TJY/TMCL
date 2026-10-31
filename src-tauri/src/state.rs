@@ -51,6 +51,8 @@ pub struct AppState {
     pub textures_base: String,
     /// SakuraFrp API 根地址；测试中指向本地服务器。
     pub sakura_api: String,
+    /// 当前的 P2P 联机会话。
+    pub p2p: Arc<crate::commands::p2p::P2pState>,
     /// 当前的樱花穿透联机会话，同一时间最多一个。
     pub sakura: Arc<Mutex<Option<tmcl_sakura::Session>>>,
 }
@@ -91,6 +93,7 @@ impl AppState {
             textures_base: tmcl_skin::texture::TEXTURES_BASE.to_owned(),
             sakura_api: tmcl_sakura::api::API_BASE.to_owned(),
             sakura: Arc::new(Mutex::new(None)),
+            p2p: Arc::default(),
         }
     }
 

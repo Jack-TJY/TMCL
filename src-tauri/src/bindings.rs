@@ -31,7 +31,7 @@ use crate::commands::launch::{
 };
 use crate::commands::layout::{LayoutSaveArgs, LayoutSnapshot};
 use crate::commands::loader::{LoaderInstallArgs, LoaderListArgs, LoaderVersionList};
-use crate::commands::p2p::P2pInfo;
+use crate::commands::p2p::{LanWorldList, P2pHostArgs, P2pInfo, P2pJoinArgs, P2pStatus};
 use crate::commands::resources::{
     DetectedPack, ResourceSources, ResourceUpdateList, ResourceVersionList, ResourceWorldList,
     ResourcesDirArgs, ResourcesImportArgs, ResourcesInstallArgs, ResourcesModpackExportArgs,
@@ -150,12 +150,17 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ResourcesUpdateArgs::export_all(&cfg)?;
     ResourcesVersionsArgs::export_all(&cfg)?;
     ResourcesWorldsArgs::export_all(&cfg)?;
+    // p2p（LanWorld 随 LanWorldList，P2pRoom、P2pPlayer、P2pRole 随 P2pStatus 一并导出）
+    LanWorldList::export_all(&cfg)?;
+    P2pHostArgs::export_all(&cfg)?;
+    P2pInfo::export_all(&cfg)?;
+    P2pJoinArgs::export_all(&cfg)?;
+    P2pStatus::export_all(&cfg)?;
     // sakura（SakuraNodeInfo、SakuraNode 随 SakuraNodeList，SakuraRoom 随 SakuraStatus 一并导出）
     SakuraKeyArgs::export_all(&cfg)?;
     SakuraNodeList::export_all(&cfg)?;
     SakuraPing::export_all(&cfg)?;
     SakuraPingArgs::export_all(&cfg)?;
-    P2pInfo::export_all(&cfg)?;
     SakuraPolicy::export_all(&cfg)?;
     SakuraStatus::export_all(&cfg)?;
     SakuraUser::export_all(&cfg)?;
