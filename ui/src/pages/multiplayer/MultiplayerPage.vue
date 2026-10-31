@@ -36,7 +36,7 @@ watch([mode, role], ([m, r]) => savePrefs({ mode: m, role: r }));
         <NRadioButton value="member">{{ t("multiplayer.role.member") }}</NRadioButton>
       </NRadioGroup>
 
-      <DirectPanel v-if="mode === 'direct'" @use-sakura="mode = 'sakura'" />
+      <DirectPanel v-if="mode === 'direct'" :role="role" @use-sakura="mode = 'sakura'" />
       <template v-else>
         <SakuraHost v-if="role === 'host'" />
         <SakuraJoin v-else />

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { SakuraNodeInfo } from "../../api/sakura";
 import {
+  isValidPlayerName,
   isValidPort,
   latencyLevel,
   nodeUsable,
   normalizeAddress,
+  normalizeRoomCode,
   parsePrefs,
   sortNodes,
 } from "./multiplayer";
@@ -90,5 +92,32 @@ describe("parsePrefs", () => {
       port: null,
     });
     expect(parsePrefs('{"mode":"sakura","port":25565}').port).toBe(25565);
+  });
+});
+
+describe("normalizeRoomCode", () => {
+  // 后端 room.rs 测试中的规范示例。
+  const VALID = "U/YNZE-U61D-2206-HXRG";
+
+  it("accepts valid codes leniently", () => {
+    expect(normalizeRoomCode(VALID)).toBe(VALID);
+    expect(normalizeRoomCode("  u/ynze-u61d-2206-hxrg ")).toBe(VALID);
+    expect(normalizeRoomCode("YNZE-U61D-2206-HXRG")).toBe(VALID);
+  });
+
+  it("rejects bad format, letters outside the alphabet and bad checksums", () => {
+    expect(normalizeRoomCode("")).toBeNull();
+    expect(normalizeRoomCode("U/YNZE-U61D-2206")).toBeNull();
+    expect(normalizeRoomCode("U/YNZE-U61D-2206-HXRI")).toBeNull();
+    expect(normalizeRoomCode("U/YNZE-U61D-2206-HXRH")).toBeNull();
+  });
+});
+
+describe("isValidPlayerName", () => {
+  it("requires 1-64 characters after trimming", () => {
+    expect(isValidPlayerName("Steve")).toBe(true);
+    expect(isValidPlayerName("   ")).toBe(false);
+    expect(isValidPlayerName("a".repeat(64))).toBe(true);
+    expect(isValidPlayerName("a".repeat(65))).toBe(false);
   });
 });
