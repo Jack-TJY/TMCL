@@ -10,6 +10,7 @@
 //! - [`tunnel`]：`easytier-core` 子进程与端口转发。
 //! - [`punch`]：读取连接与 NAT 状态、查找联机中心。
 //! - [`signal`]：Scaffolding 联机信息获取协议（联机中心服务与房客客户端）。
+//! - [`session`]：开房与加入房间的完整流程。
 //! - [`lan`]：Minecraft 局域网广播的监听与发送。
 //! - [`relay`]：中继接口（暂无实现）。
 
@@ -19,6 +20,7 @@ pub mod nodes;
 pub mod punch;
 pub mod relay;
 pub mod room;
+pub mod session;
 pub mod signal;
 pub mod tunnel;
 
@@ -28,5 +30,6 @@ pub use nodes::{DEFAULT_PUBLIC_NODES, effective_nodes, validate_node};
 pub use punch::{Peer, find_center};
 pub use relay::Relay;
 pub use room::RoomCode;
+pub use session::{Role, Session, SessionOptions, SessionStatus, cleanup_orphan};
 pub use signal::{PlayerKind, PlayerProfile, SignalClient, SignalServer};
 pub use tunnel::{PortForward, Proto, Tunnel, TunnelConfig, TunnelState};

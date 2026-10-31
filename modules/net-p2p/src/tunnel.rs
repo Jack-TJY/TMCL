@@ -206,6 +206,11 @@ impl Tunnel {
         Ok(tunnel)
     }
 
+    /// `easytier-core` 的进程号；进程已退出时为 `None`。
+    pub fn pid(&self) -> Option<u32> {
+        self.child.id()
+    }
+
     /// 当前状态。
     pub fn state(&mut self) -> TunnelState {
         match self.child.try_wait() {
@@ -328,13 +333,13 @@ where
 }
 
 #[cfg(windows)]
-fn hide_console(command: &mut Command) {
+pub(crate) fn hide_console(command: &mut Command) {
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
     command.creation_flags(CREATE_NO_WINDOW);
 }
 
 #[cfg(not(windows))]
-fn hide_console(_command: &mut Command) {}
+pub(crate) fn hide_console(_command: &mut Command) {}
 
 #[cfg(test)]
 mod tests {
