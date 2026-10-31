@@ -37,7 +37,7 @@ tmcl-resources = { path = "../modules/resources" }
 tmcl-sakura = { path = "../modules/net-sakura" }
 tmcl-skin = { path = "../modules/skin" }
 tmcl-sync = { path = "../modules/sync" }
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["net", "sync"] }
 tokio-util = { workspace = true }
 tracing = { workspace = true }
 ts-rs = { workspace = true }

@@ -88,6 +88,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // sakura
         commands::sakura::sakura_clear_key,
         commands::sakura::sakura_nodes,
+        commands::sakura::sakura_ping,
         commands::sakura::sakura_save_key,
         commands::sakura::sakura_start,
         commands::sakura::sakura_status,
@@ -2181,6 +2182,28 @@ fov:0.0
         assert_eq!(finished.error.unwrap().code, ErrorCode::NetHttpStatus);
         let status = invoke(&webview, "sakura_status", json!({})).unwrap();
         assert_eq!(status["room"], Value::Null);
+
+        // 到本地测试服务器能连上；无效地址与没人监听的端口为 null。
+        let addr = server
+            .url("")
+            .trim_start_matches("http://")
+            .trim_end_matches('/')
+            .to_owned();
+        let ping = invoke(
+            &webview,
+            "sakura_ping",
+            json!({ "args": { "address": addr } }),
+        )
+        .unwrap();
+        assert!(ping["latency_ms"].is_u64());
+        for address in ["no-port", "127.0.0.1:0", "127.0.0.1:1"] {
+            let ping = invoke(
+                &webview,
+                "sakura_ping",
+                json!({ "args": { "address": address } }),
+            );
+            assert_eq!(ping.unwrap(), json!({ "latency_ms": null }));
+        }
 
         invoke(&webview, "sakura_stop", json!({})).unwrap();
         invoke(&webview, "sakura_clear_key", json!({})).unwrap();

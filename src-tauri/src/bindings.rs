@@ -40,7 +40,9 @@ use crate::commands::resources::{
     ResourcesRemoveArgs, ResourcesSearchAnyArgs, ResourcesSearchArgs, ResourcesSetEnabledArgs,
     ResourcesSetEnabledResult, ResourcesUpdateArgs, ResourcesVersionsArgs, ResourcesWorldsArgs,
 };
-use crate::commands::sakura::{SakuraKeyArgs, SakuraNodeList, SakuraStatus};
+use crate::commands::sakura::{
+    SakuraKeyArgs, SakuraNodeList, SakuraPing, SakuraPingArgs, SakuraStatus,
+};
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
@@ -151,6 +153,8 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     // sakura（SakuraNodeInfo、SakuraNode 随 SakuraNodeList，SakuraRoom 随 SakuraStatus 一并导出）
     SakuraKeyArgs::export_all(&cfg)?;
     SakuraNodeList::export_all(&cfg)?;
+    SakuraPing::export_all(&cfg)?;
+    SakuraPingArgs::export_all(&cfg)?;
     P2pInfo::export_all(&cfg)?;
     SakuraPolicy::export_all(&cfg)?;
     SakuraStatus::export_all(&cfg)?;

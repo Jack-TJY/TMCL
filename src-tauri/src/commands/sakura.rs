@@ -5,7 +5,7 @@
 //! 应用退出时 `lib.rs` 调用 [`stop_on_exit`] 结束 frpc 并删除临时隧道。
 
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State};
@@ -30,6 +30,12 @@ pub const SAKURA_START_KIND: &str = "sakura_start";
 /// 应用退出时删除临时隧道最多等待的时间。
 const EXIT_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// `sakura_ping` 单次连接最多等待的时间。
+const PING_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// `sakura_ping` 连接的次数，取最快的一次。
+const PING_ATTEMPTS: usize = 3;
+
 /// `sakura_status` 的返回值。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct SakuraStatus {
@@ -41,6 +47,20 @@ pub struct SakuraStatus {
     pub running: bool,
     /// 开始联机的任务正在进行（下载 frpc、建隧道或等待地址）。
     pub starting: bool,
+}
+
+/// `sakura_ping` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SakuraPingArgs {
+    /// 联机地址 `主机:端口`，例如 `frp-xxx.com:10086`。
+    pub address: String,
+}
+
+/// `sakura_ping` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct SakuraPing {
+    /// 建立 TCP 连接最快一次的耗时（毫秒）；地址无效或连不上时为 `null`。
+    pub latency_ms: Option<u32>,
 }
 
 /// `sakura_save_key` 的参数。
@@ -169,6 +189,33 @@ pub async fn sakura_start<R: Runtime>(
         *slot = Some(session);
         Ok(())
     }))
+}
+
+/// 测量到联机地址的延迟：连续建立 [`PING_ATTEMPTS`] 次 TCP 连接（不发送数据），取最快一次。
+/// 连接建立在穿透节点上，因此反映的是到节点的延迟，不代表房主的游戏一定能进。
+#[tauri::command]
+pub async fn sakura_ping(args: SakuraPingArgs) -> Result<SakuraPing, AppError> {
+    Ok(SakuraPing {
+        latency_ms: ping(args.address.trim()).await,
+    })
+}
+
+async fn ping(address: &str) -> Option<u32> {
+    let (host, port) = address.rsplit_once(':')?;
+    let port: u16 = port.parse().ok()?;
+    if host.is_empty() || port == 0 {
+        return None;
+    }
+    let mut best: Option<Duration> = None;
+    for _ in 0..PING_ATTEMPTS {
+        let started = Instant::now();
+        let connect = tokio::net::TcpStream::connect((host, port));
+        if let Ok(Ok(_stream)) = tokio::time::timeout(PING_TIMEOUT, connect).await {
+            let elapsed = started.elapsed();
+            best = Some(best.map_or(elapsed, |b| b.min(elapsed)));
+        }
+    }
+    best.map(|d| u32::try_from(d.as_millis()).unwrap_or(u32::MAX))
 }
 
 /// 停止联机：结束 frpc 并删除临时隧道。没有联机时什么也不做。

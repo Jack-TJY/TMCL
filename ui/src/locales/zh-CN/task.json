@@ -14,7 +14,8 @@
     "resources_modpack_export": "导出整合包",
     "resources_install": "安装资源",
     "resources_modpack_install": "安装整合包",
-    "resources_update": "更新资源"
+    "resources_update": "更新资源",
+    "sakura_start": "樱花穿透开房"
   },
   "stage": {
     "version_json": "版本信息",
@@ -36,7 +37,8 @@
     "resources": "下载资源",
     "modpack_fetch": "获取整合包",
     "modpack_files": "下载整合包文件",
-    "modpack_overrides": "解压整合包"
+    "modpack_overrides": "解压整合包",
+    "sakura_frpc": "下载穿透客户端"
   },
   "status": {
     "waiting": "准备中…",
