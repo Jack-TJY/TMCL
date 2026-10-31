@@ -7,4 +7,9 @@ export type SakuraPing = {
 /**
  * 建立 TCP 连接最快一次的耗时（毫秒）；地址无效或连不上时为 `null`。
  */
-latency_ms: number | null, };
+latency_ms: number | null, 
+/**
+ * 地址后面的 Minecraft 是否回应了服务器列表查询；连不上时为 `null`。
+ * 为 `false` 表示隧道通了，但房主的游戏没开、没有对局域网开放或端口填错。
+ */
+game_responding: boolean | null, };

@@ -63,7 +63,8 @@
       "unreachableHint": "The tunnel node cannot be reached right now, perhaps because the node is down or your network dropped. If friends cannot join either, stop and pick another node.",
       "stop": "Stop hosting",
       "stopTitle": "Stop hosting?",
-      "stopContent": "The tunnel will be deleted and friends in game will be disconnected."
+      "stopContent": "The tunnel will be deleted and friends in game will be disconnected.",
+      "gameSilentHint": "The node is reachable, but your game did not answer. Make sure the world is still open to LAN and that port {port} matches the one shown in chat. If the port is wrong, stop hosting and start again."
     },
     "join": {
       "step1": "Ask the host for the address, like frp-xxx.com:12345, and paste it below.",
@@ -72,8 +73,22 @@
       "placeholder": "Address, e.g. frp-xxx.com:12345",
       "invalid": "The address should look like host:port",
       "test": "Test connection",
-      "reachable": "The tunnel node can be reached. If you still can't join in game, make sure the host's world is still open to LAN and you both use the same game version.",
-      "unreachable": "This address cannot be reached. Check that it is complete and that the host is still hosting."
+      "reachable": "The host's game answered, so you can join from the game now. If you still can't get in, make sure you both use the same game version.",
+      "unreachable": "This address cannot be reached. Check that it is complete and that the host is still hosting.",
+      "gameSilent": "The tunnel node is reachable, but the host's game did not answer. Ask the host to check that the world is open to LAN and that they entered the right port."
+    },
+    "tunnels": {
+      "title": "My tunnels ({count}/{limit})",
+      "hint": "Free SakuraFrp accounts can only have a few tunnels at once, and you can't host when they are used up. TMCL's temporary tunnels are deleted when you stop hosting; you can delete tunnels you made on the website here.",
+      "empty": "No tunnels on this account.",
+      "temporary": "TMCL temporary",
+      "online": "Online",
+      "offline": "Offline",
+      "details": "{type} · node #{node} · local {local}",
+      "delete": "Delete",
+      "deleteTitle": "Delete tunnel {name}?",
+      "deleteContent": "This cannot be undone, and connections using this tunnel will drop.",
+      "deleted": "Deleted tunnel {name}"
     }
   },
   "status": {

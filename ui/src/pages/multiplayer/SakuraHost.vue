@@ -25,6 +25,7 @@ import {
   sakuraStatus,
   sakuraStop,
   type SakuraNodeInfo,
+  type SakuraPing,
   type SakuraStatus,
   type SakuraUser,
 } from "../../api/sakura";
@@ -34,6 +35,7 @@ import { progressPercent } from "../../components/tasks/format";
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import SakuraAccount from "./SakuraAccount.vue";
+import SakuraTunnels from "./SakuraTunnels.vue";
 import LatencyTag from "./LatencyTag.vue";
 import { isValidPort, loadPrefs, nodeUsable, savePrefs, sortNodes } from "./multiplayer";
 
@@ -59,7 +61,12 @@ const isPublic = ref(false);
 const taskId = ref<TaskId | null>(null);
 const startError = ref<AppError | null>(null);
 const stopping = ref(false);
-const latency = ref<number | null | undefined>(undefined);
+/** 最近一次检查；`undefined` 为还在测量。 */
+const check = ref<SakuraPing | undefined>(undefined);
+const latency = computed(() => (check.value ? check.value.latency_ms : undefined));
+
+/** 递增时隧道列表重新读取：开始或停止联机后隧道会变化。 */
+const tunnelsReload = ref(0);
 
 let statusTimer: ReturnType<typeof setInterval> | undefined;
 let pingTimer: ReturnType<typeof setInterval> | undefined;
@@ -122,6 +129,7 @@ watch(
     if (!state || state === "running") return;
     if (state === "failed" && task.value?.error) startError.value = task.value.error;
     void refreshStatus();
+    tunnelsReload.value++;
   },
 );
 
@@ -130,10 +138,13 @@ watch(
   () => room.value?.address ?? null,
   (address) => {
     clearInterval(pingTimer);
-    latency.value = undefined;
+    check.value = undefined;
     if (!address) return;
     const ping = async () => {
-      latency.value = await sakuraPing(address).catch(() => null);
+      check.value = await sakuraPing(address).catch(() => ({
+        latency_ms: null,
+        game_responding: null,
+      }));
     };
     void ping();
     pingTimer = setInterval(ping, PING_INTERVAL_MS);
@@ -191,6 +202,7 @@ async function stop() {
   try {
     await sakuraStop();
     taskId.value = null;
+    tunnelsReload.value++;
     await refreshStatus();
   } catch (err) {
     message.error(formatError(toAppError(err)));
@@ -265,6 +277,9 @@ async function copy(text: string) {
     </NAlert>
     <NAlert v-else-if="latency === null" type="warning" class="gap">
       {{ t("multiplayer.sakura.host.unreachableHint") }}
+    </NAlert>
+    <NAlert v-else-if="check?.game_responding === false" type="warning" class="gap">
+      {{ t("multiplayer.sakura.host.gameSilentHint", { port: room.local_port }) }}
     </NAlert>
     <div class="actions">
       <NButton type="error" secondary :loading="stopping" @click="confirmStop">
@@ -343,6 +358,8 @@ async function copy(text: string) {
       </NButton>
     </div>
   </div>
+
+  <SakuraTunnels v-if="user" :limit="user.tunnel_limit" :reload="tunnelsReload" />
 </template>
 
 <style scoped>

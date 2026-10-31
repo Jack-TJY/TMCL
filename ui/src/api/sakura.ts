@@ -4,12 +4,22 @@ import type { SakuraNodeList } from "../bindings/SakuraNodeList";
 import type { SakuraPing } from "../bindings/SakuraPing";
 import type { SakuraPolicy } from "../bindings/SakuraPolicy";
 import type { SakuraStatus } from "../bindings/SakuraStatus";
+import type { SakuraTunnel } from "../bindings/SakuraTunnel";
+import type { SakuraTunnelList } from "../bindings/SakuraTunnelList";
 import type { SakuraUser } from "../bindings/SakuraUser";
 import type { StartRequest } from "../bindings/StartRequest";
 import type { TaskStarted } from "../bindings/TaskStarted";
 import { invoke } from "./invoke";
 
-export type { SakuraNodeInfo, SakuraPolicy, SakuraStatus, SakuraUser, StartRequest };
+export type {
+  SakuraNodeInfo,
+  SakuraPing,
+  SakuraPolicy,
+  SakuraStatus,
+  SakuraTunnel,
+  SakuraUser,
+  StartRequest,
+};
 export type { SakuraRoom } from "../bindings/SakuraRoom";
 
 /** 开始联机任务的种类名，与后端 `SAKURA_START_KIND` 一致。 */
@@ -55,7 +65,20 @@ export function sakuraStop(): Promise<void> {
   return invoke<void>("sakura_stop");
 }
 
-/** 到联机地址（穿透节点）的延迟（毫秒）；连不上时为 `null`。 */
-export async function sakuraPing(address: string): Promise<number | null> {
-  return (await invoke<SakuraPing>("sakura_ping", { args: { address } })).latency_ms;
+/** 到联机地址（穿透节点）的延迟，以及地址后面的游戏是否回应。 */
+export function sakuraPing(address: string): Promise<SakuraPing> {
+  return invoke<SakuraPing>("sakura_ping", { args: { address } });
 }
+
+/** 账号下的全部隧道。 */
+export async function sakuraTunnels(): Promise<SakuraTunnel[]> {
+  return (await invoke<SakuraTunnelList>("sakura_tunnels")).tunnels;
+}
+
+/** 删除一条隧道；是当前房间的隧道时等同于停止联机。 */
+export function sakuraDeleteTunnel(id: number): Promise<void> {
+  return invoke<void>("sakura_delete_tunnel", { args: { id } });
+}
+
+/** TMCL 临时隧道的备注，与后端 `TEMP_NOTE` 一致。 */
+export const SAKURA_TEMP_NOTE = "TMCL temporary tunnel";
