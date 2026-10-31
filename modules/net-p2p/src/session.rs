@@ -28,6 +28,8 @@ use crate::tunnel::{PortForward, Proto, Tunnel, TunnelConfig, TunnelState};
 pub const CENTER_TIMEOUT: Duration = Duration::from_secs(60);
 /// 找到联机中心后与其建立直连的最长时间。
 pub const DIRECT_TIMEOUT: Duration = Duration::from_secs(30);
+/// 记录 EasyTier 连接情况的间隔；只在变化时写日志。
+const PEER_LOG_INTERVAL: Duration = Duration::from_secs(10);
 /// 轮询 EasyTier 节点列表、重试连接的间隔。
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
 /// 记录 `easytier-core` 进程号的文件，用于清理强制结束 TMCL 后残留的进程。
@@ -88,6 +90,7 @@ pub struct Session {
     state_dir: PathBuf,
     server: Option<SignalServer>,
     guest: Option<GuestState>,
+    peer_log: JoinHandle<()>,
 }
 
 struct GuestState {
@@ -120,12 +123,14 @@ impl Session {
         let tunnel = Tunnel::start(binaries, &config).await?;
         write_pid(&options.state_dir, &tunnel);
         tracing::info!(?room, mc_port, "已开房");
+        let tunnel = Arc::new(tokio::sync::Mutex::new(tunnel));
         Ok(Self {
             role: Role::Host,
             room,
             mc_port,
             me,
-            tunnel: Arc::new(tokio::sync::Mutex::new(tunnel)),
+            peer_log: spawn_peer_log(&tunnel),
+            tunnel,
             state_dir: options.state_dir,
             server: Some(server),
             guest: None,
@@ -147,6 +152,7 @@ impl Session {
         // 出错时结束 EasyTier 再返回；`?` 之外的路径都显式停止。
         match connect(&mut tunnel, options.player, ctx).await {
             Ok(joined) => {
+                let tunnel = Arc::new(tokio::sync::Mutex::new(tunnel));
                 let me = joined.me.machine_id.clone();
                 let link = Arc::new(Mutex::new(GuestLink {
                     players: joined.players,
@@ -163,7 +169,8 @@ impl Session {
                     room,
                     mc_port: joined.mc_port,
                     me,
-                    tunnel: Arc::new(tokio::sync::Mutex::new(tunnel)),
+                    peer_log: spawn_peer_log(&tunnel),
+                    tunnel,
                     state_dir: options.state_dir,
                     server: None,
                     guest: Some(GuestState {
@@ -251,6 +258,7 @@ impl Session {
 
     /// 结束联机：停止心跳、广播与信令服务，结束 EasyTier。
     pub async fn stop(mut self) -> AppResult<()> {
+        self.peer_log.abort();
         if let Some(guest) = self.guest.take() {
             guest.heartbeat.abort();
         }
@@ -264,6 +272,58 @@ impl Session {
         tracing::info!("已结束联机");
         result
     }
+}
+
+/// 节点列表的简短描述，用于日志：`主机名(直连|中继 延迟)`，不含本机。
+fn describe_peers(peers: &[Peer]) -> String {
+    let parts: Vec<String> = peers
+        .iter()
+        .filter(|p| !p.is_local)
+        .map(|p| {
+            let link = if p.direct { "direct" } else { "relay" };
+            match p.latency_ms {
+                Some(ms) => format!("{}({link} {ms:.0}ms)", p.hostname),
+                None => format!("{}({link})", p.hostname),
+            }
+        })
+        .collect();
+    if parts.is_empty() {
+        "none".to_owned()
+    } else {
+        parts.join(", ")
+    }
+}
+
+/// 定期读取 EasyTier 节点列表，连上 / 断开的节点变化时写一条日志，便于排查
+/// “两边没连到同一个公共节点”这类问题。只持有弱引用，不影响 [`Session::stop`]。
+fn spawn_peer_log(tunnel: &Arc<tokio::sync::Mutex<Tunnel>>) -> JoinHandle<()> {
+    let tunnel = Arc::downgrade(tunnel);
+    tokio::spawn(async move {
+        let mut last: Option<Vec<(String, bool)>> = None;
+        loop {
+            let Some(tunnel) = tunnel.upgrade() else {
+                return;
+            };
+            let peers = {
+                let mut tunnel = tunnel.lock().await;
+                if tunnel.state() != TunnelState::Running {
+                    return;
+                }
+                tunnel.peers().await.unwrap_or_default()
+            };
+            drop(tunnel);
+            let key: Vec<(String, bool)> = peers
+                .iter()
+                .filter(|p| !p.is_local)
+                .map(|p| (p.hostname.clone(), p.direct))
+                .collect();
+            if last.as_ref() != Some(&key) {
+                tracing::info!(peers = %describe_peers(&peers), "EasyTier 连接变化");
+                last = Some(key);
+            }
+            tokio::time::sleep(PEER_LOG_INTERVAL).await;
+        }
+    })
 }
 
 fn center_peer(peers: &[Peer], center: Ipv4Addr) -> Option<&Peer> {
@@ -290,7 +350,9 @@ async fn connect(tunnel: &mut Tunnel, mut me: PlayerProfile, ctx: &TaskCtx) -> A
             break (ip, port, local_id);
         }
         if started.elapsed() > CENTER_TIMEOUT {
-            return Err(AppError::new(ErrorCode::P2pCenterNotFound));
+            tracing::warn!(peers = %describe_peers(&peers), "找不到联机中心");
+            return Err(AppError::new(ErrorCode::P2pCenterNotFound)
+                .with_detail(format!("peers: {}", describe_peers(&peers))));
         }
         tokio::time::sleep(POLL_INTERVAL).await;
     };
@@ -474,6 +536,29 @@ mod tests {
         cleanup_orphan(dir.path()).await;
         std::fs::write(dir.path().join(PID_FILE), "garbage").unwrap();
         cleanup_orphan(dir.path()).await;
+    }
+
+    #[test]
+    fn describes_peers_without_local() {
+        let peer = |name: &str, local: bool, direct: bool, ms: Option<f64>| Peer {
+            id: "1".into(),
+            hostname: name.into(),
+            ipv4: None,
+            is_local: local,
+            direct,
+            latency_ms: ms,
+            nat_type: "FullCone".into(),
+            version: "2.6.4".into(),
+        };
+        assert_eq!(describe_peers(&[peer("me", true, false, None)]), "none");
+        assert_eq!(
+            describe_peers(&[
+                peer("me", true, false, None),
+                peer("PublicServer_a", false, true, Some(31.4)),
+                peer("scaffolding-mc-server-1234", false, false, None),
+            ]),
+            "PublicServer_a(direct 31ms), scaffolding-mc-server-1234(relay)"
+        );
     }
 
     #[test]
