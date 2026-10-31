@@ -15,8 +15,8 @@ use tmcl_net::HttpClient;
 use tmcl_sakura::frpc::START_TIMEOUT;
 use tmcl_sakura::tunnel;
 use tmcl_sakura::{
-    SakuraClient, SakuraNode, SakuraPolicy, SakuraRoom, SakuraUser, Session, StartRequest,
-    ensure_frpc,
+    SakuraClient, SakuraNode, SakuraPolicy, SakuraRoom, SakuraTunnel, SakuraUser, Session,
+    StartRequest, ensure_frpc,
 };
 use tokio::sync::Mutex;
 use ts_rs::TS;
@@ -61,6 +61,23 @@ pub struct SakuraPingArgs {
 pub struct SakuraPing {
     /// 建立 TCP 连接最快一次的耗时（毫秒）；地址无效或连不上时为 `null`。
     pub latency_ms: Option<u32>,
+    /// 地址后面的 Minecraft 是否回应了服务器列表查询；连不上时为 `null`。
+    /// 为 `false` 表示隧道通了，但房主的游戏没开、没有对局域网开放或端口填错。
+    pub game_responding: Option<bool>,
+}
+
+/// `sakura_tunnels` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct SakuraTunnelList {
+    /// 账号下的全部隧道，包括不是 TMCL 创建的。
+    pub tunnels: Vec<SakuraTunnel>,
+}
+
+/// `sakura_delete_tunnel` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SakuraTunnelArgs {
+    #[ts(type = "number")]
+    pub id: u64,
 }
 
 /// `sakura_save_key` 的参数。
@@ -154,6 +171,34 @@ pub async fn sakura_nodes(state: State<'_, AppState>) -> Result<SakuraNodeList, 
     })
 }
 
+/// 账号下的全部隧道，用于在隧道数已满时让用户删掉不用的。
+#[tauri::command]
+pub async fn sakura_tunnels(state: State<'_, AppState>) -> Result<SakuraTunnelList, AppError> {
+    let key = tunnel::load_key(state.secrets.as_ref())?;
+    let tunnels = api(&state)?.tunnels(&key, &TaskCtx::noop("sakura")).await?;
+    Ok(SakuraTunnelList { tunnels })
+}
+
+/// 删除一条隧道；是当前联机房间的隧道时等同于停止联机。
+#[tauri::command]
+pub async fn sakura_delete_tunnel(
+    state: State<'_, AppState>,
+    args: SakuraTunnelArgs,
+) -> Result<(), AppError> {
+    let current = state
+        .sakura
+        .try_lock()
+        .ok()
+        .and_then(|s| s.as_ref().map(|s| s.room.tunnel_id));
+    if current == Some(args.id) {
+        return stop(&state).await;
+    }
+    let key = tunnel::load_key(state.secrets.as_ref())?;
+    api(&state)?
+        .delete_tunnels(&key, &[args.id], &TaskCtx::noop("sakura"))
+        .await
+}
+
 /// SakuraFrp 服务条款，首次使用时展示给用户确认。
 #[tauri::command]
 pub async fn sakura_terms(state: State<'_, AppState>) -> Result<SakuraPolicy, AppError> {
@@ -191,21 +236,35 @@ pub async fn sakura_start<R: Runtime>(
     }))
 }
 
-/// 测量到联机地址的延迟：连续建立 [`PING_ATTEMPTS`] 次 TCP 连接（不发送数据），取最快一次。
-/// 连接建立在穿透节点上，因此反映的是到节点的延迟，不代表房主的游戏一定能进。
+/// 测量到联机地址的延迟：连续建立 [`PING_ATTEMPTS`] 次 TCP 连接，取最快一次；
+/// 连得上时再发一次 Minecraft 服务器列表查询，看房主的游戏是否回应。
+/// TCP 连接落在穿透节点上，只反映到节点的延迟；游戏是否回应才说明朋友能不能进。
 #[tauri::command]
 pub async fn sakura_ping(args: SakuraPingArgs) -> Result<SakuraPing, AppError> {
+    let Some((host, port)) = split_address(args.address.trim()) else {
+        return Ok(SakuraPing {
+            latency_ms: None,
+            game_responding: None,
+        });
+    };
+    let latency_ms = ping(host, port).await;
+    let game_responding = match latency_ms {
+        Some(_) => Some(game_responds(host, port).await),
+        None => None,
+    };
     Ok(SakuraPing {
-        latency_ms: ping(args.address.trim()).await,
+        latency_ms,
+        game_responding,
     })
 }
 
-async fn ping(address: &str) -> Option<u32> {
+fn split_address(address: &str) -> Option<(&str, u16)> {
     let (host, port) = address.rsplit_once(':')?;
     let port: u16 = port.parse().ok()?;
-    if host.is_empty() || port == 0 {
-        return None;
-    }
+    (!host.is_empty() && port != 0).then_some((host, port))
+}
+
+async fn ping(host: &str, port: u16) -> Option<u32> {
     let mut best: Option<Duration> = None;
     for _ in 0..PING_ATTEMPTS {
         let started = Instant::now();
@@ -216,6 +275,49 @@ async fn ping(address: &str) -> Option<u32> {
         }
     }
     best.map(|d| u32::try_from(d.as_millis()).unwrap_or(u32::MAX))
+}
+
+/// 发送握手（下一状态为 status）与状态请求，[`PING_TIMEOUT`] 内收到任意回应即认为游戏在线。
+/// frpc 转发不到本地端口时，节点会接受连接后立即断开，读到的是 0 字节。
+async fn game_responds(host: &str, port: u16) -> bool {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let probe = async {
+        let mut stream = tokio::net::TcpStream::connect((host, port)).await?;
+        stream.write_all(&status_request(host, port)).await?;
+        let mut buf = [0u8; 1];
+        Ok::<_, std::io::Error>(stream.read(&mut buf).await? > 0)
+    };
+    matches!(
+        tokio::time::timeout(PING_TIMEOUT, probe).await,
+        Ok(Ok(true))
+    )
+}
+
+/// Minecraft 握手包（协议号 -1、下一状态 1）加状态请求包。
+fn status_request(host: &str, port: u16) -> Vec<u8> {
+    fn varint(mut value: u32, out: &mut Vec<u8>) {
+        loop {
+            let byte = (value & 0x7f) as u8;
+            value >>= 7;
+            if value == 0 {
+                out.push(byte);
+                return;
+            }
+            out.push(byte | 0x80);
+        }
+    }
+    let host = &host.as_bytes()[..host.len().min(255)];
+    let mut body = vec![0x00];
+    varint(u32::MAX, &mut body); // 协议号 -1：只查询状态，不关心版本。
+    varint(host.len() as u32, &mut body);
+    body.extend_from_slice(host);
+    body.extend_from_slice(&port.to_be_bytes());
+    body.push(0x01);
+    let mut packet = Vec::with_capacity(body.len() + 4);
+    varint(body.len() as u32, &mut packet);
+    packet.extend_from_slice(&body);
+    packet.extend_from_slice(&[0x01, 0x00]);
+    packet
 }
 
 /// 停止联机：结束 frpc 并删除临时隧道。没有联机时什么也不做。
@@ -252,4 +354,49 @@ pub fn stop_on_exit(sessions: &Mutex<Option<Session>>, api_base: &str) {
             Err(_) => tracing::warn!("退出时删除樱花临时隧道超时"),
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    #[test]
+    fn status_request_bytes() {
+        let packet = status_request("a.b", 25565);
+        // 长度 13：包 ID、协议号 -1（5 字节）、主机名长度与内容、端口、下一状态；随后是状态请求。
+        assert_eq!(
+            packet,
+            [
+                13, 0, 0xff, 0xff, 0xff, 0xff, 0x0f, 3, b'a', b'.', b'b', 0x63, 0xdd, 1, 1, 0
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn game_check_tells_closed_tunnel_from_live_game() {
+        // frpc 转发失败时节点接受连接后立即断开。
+        let closed = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let closed_port = closed.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            while let Ok((stream, _)) = closed.accept().await {
+                drop(stream);
+            }
+        });
+        assert!(!game_responds("127.0.0.1", closed_port).await);
+
+        let live = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let live_port = live.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            while let Ok((mut stream, _)) = live.accept().await {
+                // 像真实服务器一样先读完请求再回应；不读就关闭的话 Windows 会发 RST，客户端读到的是错误。
+                let mut request = [0u8; 64];
+                let _ = stream.read(&mut request).await;
+                let _ = stream.write_all(&[1, 0]).await;
+                let _ = stream.shutdown().await;
+            }
+        });
+        assert!(game_responds("127.0.0.1", live_port).await);
+    }
 }

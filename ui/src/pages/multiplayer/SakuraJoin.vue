@@ -4,7 +4,7 @@ import { Copy20Regular, PlugConnected20Regular } from "@vicons/fluent";
 import { NAlert, NButton, NIcon, NInput, useMessage, useThemeVars } from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { sakuraPing } from "../../api/sakura";
+import { sakuraPing, type SakuraPing } from "../../api/sakura";
 import LatencyTag from "./LatencyTag.vue";
 import { normalizeAddress } from "./multiplayer";
 
@@ -15,19 +15,23 @@ const themeVars = useThemeVars();
 const input = ref("");
 const testing = ref(false);
 /** 最近一次测试的结果；`undefined` 为还没测。 */
-const latency = ref<number | null | undefined>(undefined);
+const check = ref<SakuraPing | undefined>(undefined);
+const latency = computed(() => (check.value ? check.value.latency_ms : undefined));
 
 const address = computed(() => normalizeAddress(input.value));
 const invalid = computed(() => input.value.trim() !== "" && address.value === null);
 
-watch(address, () => (latency.value = undefined));
+watch(address, () => (check.value = undefined));
 
 async function test() {
   const value = address.value;
   if (!value) return;
   testing.value = true;
   try {
-    latency.value = await sakuraPing(value).catch(() => null);
+    check.value = await sakuraPing(value).catch(() => ({
+      latency_ms: null,
+      game_responding: null,
+    }));
   } finally {
     testing.value = false;
   }
@@ -79,6 +83,9 @@ async function copy() {
     </p>
     <NAlert v-if="latency === null && !testing" type="warning" class="gap">
       {{ t("multiplayer.sakura.join.unreachable") }}
+    </NAlert>
+    <NAlert v-else-if="check?.game_responding === false && !testing" type="warning" class="gap">
+      {{ t("multiplayer.sakura.join.gameSilent") }}
     </NAlert>
     <NAlert v-else-if="typeof latency === 'number' && !testing" type="success" class="gap">
       {{ t("multiplayer.sakura.join.reachable") }}

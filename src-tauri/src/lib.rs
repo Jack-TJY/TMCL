@@ -92,6 +92,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_worlds,
         // sakura
         commands::sakura::sakura_clear_key,
+        commands::sakura::sakura_delete_tunnel,
         commands::sakura::sakura_nodes,
         commands::sakura::sakura_ping,
         commands::sakura::sakura_save_key,
@@ -99,6 +100,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::sakura::sakura_status,
         commands::sakura::sakura_stop,
         commands::sakura::sakura_terms,
+        commands::sakura::sakura_tunnels,
         commands::sakura::sakura_user,
         // settings
         commands::settings::settings_get,
@@ -2182,10 +2184,14 @@ fov:0.0
         let nodes = r#"{"5":{"name":"BGP","host":"a.test","description":"","vip":0,"flag":4},
             "7":{"name":"多线","host":"b.test","description":"","vip":0,"flag":516}}"#;
         let terms = r##"{"updated":"2024/02/13","alert":"","content":"# 服务条款"}"##;
+        let tunnels = r#"[{"id":3,"name":"mine","type":"tcp","node":5,"local_ip":"127.0.0.1",
+            "local_port":22,"remote":"1234","online":false,"note":null}]"#;
         let server = tauri::async_runtime::block_on(TestServer::start([
             ("/user/info", user.to_vec()),
             ("/nodes", nodes.as_bytes().to_vec()),
             ("/system/policy?type=tos", terms.as_bytes().to_vec()),
+            ("/tunnels", tunnels.as_bytes().to_vec()),
+            ("/tunnel/delete", br#"{"deleted":[3],"failed":[]}"#.to_vec()),
         ]));
         let dir = tempfile::tempdir().unwrap();
         let (mut state, secrets) = state_with_memory_secrets(dir.path());
@@ -2223,6 +2229,15 @@ fov:0.0
         assert_eq!(nodes[1]["public_game"], true);
         let terms = invoke(&webview, "sakura_terms", json!({})).unwrap();
         assert_eq!(terms["updated"], "2024/02/13");
+        let list = invoke(&webview, "sakura_tunnels", json!({})).unwrap();
+        assert_eq!(list["tunnels"][0]["id"], 3);
+        assert_eq!(list["tunnels"][0]["note"], "");
+        invoke(
+            &webview,
+            "sakura_delete_tunnel",
+            json!({ "args": { "id": 3 } }),
+        )
+        .unwrap();
 
         // 下载信息取不到且本地没有 frpc：任务失败，不留下会话。
         let finished = run_task(
@@ -2249,13 +2264,18 @@ fov:0.0
         )
         .unwrap();
         assert!(ping["latency_ms"].is_u64());
+        // 测试服务器是 HTTP，对握手是否回应取决于实现，这里只检查字段存在。
+        assert!(ping["game_responding"].is_boolean());
         for address in ["no-port", "127.0.0.1:0", "127.0.0.1:1"] {
             let ping = invoke(
                 &webview,
                 "sakura_ping",
                 json!({ "args": { "address": address } }),
             );
-            assert_eq!(ping.unwrap(), json!({ "latency_ms": null }));
+            assert_eq!(
+                ping.unwrap(),
+                json!({ "latency_ms": null, "game_responding": null })
+            );
         }
 
         invoke(&webview, "sakura_stop", json!({})).unwrap();
