@@ -118,3 +118,33 @@ export function loadPrefs(): MultiplayerPrefs {
 export function savePrefs(change: Partial<MultiplayerPrefs>) {
   save(PREFS_KEY, JSON.stringify({ ...loadPrefs(), ...change }));
 }
+
+/** Scaffolding 房间码字母表，与后端 `room.rs` 一致（去掉了易混的 I、O）。 */
+const ROOM_ALPHABET = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+/**
+ * 规整用户输入的房间码 `U/NNNN-NNNN-SSSS-SSSS`：忽略首尾空白与大小写，`U/` 可省略。
+ * 格式与校验位（34 进制小端数值是 7 的倍数）都正确时返回完整房间码，否则返回 `null`。
+ * 只是前端预检，后端加入时会再解析一次。
+ */
+export function normalizeRoomCode(input: string): string | null {
+  const upper = input.trim().toUpperCase();
+  const body = upper.startsWith("U/") ? upper.slice(2) : upper;
+  const groups = body.split("-");
+  if (groups.length !== 4 || groups.some((g) => g.length !== 4)) return null;
+  let value = 0n;
+  let weight = 1n;
+  for (const ch of groups.join("")) {
+    const digit = ROOM_ALPHABET.indexOf(ch);
+    if (digit < 0) return null;
+    value += BigInt(digit) * weight;
+    weight *= 34n;
+  }
+  return value % 7n === 0n ? `U/${groups.join("-")}` : null;
+}
+
+/** 玩家名：去掉首尾空白后 1–64 个字符，与后端限制一致。 */
+export function isValidPlayerName(name: string): boolean {
+  const length = [...name.trim()].length;
+  return length >= 1 && length <= 64;
+}

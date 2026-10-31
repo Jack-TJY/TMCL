@@ -15,7 +15,9 @@
     "resources_install": "Install resources",
     "resources_modpack_install": "Install modpack",
     "resources_update": "Update resources",
-    "sakura_start": "SakuraFrp room"
+    "sakura_start": "SakuraFrp room",
+    "p2p_host": "Host direct room",
+    "p2p_join": "Join direct room"
   },
   "stage": {
     "version_json": "Version info",
@@ -38,7 +40,10 @@
     "modpack_fetch": "Fetching modpack",
     "modpack_files": "Modpack files",
     "modpack_overrides": "Extracting modpack",
-    "sakura_frpc": "Downloading tunnel client"
+    "sakura_frpc": "Downloading tunnel client",
+    "p2p_easytier": "Preparing networking component",
+    "p2p_start": "Opening room",
+    "p2p_connect": "Connecting to host"
   },
   "status": {
     "waiting": "Preparing…",
