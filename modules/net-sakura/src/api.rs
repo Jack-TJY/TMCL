@@ -137,11 +137,21 @@ pub struct SakuraPolicy {
     /// 更新时间，例如 `2023/01/04`。
     #[serde(default)]
     pub updated: String,
-    /// 置顶警告。
+    /// 置顶警告，没有时为空串。
     #[serde(default)]
     pub alert: String,
     /// 条款正文。
     pub content: String,
+}
+
+/// 接口原样的服务条款；没有置顶警告时 `alert` 为 `null`（2026-10-31 实测）。
+#[derive(Deserialize)]
+struct RawPolicy {
+    #[serde(default)]
+    updated: Option<String>,
+    #[serde(default)]
+    alert: Option<String>,
+    content: String,
 }
 
 #[derive(Deserialize)]
@@ -302,7 +312,8 @@ impl SakuraClient {
     /// 服务条款（不需要登录）。
     pub async fn terms(&self, ctx: &TaskCtx) -> AppResult<SakuraPolicy> {
         let url = self.url("/system/policy?type=tos");
-        self.get(&url, None, ctx).await
+        let raw: RawPolicy = self.get(&url, None, ctx).await?;
+        Ok(raw.into())
     }
 
     async fn get<T: DeserializeOwned>(
@@ -379,9 +390,28 @@ fn parse<T: DeserializeOwned>(url: &str, bytes: &[u8]) -> AppResult<T> {
     })
 }
 
+impl From<RawPolicy> for SakuraPolicy {
+    fn from(raw: RawPolicy) -> Self {
+        Self {
+            updated: raw.updated.unwrap_or_default(),
+            alert: raw.alert.unwrap_or_default(),
+            content: raw.content,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn policy_accepts_null_alert() {
+        let body = r##"{"alert":null,"updated":"2024\/02\/13","content":"# 服务条款"}"##;
+        let policy: SakuraPolicy = parse::<RawPolicy>("tos", body.as_bytes()).unwrap().into();
+        assert_eq!(policy.alert, "");
+        assert_eq!(policy.updated, "2024/02/13");
+        assert_eq!(policy.content, "# 服务条款");
+    }
 
     fn node(name: &str, flag: u32) -> SakuraNode {
         SakuraNode {
