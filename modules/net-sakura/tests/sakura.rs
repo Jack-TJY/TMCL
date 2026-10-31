@@ -200,6 +200,27 @@ async fn banned_and_api_errors_are_mapped() {
         .unwrap_err();
     assert_eq!(err.code, ErrorCode::SakuraApiError);
     assert_eq!(err.params["msg"], "无权访问");
+
+    // 接口文档里的错误返回是 500 + `{ code, msg }`，同样把说明交给界面；没有说明时仍是 HTTP 错误。
+    server.route(
+        "POST /tunnel/delete",
+        500,
+        r#"{"code":500,"msg":"隧道数量已达上限"}"#,
+    );
+    let err = server
+        .api()
+        .delete_tunnels("k", &[1], &ctx())
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, ErrorCode::SakuraApiError);
+    assert_eq!(err.params["msg"], "隧道数量已达上限");
+    server.route("POST /tunnel/delete", 502, "bad gateway");
+    let err = server
+        .api()
+        .delete_tunnels("k", &[1], &ctx())
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, ErrorCode::NetHttpStatus);
 }
 
 #[tokio::test]

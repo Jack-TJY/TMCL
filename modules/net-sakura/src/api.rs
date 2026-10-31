@@ -361,7 +361,8 @@ impl SakuraClient {
         Err(match status {
             401 => AppError::new(ErrorCode::SakuraKeyInvalid),
             // 其余业务错误（隧道数已满、节点不可用、未实名等）由服务端给出说明，原样交给界面。
-            400..=499 if !msg.is_empty() => AppError::new(ErrorCode::SakuraApiError)
+            // 接口文档只定义了 500 + `{ code, msg }` 这一种错误返回，2026-10-31 实测建隧道失败也是 500。
+            400..=599 if !msg.is_empty() => AppError::new(ErrorCode::SakuraApiError)
                 .with_param("msg", &msg)
                 .with_param("status", status),
             _ => AppError::new(ErrorCode::NetHttpStatus)
