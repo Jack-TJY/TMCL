@@ -14,7 +14,7 @@ use tmcl_common::config::Config;
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode, TaskCtx};
 use tmcl_p2p::{
     PlayerKind, PlayerProfile, Role, RoomCode, Session, SessionOptions, effective_nodes,
-    ensure_installed, signal,
+    ensure_installed, fetch_terracotta_nodes, signal, with_terracotta_nodes,
 };
 use tokio::sync::Mutex;
 use ts_rs::TS;
@@ -192,6 +192,7 @@ pub async fn p2p_host<R: Runtime>(
     let options = options(&state, &args.player_name)?;
     let mc_port = args.mc_port;
     start(&app, &state, P2P_HOST_KIND, move |bins, ctx| async move {
+        let options = with_latest_nodes(options, &ctx).await;
         Session::host(&bins, mc_port, options, &ctx).await
     })
     .await
@@ -207,6 +208,7 @@ pub async fn p2p_join<R: Runtime>(
     let room = RoomCode::parse(&args.room_code)?;
     let options = options(&state, &args.player_name)?;
     start(&app, &state, P2P_JOIN_KIND, move |bins, ctx| async move {
+        let options = with_latest_nodes(options, &ctx).await;
         Session::join(&bins, room, options, &ctx).await
     })
     .await
@@ -287,6 +289,16 @@ fn options(state: &AppState, player_name: &str) -> AppResult<SessionOptions> {
         peers: effective_nodes(p2p.use_default_nodes, &p2p.custom_nodes),
         state_dir,
     })
+}
+
+/// 用陶瓦联机（HMCL）最新的节点列表替换内置的备用节点，提高与 HMCL / PCL-CE 共用节点的机会。
+async fn with_latest_nodes(mut options: SessionOptions, ctx: &TaskCtx) -> SessionOptions {
+    if let Ok(http) = tmcl_net::HttpClient::new() {
+        let fetched = fetch_terracotta_nodes(&http, ctx).await;
+        options.peers = with_terracotta_nodes(options.peers, &fetched);
+    }
+    tracing::info!(peers = ?options.peers, "P2P 公共节点");
+    options
 }
 
 /// 检查没有房间、没有正在进行的开房或加入，然后在后台下载 EasyTier 并运行 `job`。
