@@ -87,16 +87,16 @@ pub struct SakuraTunnel {
     pub kind: String,
     /// 节点 ID。
     pub node: u32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     pub local_ip: String,
     #[serde(default)]
     pub local_port: u16,
     /// 远程端口或绑定域名。
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     pub remote: String,
     #[serde(default)]
     pub online: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     pub note: String,
 }
 
@@ -135,10 +135,10 @@ pub struct ClientFile {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SakuraPolicy {
     /// 更新时间，例如 `2023/01/04`。
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     pub updated: String,
     /// 置顶警告。
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     pub alert: String,
     /// 条款正文。
     pub content: String,
@@ -151,7 +151,7 @@ struct RawUser {
     /// 账号被冻结时只有 `id`、`name`、`avatar`、`ban`。
     #[serde(default)]
     ban: Option<serde_json::Value>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     speed: String,
     #[serde(default)]
     tunnels: u32,
@@ -173,7 +173,7 @@ struct RawGroup {
 struct RawNode {
     name: String,
     host: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     description: String,
     #[serde(default)]
     vip: u32,
@@ -189,7 +189,7 @@ struct Created {
 /// 接口的通用错误响应。
 #[derive(Deserialize)]
 struct ApiError {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty")]
     msg: String,
 }
 
@@ -371,6 +371,11 @@ impl SakuraClient {
     }
 }
 
+/// 接口有时把空字符串字段返回为 `null`（例如条款的 `alert`），按空字符串处理。
+fn null_as_empty<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+    Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 fn parse<T: DeserializeOwned>(url: &str, bytes: &[u8]) -> AppResult<T> {
     serde_json::from_slice(bytes).map_err(|e| {
         AppError::new(ErrorCode::CommonJson)
@@ -392,6 +397,19 @@ mod tests {
             vip: 0,
             flag,
         }
+    }
+
+    #[test]
+    fn policy_accepts_null_alert() {
+        // 2026-10-31 实测：没有置顶警告时 `alert` 为 `null`。
+        let body =
+            br##"{"alert":null,"updated":"2024\/02\/13","content":"# \u670d\u52a1\u6761\u6b3e"}"##;
+        let policy: SakuraPolicy = parse("u", body).unwrap();
+        assert_eq!(policy.alert, "");
+        assert_eq!(policy.updated, "2024/02/13");
+        assert_eq!(policy.content, "# 服务条款");
+        let policy: SakuraPolicy = parse("u", br#"{"content":"x"}"#).unwrap();
+        assert_eq!(policy.updated, "");
     }
 
     #[test]
