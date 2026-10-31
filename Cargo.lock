@@ -4495,7 +4495,7 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tmcl-app"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "embed-resource",
  "serde",
@@ -4528,7 +4528,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-auth"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "dotenvy",
  "form_urlencoded",
@@ -4550,7 +4550,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-common"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "regex",
  "rusqlite",
@@ -4569,7 +4569,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-game"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "regex",
  "rusqlite",
@@ -4587,7 +4587,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-instance"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "rusqlite",
  "serde",
@@ -4603,7 +4603,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-java"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "flate2",
  "serde",
@@ -4623,7 +4623,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-launch"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "tempfile",
  "time",
@@ -4640,7 +4640,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-loader"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "regex",
  "serde",
@@ -4660,7 +4660,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-net"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "reqwest",
  "serde",
@@ -4675,7 +4675,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-p2p"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "getrandom 0.3.4",
  "reqwest",
@@ -4693,7 +4693,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-resources"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "reqwest",
  "serde",
@@ -4713,7 +4713,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-sakura"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "md-5",
  "reqwest",
@@ -4730,7 +4730,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-skin"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "reqwest",
  "serde",
@@ -4747,7 +4747,7 @@ dependencies = [
 
 [[package]]
 name = "tmcl-sync"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 dependencies = [
  "serde",
  "serde_json",
