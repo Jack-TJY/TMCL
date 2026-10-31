@@ -52,7 +52,7 @@ const ASSETS: [(&str, &str, u64); 6] = [
 /// 安装完成标记，内容为压缩包的 SHA-256。
 const MARKER: &str = ".complete";
 /// 进度阶段名。
-const STAGE: &str = "p2p.easytier";
+const STAGE: &str = "p2p_easytier";
 
 /// 一个平台的 EasyTier 压缩包。
 #[derive(Debug, Clone, PartialEq, Eq)]
