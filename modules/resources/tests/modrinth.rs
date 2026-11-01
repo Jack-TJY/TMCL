@@ -114,6 +114,41 @@ async fn project_versions_are_filtered() {
     assert_eq!(versions[0].id, "OihdIimA");
 }
 
+fn gzip(data: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+    encoder.write_all(data).unwrap();
+    encoder.finish().unwrap()
+}
+
+#[tokio::test]
+async fn gzip_responses_are_requested_and_decoded() {
+    let server = MockServer::start(|req, _| match req.header("accept-encoding") {
+        Some("gzip") => Response::json(&gzip(PROJECT)).header("Content-Encoding", "gzip"),
+        _ => Response::json(PROJECT),
+    })
+    .await;
+    let project = client(&server).project("sodium", &ctx()).await.unwrap();
+    assert_eq!(project.unwrap().id, "AANobbMI");
+    assert_eq!(server.requests()[0].header("accept-encoding"), Some("gzip"));
+}
+
+#[tokio::test]
+async fn modpack_versions_skip_changelogs() {
+    use tmcl_resources::modpack::source;
+    let server = MockServer::start(|_, _| Response::json(PROJECT_VERSIONS)).await;
+    let versions = source::versions(&client(&server), "fabulously-optimized", None, &ctx())
+        .await
+        .unwrap();
+    assert_eq!(versions[0].id, "OihdIimA");
+    let request = &server.requests()[0];
+    assert_eq!(request.path(), "/v2/project/fabulously-optimized/version");
+    assert_eq!(
+        request.query(),
+        vec![("include_changelog".to_owned(), "false".to_owned())]
+    );
+}
+
 #[tokio::test]
 async fn dependencies_are_parsed() {
     let server = MockServer::start(|_, _| Response::json(DEPENDENCIES)).await;

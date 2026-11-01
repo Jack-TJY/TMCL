@@ -18,6 +18,7 @@ mod cross;
 pub mod curseforge;
 pub mod deps;
 pub mod fabric_api;
+mod gzip;
 pub mod install;
 pub mod merged;
 pub mod modpack;

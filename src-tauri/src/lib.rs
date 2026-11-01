@@ -1698,7 +1698,7 @@ fov:0.0
         for (path, body) in [
             ("/v2/version/mp1".to_owned(), version.clone()),
             (
-                modrinth_target("/v2/project/MP/version", &[]),
+                modrinth_target("/v2/project/MP/version", &[("include_changelog", "false")]),
                 json!([version]),
             ),
             (

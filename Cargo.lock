@@ -4695,6 +4695,7 @@ dependencies = [
 name = "tmcl-resources"
 version = "0.2.0-beta.1"
 dependencies = [
+ "flate2",
  "reqwest",
  "serde",
  "serde_json",

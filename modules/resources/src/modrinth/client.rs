@@ -4,11 +4,13 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
-use reqwest::header::{CONTENT_TYPE, HeaderMap, RETRY_AFTER};
+use reqwest::header::{ACCEPT_ENCODING, CONTENT_TYPE, HeaderMap, RETRY_AFTER};
 use reqwest::{Method, StatusCode, Url};
 use serde::de::DeserializeOwned;
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::{HttpClient, RetryPolicy};
+
+use crate::gzip;
 
 use super::models::{
     HashAlgorithm, Project, ProjectDependencies, ProjectType, SearchIndex, SearchResponse, Version,
@@ -255,7 +257,10 @@ impl ModrinthClient {
         ctx: &TaskCtx,
     ) -> AppResult<Option<Vec<u8>>> {
         self.limiter.acquire(ctx).await?;
-        let mut request = self.inner.request(method, url.clone());
+        let mut request = self
+            .inner
+            .request(method, url.clone())
+            .header(ACCEPT_ENCODING, gzip::ACCEPT);
         if let Some(body) = body {
             request = request
                 .header(CONTENT_TYPE, "application/json")
@@ -270,9 +275,9 @@ impl ModrinthClient {
                 .map_err(|e| map_reqwest_error(url, &e))?;
             self.limiter.update(response.headers());
             match response.status() {
-                status if status.is_success() => {
-                    self.http.body(response, url).bytes(ctx).await.map(Some)
-                }
+                status if status.is_success() => gzip::read_body(&self.http, response, url, ctx)
+                    .await
+                    .map(Some),
                 StatusCode::NOT_FOUND => Ok(None),
                 StatusCode::TOO_MANY_REQUESTS => {
                     let wait = self.limiter.exhaust(response.headers());
