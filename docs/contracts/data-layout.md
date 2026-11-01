@@ -37,6 +37,7 @@
 │  └─ backgrounds/           # 用户背景图
 ├─ skins/                    # 默认的本地皮肤库：<sha256>.png 与 <sha256>.json（M2-07）
 ├─ p2p/easytier/<版本>/      # 运行时下载的 EasyTier 程序（M2-12）
+├─ p2p/easytier.log         # EasyTier 输出日志（≤ 2 MB，另保留上一份 easytier.old.log）
 ├─ cache/                    # 可随时清空
 └─ logs/                     # 启动器日志，已脱敏
 ```
@@ -48,6 +49,8 @@
 `skins/`（`DataPaths::skins_dir()`，首次导入皮肤时创建）：默认的皮肤库位置，可由 `config.json` 的 `skins.library_dir` 改到任意文件夹（例如网盘同步文件夹），供多台电脑、多个安装目录共用。每张皮肤是一对文件：`<sha256>.png`（文件内容的 SHA-256，小写十六进制，同一图片只存一份）与描述文件 `<sha256>.json` = `{ "schema": 2, "name", "variant": "classic"|"slim", "height": 64|32, "added_at": <unix 毫秒> }`。没有共享的索引文件，每次增删改只写这张皮肤自己的文件（原子写入），因此多处同时修改不会互相覆盖。读取时以图片为准：描述文件缺失或损坏时仍列出（名称取 ID 前 8 位、模型 `classic`、加入时间取图片修改时间）；文件名不是 `<64 位小写十六进制>.png` 的文件（如同步盘的冲突副本）忽略。旧版（schema 1）的 `index.json` = `{ "schema": 1, "skins": [{ "id", "name", "variant", "height", "added_at" }] }` 在首次读取时拆成描述文件（已有描述文件的不覆盖），原文件改名为 `index.json.bak`。
 
 `p2p/`（`DataPaths::p2p_dir()`，首次联机时创建）：`easytier/<版本>/` 下是从 EasyTier 官方 GitHub Releases 下载、按内置 SHA-256 校验后解压的 `easytier-core`、`easytier-cli`（Windows 另有 `Packet.dll`），解压完成后写入 `.complete`；没有 `.complete` 的目录视为未安装，下次重新下载。
+
+`p2p/easytier.log`：`easytier-core` 的启动参数与 stdout/stderr（网络密钥已替换为 `***`），用于排查各节点的连接情况。每次启动 `easytier-core` 时把已有文件改名为 `easytier.old.log`（覆盖更旧的），单个文件超过 2 MB 时再轮转，因此最多两份、每份不超过 2 MB。日志保留对端与公共节点的公网 IP（排查节点连通性需要）。导出诊断信息时两份都以 `p2p/easytier.log`、`p2p/easytier.old.log` 放进包内，并与其他文件一样脱敏（令牌、玩家名、UUID、账号 ID、主目录、路径中的用户名、系统用户名、计算机名、邮箱）。
 
 ## 3. config.json
 
