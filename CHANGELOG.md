@@ -2,12 +2,44 @@
 
 本文件记录每个发布版本的主要变化。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
+## [0.2.0-beta.2] - 2026-11-01
+
+第二个公测版本。修复 beta.1 测试中发现的问题，安装 Fabric 时默认附带 Fabric API，缺失的前置可以从另一平台补全，皮肤库位置可自定义。
 
 ### 新增
 
-- Windows 安装包接入 [SignPath](https://signpath.org) 免费代码签名流程，申请通过后生效；新增 [代码签名政策与隐私政策](docs/CODE_SIGNING.md)，README 补充 SmartScreen 拦截时的处理方法。
-- 皮肤库位置可自定义：放到网盘同步文件夹或指向另一个 TMCL 的皮肤库，即可在多台电脑、多个安装目录间共用；更改时可把现有皮肤复制过去。皮肤库改为每张皮肤一个描述文件，同步时不会互相覆盖，旧皮肤库首次打开时自动迁移。
+- 安装 Fabric 时默认同时安装 Fabric API：下载页新建实例、资源页一键新建实例、更换加载器时都有默认勾选的“同时安装 Fabric API”，实例中已有 Fabric API 时跳过；安装整合包时不额外安装。Fabric API 安装失败时加载器照常装好，并提示到资源页重新安装，提示中可直接打开该实例的资源页（#202）。
+- 必需前置在来源平台上没有适用的版本时，自动到另一平台（Modrinth ↔ CurseForge）查找同一个 mod 并加入安装计划，安装对话框中标出“来自 CurseForge / Modrinth”；不兼容的资源仍会提示，由你手动处理（#200）。
+- 皮肤库位置可自定义：放到网盘同步文件夹或指向另一个 TMCL 的皮肤库，即可在多台电脑、多个安装目录间共用；更改时可以把现有皮肤复制过去。皮肤库改为每张皮肤一个描述文件，同步时不会互相覆盖，旧皮肤库首次打开时自动迁移（#199）。
+- 联机时 EasyTier 的输出写入 `tmcl-data/p2p/easytier.log`（保留当前和上一份，每份不超过 2 MB），并随诊断信息包导出；导出时去掉网络密钥、个人信息与 IP 地址（#201）。
+- Windows 安装包接入 [SignPath](https://signpath.org) 免费代码签名流程，申请通过后生效；新增 [代码签名政策与隐私政策](docs/CODE_SIGNING.md)，README 补充 SmartScreen 拦截时的处理方法（#198）。
+
+### 修复
+
+- Fabric 实例安装 Jade 等 mod 后因缺少 Fabric API 启动崩溃（B2，#202）。
+- 资源页一键新建实例时，默认的游戏版本不看所选加载器，可能选到该资源没有文件的版本；现在只列出资源在所选加载器上支持的游戏版本，换加载器时重新筛选（C2b，#202）。
+- 设置 → Java 显示“尚未发现 Java”：现在列出 TMCL 自动下载的 Java 与系统中的 Java（B5，#201）。
+- 导出诊断信息时保存对话框默认在根目录：现在默认在“下载”文件夹，文件名带日期时间（B6，#201）。
+- 1280 宽度窗口下实例页搜索框被挤窄、按钮挤到第二行，关于页 EasyTier 网址超出卡片（B8，#201）。
+- 资源页按 CurseForge 筛选时装好的资源不显示“已安装”，已安装的行仍显示“安装”按钮（B3，#204）。
+- 离开资源页再回来，选中的实例与平台筛选被重置（B4，#204）。
+- 选定整合包后版本列表要十几秒才出来，现在资源接口启用 gzip 压缩、不再拉取更新说明，传输量约为原来的 1/13（B7，#204）。
+
+### 已知问题
+
+- Forge 1.7.10 无模组时进入主菜单可能崩溃，是 Forge 自身的问题（Alpha D1）。
+- 默认窗口大小下首页“快捷操作”组件需要内部滚动（Alpha D3）。
+- Linux 上 WebKit 会在 `tmcl-data` 之外写入少量数据，卸载后残留（Alpha D11）。
+- 直连联机首次连接可能需要等待十几秒，个别网络下第一次会失败、重试后成功；一直连不上时请改用樱花穿透。
+- 实例的资源管理页（已安装、启用 / 禁用、检查更新）尚未在真机上完整测试，欢迎反馈。
+- 皮肤库迁移为新格式后，0.2.0-beta.1 及更早的 TMCL 读取同一个皮肤库会显示为空（文件不受影响）；共用皮肤库的各个 TMCL 请都升级到本版本。
+- 皮肤库放在同步文件夹时，别处同步来的改动要重新进入皮肤页才显示。
+- Windows 安装包暂未签名（代码签名申请中），SmartScreen 拦截时点“更多信息”→“仍要运行”。
+- macOS 版本尚未测试。
+
+### 致谢
+
+下载加速使用 [BMCLAPI](https://bmclapidoc.bangbang93.com/)；资源数据来自 [Modrinth](https://modrinth.com/) 与 [CurseForge](https://www.curseforge.com/)；资源文件镜像来自 [MCIM](https://github.com/mcmod-info-mirror)；P2P 联机基于 [EasyTier](https://github.com/EasyTier/EasyTier)（LGPL-3.0，作为独立程序下载运行）；内网穿透由 [SakuraFrp](https://www.natfrp.com/) 提供。
 
 ## [0.2.0-beta.1] - 2026-11-01
 
@@ -113,5 +145,6 @@
 - 首页“快捷操作”组件在默认大小下需要滚动。
 - Linux 上 WebKit 会在 `tmcl-data` 之外写入少量缓存，卸载后残留。
 
+[0.2.0-beta.2]: https://github.com/Jack-TJY/TMCL/releases/tag/v0.2.0-beta.2
 [0.2.0-beta.1]: https://github.com/Jack-TJY/TMCL/releases/tag/v0.2.0-beta.1
 [0.1.0-alpha.1]: https://github.com/Jack-TJY/TMCL/releases/tag/v0.1.0-alpha.1
