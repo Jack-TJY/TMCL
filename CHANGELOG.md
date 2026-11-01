@@ -86,7 +86,25 @@
 
 ## [0.1.0-alpha.1] - 2026-10-25
 
-第一个预览版本：下载与安装 Minecraft: Java Edition 各版本，安装 Forge、NeoForge、Fabric、Quilt，自动下载 Java，微软正版、外置登录与离线账号，多实例管理，可自定义的首页组件。
+第一个预览版本。
+
+### 新增
+
+- 游戏下载：正式版、快照、远古版本一键下载，分片并发、断点续传、失败重试；Forge、NeoForge、Fabric 经 BMCLAPI 加速，失败回退官方源。
+- Java 管理：自动探测本机 Java，没有合适的版本时自动下载官方运行时。
+- 账号：微软正版（设备码登录）、authlib-injector 外置登录、离线账号。
+- 实例：独立游戏目录，重命名、复制、分组排序，导入导出 `.tmclpack`。
+- 模组加载器：Forge、NeoForge、Fabric、Quilt 一键安装与更换。
+- 启动：一键启动、游戏日志窗口、崩溃提示、强制结束。
+- 界面：Windows 11 风格，深浅色，Mica / 毛玻璃，自定义背景，可拖拽的首页组件，任务中心，简体中文与英文。
+
+### 已知问题
+
+- Forge 1.7.10 无模组时进入主菜单可能崩溃，是 Forge 自身的问题。
+- 部分虚拟机的虚拟显卡上 26.x 可能黑屏。
+- macOS 版本未经实机测试，也没有 Apple 签名。
+- 首页“快捷操作”组件在默认大小下需要滚动。
+- Linux 上 WebKit 会在 `tmcl-data` 之外写入少量缓存，卸载后残留。
 
 [0.2.0-beta.1]: https://github.com/Jack-TJY/TMCL/releases/tag/v0.2.0-beta.1
 [0.1.0-alpha.1]: https://github.com/Jack-TJY/TMCL/releases/tag/v0.1.0-alpha.1
