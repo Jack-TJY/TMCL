@@ -15,6 +15,8 @@ use crate::log::{LOG_FILE_PREFIX, redact};
 pub const USER_PLACEHOLDER: &str = "<user>";
 /// 替换用户主目录后使用的占位符。
 pub const HOME_PLACEHOLDER: &str = "<home>";
+/// 替换计算机名后使用的占位符。
+pub const HOST_PLACEHOLDER: &str = "<hostname>";
 /// 替换邮箱地址后使用的占位符。
 pub const EMAIL_PLACEHOLDER: &str = "<email>";
 
@@ -34,11 +36,12 @@ static EMAIL: LazyLock<Regex> = LazyLock::new(|| {
 /// 诊断信息的脱敏器。
 ///
 /// 依次处理：令牌（[`redact`]）、登记的敏感值（玩家名、UUID 等，按整词替换为标签）、
-/// 用户主目录、路径中的用户名、邮箱。
+/// 用户主目录、路径中的用户名、路径以外出现的系统用户名与计算机名、邮箱。
 #[derive(Debug, Default)]
 pub struct Scrubber {
     secrets: Vec<(Regex, String)>,
     homes: Vec<String>,
+    machine: Vec<(Regex, String)>,
 }
 
 impl Scrubber {
@@ -59,6 +62,21 @@ impl Scrubber {
         self
     }
 
+    /// 登记本机的系统用户名与计算机名（EasyTier 会把计算机名作为节点主机名写进日志），
+    /// 按整词替换为 `<user>` / `<hostname>`。在主目录之后处理，路径仍显示为 `<home>`；
+    /// 少于 3 个字符的名字忽略，避免误伤普通文本。
+    pub fn with_machine(mut self, user: Option<&str>, host: Option<&str>) -> Self {
+        for (value, label) in [(user, USER_PLACEHOLDER), (host, HOST_PLACEHOLDER)] {
+            let Some(value) = value.map(str::trim).filter(|v| v.chars().count() >= 3) else {
+                continue;
+            };
+            if let Some(re) = word_regex(&[regex::escape(value)]) {
+                self.machine.push((re, label.to_owned()));
+            }
+        }
+        self
+    }
+
     /// 登记一个敏感值，按整词（不区分大小写）替换为 `label`。
     ///
     /// 带连字符的 UUID 同时匹配不带连字符的写法；空值忽略。
@@ -71,8 +89,7 @@ impl Scrubber {
         if value.len() == 36 && value.matches('-').count() == 4 {
             forms.push(regex::escape(&value.replace('-', "")));
         }
-        let pattern = format!(r"(?i)\b(?:{})\b", forms.join("|"));
-        if let Ok(re) = Regex::new(&pattern) {
+        if let Some(re) = word_regex(&forms) {
             self.secrets.push((re, label.to_owned()));
         }
     }
@@ -91,8 +108,24 @@ impl Scrubber {
         out = USER_DIR
             .replace_all(&out, format!("${{1}}{USER_PLACEHOLDER}"))
             .into_owned();
+        for (re, label) in &self.machine {
+            out = re.replace_all(&out, label.as_str()).into_owned();
+        }
         EMAIL.replace_all(&out, EMAIL_PLACEHOLDER).into_owned()
     }
+}
+
+/// 整词、不区分大小写地匹配 `forms`（已转义）中任一写法。
+fn word_regex(forms: &[String]) -> Option<Regex> {
+    Regex::new(&format!(r"(?i)\b(?:{})\b", forms.join("|"))).ok()
+}
+
+/// 读取单个日志文件尾部的 [`LOG_TAIL_BYTES`]（从第一个完整行开始）；文件不存在时返回 `None`。
+pub fn read_log(path: &Path) -> AppResult<Option<String>> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    read_tail(path, LOG_TAIL_BYTES).map(Some)
 }
 
 /// 读取 `logs_dir` 中的启动器日志（`tmcl.*.log`），按文件名排序，每个最多保留尾部
@@ -212,6 +245,29 @@ mod tests {
             s.scrub("--accessToken eyJ0 by someone@example.com"),
             "--accessToken *** by <email>"
         );
+    }
+
+    #[test]
+    fn hides_machine_names_outside_paths() {
+        let s = Scrubber::new()
+            .with_home(Path::new(r"C:\Users\jack"))
+            .with_machine(Some("jack"), Some("DESKTOP-JACK01"));
+        assert_eq!(
+            s.scrub(r"peer desktop-jack01 via C:\Users\jack\tmcl, user=jack, jackson"),
+            r"peer <hostname> via <home>\tmcl, user=<user>, jackson"
+        );
+        // 太短的名字不登记。
+        let s = Scrubber::new().with_machine(Some("pc"), Some(" "));
+        assert_eq!(s.scrub("pc started"), "pc started");
+    }
+
+    #[test]
+    fn read_log_tolerates_missing_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("easytier.log");
+        assert_eq!(read_log(&path).unwrap(), None);
+        std::fs::write(&path, "peer up\n").unwrap();
+        assert_eq!(read_log(&path).unwrap().as_deref(), Some("peer up\n"));
     }
 
     #[test]

@@ -1,15 +1,16 @@
 //! `diagnostics_*` 命令：导出诊断信息包（PLAN.md M2-16）。
 //!
 //! 包内容：系统信息、`config.json`、账号概况、实例列表与配置、检测到的 Java、
-//! 最近 7 天的启动器日志。写入前全部经过 [`Scrubber`]：令牌、玩家名、玩家 UUID、
-//! 账号 ID、用户主目录、路径中的用户名与邮箱都会被替换。
+//! 最近 7 天的启动器日志、EasyTier 日志（`p2p/easytier*.log`）。写入前全部经过
+//! [`Scrubber`]：令牌、玩家名、玩家 UUID、账号 ID、用户主目录、路径中的用户名、
+//! 系统用户名、计算机名与邮箱都会被替换。
 
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::State;
-use tmcl_common::diagnostics::{Scrubber, read_logs, write_bundle};
+use tmcl_common::diagnostics::{Scrubber, read_log, read_logs, write_bundle};
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode};
 use tmcl_instance::InstanceStore;
 use ts_rs::TS;
@@ -50,7 +51,7 @@ async fn export(state: &AppState, dest: &str) -> AppResult<DiagnosticsExported> 
             .with_detail("diagnostics_export: dest must be an absolute path"));
     }
     let paths = state.data()?.clone();
-    let mut scrubber = Scrubber::new();
+    let mut scrubber = Scrubber::new().with_machine(user_name().as_deref(), host_name().as_deref());
     if let Some(home) = std::env::home_dir() {
         scrubber = scrubber.with_home(&home);
     }
@@ -75,6 +76,11 @@ async fn export(state: &AppState, dest: &str) -> AppResult<DiagnosticsExported> 
     tauri::async_runtime::spawn_blocking(move || {
         for (name, text) in read_logs(&paths.logs_dir())? {
             files.push((format!("logs/{name}"), text));
+        }
+        for name in [tmcl_p2p::EASYTIER_LOG_OLD, tmcl_p2p::EASYTIER_LOG] {
+            if let Some(text) = read_log(&paths.p2p_dir().join(name))? {
+                files.push((format!("p2p/{name}"), text));
+            }
         }
         write_bundle(&dest, &files, &scrubber)?;
         Ok(DiagnosticsExported {
@@ -152,6 +158,23 @@ fn instances_json(state: &AppState) -> Value {
         Ok(instances) => json!({ "instances": instances }),
         Err(err) => error_json(&err),
     }
+}
+
+/// 当前系统用户名，用于脱敏。
+fn user_name() -> Option<String> {
+    let var = if cfg!(windows) { "USERNAME" } else { "USER" };
+    std::env::var(var).ok()
+}
+
+/// 计算机名，用于脱敏：EasyTier 默认以它作为节点主机名。
+fn host_name() -> Option<String> {
+    if cfg!(windows) {
+        return std::env::var("COMPUTERNAME").ok();
+    }
+    std::env::var("HOSTNAME")
+        .ok()
+        .or_else(|| std::fs::read_to_string("/etc/hostname").ok())
+        .map(|name| name.trim().to_owned())
 }
 
 /// 操作系统版本，取不到时为 `null`。
@@ -255,6 +278,24 @@ mod tests {
             ),
         )
         .unwrap();
+        // EasyTier 日志：玩家名、主目录、计算机名都要被替换，上一份日志也要带上。
+        let home = std::env::home_dir().unwrap();
+        let host = host_name().filter(|h| h.len() >= 3);
+        std::fs::create_dir_all(paths.p2p_dir()).unwrap();
+        std::fs::write(
+            paths.p2p_dir().join(tmcl_p2p::EASYTIER_LOG),
+            format!(
+                "peer {} connected, player Jack_TJY, dir {}\n",
+                host.as_deref().unwrap_or("node"),
+                home.join("tmcl").display()
+            ),
+        )
+        .unwrap();
+        std::fs::write(
+            paths.p2p_dir().join(tmcl_p2p::EASYTIER_LOG_OLD),
+            "previous run\n",
+        )
+        .unwrap();
 
         let dest = dir.path().join("diag.zip");
         let exported =
@@ -282,5 +323,21 @@ mod tests {
         );
         let instances = &files.iter().find(|(n, _)| n == "instances.json").unwrap().1;
         assert!(instances.contains("Survival"), "{instances}");
+
+        let p2p = |name: &str| {
+            files
+                .iter()
+                .find(|(n, _)| n == &format!("p2p/{name}"))
+                .map(|(_, text)| text.clone())
+                .unwrap_or_else(|| panic!("p2p/{name} missing"))
+        };
+        assert_eq!(p2p(tmcl_p2p::EASYTIER_LOG_OLD), "previous run\n");
+        let easytier = p2p(tmcl_p2p::EASYTIER_LOG);
+        let sep = std::path::MAIN_SEPARATOR;
+        let expected_host = if host.is_some() { "<hostname>" } else { "node" };
+        assert_eq!(
+            easytier,
+            format!("peer {expected_host} connected, player <player-1>, dir <home>{sep}tmcl\n")
+        );
     }
 }
