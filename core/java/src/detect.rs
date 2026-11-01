@@ -328,6 +328,36 @@ mod tests {
         );
     }
 
+    /// 设置页的 Java 列表（`java_list`）依赖这里：启动器下载的运行时即使同时出现在
+    /// `JAVA_HOME` / `PATH` 中，也只列一次且标记为 `managed`；系统 Java 照常列出。
+    #[tokio::test]
+    async fn managed_runtimes_listed_once_with_system_java() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let java_dir = root.join("tmcl-data/java");
+        // 官方运行时：`java/<component>/bin/java`。
+        let mojang = java_dir.join("java-runtime-gamma");
+        let mojang_exe = fake_java(&mojang, "17.0.15", "amd64");
+        // Adoptium 回退：`java/temurin-<major>/<解压出的目录>/bin/java`。
+        fake_java(
+            &java_dir.join("temurin-21/jdk-21.0.7+6-jre"),
+            "21.0.7",
+            "x86_64",
+        );
+        let system = root.join("Program Files/Java/jdk-8");
+        fake_java(&system, "1.8.0_202", "amd64");
+
+        let sources = Sources {
+            managed_dir: Some(java_dir),
+            homes: vec![mojang.clone(), system],
+            executables: vec![mojang_exe],
+            scan_roots: Vec::new(),
+        };
+        let installs = detect(&sources).await;
+        let summary: Vec<(u32, bool)> = installs.iter().map(|i| (i.major, i.managed)).collect();
+        assert_eq!(summary, vec![(21, true), (17, true), (8, false)]);
+    }
+
     #[tokio::test]
     async fn empty_sources_find_nothing() {
         assert!(detect(&Sources::default()).await.is_empty());

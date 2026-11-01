@@ -26,6 +26,7 @@ use crate::commands::instance::{
     InstanceCreateArgs, InstanceDuplicateArgs, InstanceExportArgs, InstanceGameEntries,
     InstanceIdArgs, InstanceImportArgs, InstanceList, InstanceRenameArgs, InstanceSaveArgs,
 };
+use crate::commands::java::JavaList;
 use crate::commands::launch::{
     LaunchInstanceArgs, LaunchKillResult, LaunchRunning, LaunchStartArgs,
 };
@@ -111,6 +112,8 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     InstanceList::export_all(&cfg)?;
     InstanceRenameArgs::export_all(&cfg)?;
     InstanceSaveArgs::export_all(&cfg)?;
+    // java（JavaInstall、Arch 随 JavaList 一并导出）
+    JavaList::export_all(&cfg)?;
     // launch
     LaunchInstanceArgs::export_all(&cfg)?;
     LaunchKillResult::export_all(&cfg)?;

@@ -6,6 +6,7 @@ pub mod auth;
 pub mod diagnostics;
 pub mod game;
 pub mod instance;
+pub mod java;
 pub mod launch;
 pub mod layout;
 pub mod loader;

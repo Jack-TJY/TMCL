@@ -42,6 +42,7 @@
   },
   "java": {
     "label": "Java",
+    "detecting": "Looking for Java…",
     "found": "{count} Java installations found",
     "none": "No Java found yet. One will be chosen or downloaded when the game starts",
     "managed": "Managed by TMCL"

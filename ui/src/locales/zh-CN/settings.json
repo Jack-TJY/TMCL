@@ -42,6 +42,7 @@
   },
   "java": {
     "label": "Java",
+    "detecting": "正在查找 Java…",
     "found": "已发现 {count} 个 Java",
     "none": "尚未发现 Java，启动游戏时会自动选择或下载",
     "managed": "由启动器管理"
