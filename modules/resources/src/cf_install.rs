@@ -364,6 +364,19 @@ pub(crate) async fn installed_projects(
     for dir in dirs {
         paths.extend(local_files(dir, ctx).await?.into_iter().map(|f| f.path));
     }
+    let mut by_project: HashMap<u32, Vec<PathBuf>> = HashMap::new();
+    for (path, id) in match_files(client, paths, ctx).await? {
+        by_project.entry(id).or_default().push(path);
+    }
+    Ok(by_project)
+}
+
+/// 按指纹在 CurseForge 查找文件所属的项目：文件路径 → 项目 ID；找不到的文件不出现在结果中。
+pub(crate) async fn match_files(
+    client: &CurseForgeClient,
+    paths: Vec<PathBuf>,
+    ctx: &TaskCtx,
+) -> AppResult<HashMap<PathBuf, u32>> {
     let hashed = tokio::task::spawn_blocking(move || {
         paths
             .into_iter()
@@ -374,13 +387,13 @@ pub(crate) async fn installed_projects(
     .map_err(|e| AppError::new(ErrorCode::CommonInternal).with_detail(e.to_string()))?;
     let fingerprints: Vec<u32> = hashed.iter().map(|(f, _)| *f).collect();
     let matches = client.match_fingerprints(&fingerprints, ctx).await?;
-    let mut by_project: HashMap<u32, Vec<PathBuf>> = HashMap::new();
+    let mut found = HashMap::new();
     for m in matches.exact_matches {
         for (fp, path) in &hashed {
             if *fp == m.file.file_fingerprint {
-                by_project.entry(m.id).or_default().push(path.clone());
+                found.insert(path.clone(), m.id);
             }
         }
     }
-    Ok(by_project)
+    Ok(found)
 }

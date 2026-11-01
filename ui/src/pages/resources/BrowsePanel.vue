@@ -14,6 +14,7 @@ import {
   NSpin,
   NTag,
 } from "naive-ui";
+import { storeToRefs } from "pinia";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { toAppError } from "../../api/invoke";
@@ -28,16 +29,17 @@ import {
 } from "../../api/resources";
 import type { AppError } from "../../bindings/AppError";
 import { formatError } from "../../i18n";
+import { useResourceBrowseState } from "./browseState";
 import ResourceIcon from "./ResourceIcon.vue";
-import { formatCount, PAGE_SIZE, RESOURCE_SORTS } from "./resources";
+import { formatCount, isInstalledHit, PAGE_SIZE, RESOURCE_SORTS } from "./resources";
 import { hitLoaders, loaderName, versionSummary } from "./targets";
 
 const props = defineProps<{
   /** 按该实例过滤；`null` 表示不限实例。 */
   instanceId: string | null;
   kind: ResourceKind;
-  /** 已安装项目的 Modrinth ID，用于标出已安装（合并条目也比较其 Modrinth 条目）。 */
-  installedIds: ReadonlySet<string>;
+  /** 已安装的项目，见 `installedKeys`；已安装的条目不再显示“安装”。 */
+  installedKeys: ReadonlySet<string>;
 }>();
 const emit = defineEmits<{ install: [hit: ResourceHit] }>();
 
@@ -46,8 +48,8 @@ const { t, locale } = useI18n();
 const query = ref("");
 const sort = ref<ResourceSort>("relevance");
 const page = ref(1);
-/** 平台过滤：`all` 为合并显示。 */
-const platform = ref<ResourcePlatform | "all">("all");
+/** 平台过滤：`all` 为合并显示；在本次运行中保留（B4）。 */
+const { platform } = storeToRefs(useResourceBrowseState());
 const curseforge = ref(false);
 const failed = ref<ResourcePlatform[]>([]);
 resourcesSources()
@@ -123,13 +125,6 @@ function supportText(hit: ResourceHit): string {
 /** 本条及并入它的其他平台条目所在的平台。 */
 function platformsOf(hit: ResourceHit): ResourcePlatform[] {
   return [hit.platform, ...hit.also_on.map((r) => r.platform)];
-}
-
-function isInstalled(hit: ResourceHit): boolean {
-  return (
-    props.installedIds.has(hit.project_id) ||
-    hit.also_on.some((r) => props.installedIds.has(r.project_id))
-  );
 }
 
 const failedText = computed(() =>
@@ -224,10 +219,10 @@ const sortOptions = computed(() =>
             </NTag>
           </div>
         </div>
-        <NTag v-if="isInstalled(hit)" size="small" round :bordered="false">
+        <NTag v-if="isInstalledHit(hit, installedKeys)" size="small" round :bordered="false">
           {{ t("resources.browse.installed") }}
         </NTag>
-        <NButton size="small" type="primary" secondary @click="emit('install', hit)">
+        <NButton v-else size="small" type="primary" secondary @click="emit('install', hit)">
           {{ t("resources.browse.install") }}
         </NButton>
       </div>

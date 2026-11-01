@@ -11,6 +11,7 @@ use tmcl_net::{HttpClient, RetryPolicy};
 use super::models::{
     ClassId, File, FingerprintMatches, MINECRAFT_GAME_ID, Mod, ModLoaderType, Page, SortField,
 };
+use crate::gzip;
 use crate::modrinth::USER_AGENT;
 use crate::modrinth::client::{map_reqwest_error, parse_json, status_error, timeout_error};
 
@@ -252,7 +253,8 @@ impl CurseForgeClient {
             .inner
             .request(method, url.clone())
             .header("x-api-key", self.key.clone())
-            .header(reqwest::header::ACCEPT, "application/json");
+            .header(reqwest::header::ACCEPT, "application/json")
+            .header(reqwest::header::ACCEPT_ENCODING, gzip::ACCEPT);
         if let Some(body) = body {
             request = request
                 .header(CONTENT_TYPE, "application/json")
@@ -266,9 +268,9 @@ impl CurseForgeClient {
                 .map_err(|_| timeout_error(url, "等待响应头", timeouts.response))?
                 .map_err(|e| map_reqwest_error(url, &e))?;
             match response.status() {
-                status if status.is_success() => {
-                    self.http.body(response, url).bytes(ctx).await.map(Some)
-                }
+                status if status.is_success() => gzip::read_body(&self.http, response, url, ctx)
+                    .await
+                    .map(Some),
                 StatusCode::NOT_FOUND => Ok(None),
                 StatusCode::TOO_MANY_REQUESTS => {
                     let retry_after = response.headers().get(RETRY_AFTER).cloned();

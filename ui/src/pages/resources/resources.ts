@@ -2,7 +2,9 @@
 import type {
   InstallPlan,
   InstalledResource,
+  ResourceHit,
   ResourceKind,
+  ResourcePlatform,
   ResourceSort,
   ResourceVersion,
 } from "../../api/resources";
@@ -80,4 +82,25 @@ export function formatCount(count: number, locale?: string): string {
   return new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(
     count,
   );
+}
+
+function projectKey(platform: ResourcePlatform, projectId: string): string {
+  return `${platform}:${projectId}`;
+}
+
+/**
+ * 已安装资源在各平台上的项目（`<平台>:<项目 ID>`）：Modrinth 按 SHA1 反查，CurseForge 按指纹反查。
+ */
+export function installedKeys(resources: readonly InstalledResource[]): Set<string> {
+  const keys = new Set<string>();
+  for (const r of resources) {
+    if (r.source) keys.add(projectKey("modrinth", r.source.project_id));
+    if (r.curseforge_id) keys.add(projectKey("curseforge", r.curseforge_id));
+  }
+  return keys;
+}
+
+/** 搜索结果（含并入它的其他平台条目）是否已安装，`keys` 来自 {@link installedKeys}。 */
+export function isInstalledHit(hit: ResourceHit, keys: ReadonlySet<string>): boolean {
+  return [hit, ...hit.also_on].some((r) => keys.has(projectKey(r.platform, r.project_id)));
 }

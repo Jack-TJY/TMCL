@@ -110,7 +110,8 @@ pub async fn versions(
         loaders: Vec::new(),
         game_versions: game_version.map(ToOwned::to_owned).into_iter().collect(),
         featured: None,
-        without_changelog: false,
+        // 版本列表不显示更新日志；整合包版本多（如 Fabulously Optimized 有近 500 个），省下不少流量。
+        without_changelog: true,
     };
     let versions = match client.project_versions(project_id, &filter, ctx).await {
         Ok(versions) => versions,

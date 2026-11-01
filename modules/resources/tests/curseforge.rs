@@ -101,6 +101,21 @@ async fn project_parses_and_missing_is_none() {
 }
 
 #[tokio::test]
+async fn gzip_responses_are_decoded() {
+    use std::io::Write;
+    let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+    encoder.write_all(MOD).unwrap();
+    let packed = encoder.finish().unwrap();
+    let server = MockServer::start(move |req, _| match req.header("accept-encoding") {
+        Some("gzip") => Response::json(&packed).header("Content-Encoding", "gzip"),
+        _ => Response::status(406),
+    })
+    .await;
+    let jei = client(&server).project(JEI, &ctx()).await.unwrap().unwrap();
+    assert_eq!(jei.id, JEI);
+}
+
+#[tokio::test]
 async fn project_files_send_filter() {
     let server = MockServer::start(|_, _| Response::json(MOD_FILES)).await;
     let filter = FileFilter {

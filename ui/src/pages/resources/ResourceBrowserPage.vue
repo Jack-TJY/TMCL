@@ -21,6 +21,8 @@ import InstallDialog from "./InstallDialog.vue";
 import PickInstanceDialog from "./PickInstanceDialog.vue";
 import { BROWSER_KINDS, loaderName } from "./targets";
 import { autoInstall } from "./autoInstall";
+import { initialTarget, useResourceBrowseState } from "./browseState";
+import { installedKeys } from "./resources";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -30,12 +32,11 @@ const tasks = useTasksStore();
 
 const instances = ref<InstanceSummary[]>([]);
 const instancesLoaded = ref(false);
-const kind = ref<ResourceKind>(
-  BROWSER_KINDS.find((k) => k === route.query.kind) ?? BROWSER_KINDS[0],
-);
-const selectedId = ref<string | null>(
-  typeof route.query.instance === "string" ? route.query.instance : null,
-);
+// 选择保存在本次运行中，离开本页再回来时恢复（B4）。
+const remembered = useResourceBrowseState();
+const initial = initialTarget(route.query, remembered);
+const kind = ref<ResourceKind>(initial.kind);
+const selectedId = ref<string | null>(initial.instanceId);
 const selected = computed(() => instances.value.find((i) => i.id === selectedId.value) ?? null);
 
 async function loadInstances() {
@@ -51,9 +52,15 @@ async function loadInstances() {
 }
 void loadInstances();
 
-watch([selectedId, kind], ([instance, k]) => {
-  void router.replace({ query: { ...(instance ? { instance } : {}), kind: k } });
-});
+watch(
+  [selectedId, kind],
+  ([instance, k]) => {
+    remembered.instanceId = instance;
+    remembered.kind = k;
+    void router.replace({ query: { ...(instance ? { instance } : {}), kind: k } });
+  },
+  { immediate: true },
+);
 
 /** 实例的“版本 · 加载器”描述。 */
 function targetText(instance: InstanceSummary): string {
@@ -77,18 +84,16 @@ const blockedReason = computed(() => {
 });
 const blocked = computed(() => blockedReason.value !== null);
 
-const installedIds = ref<ReadonlySet<string>>(new Set());
+const installedProjects = ref<ReadonlySet<string>>(new Set());
 async function loadInstalled() {
   const instance = selected.value;
-  installedIds.value = new Set();
+  installedProjects.value = new Set();
   if (!instance || blocked.value) return;
   const list = await resourcesInstalled({ instance_id: instance.id, kind: kind.value }).catch(
     () => null,
   );
   if (selected.value !== instance || !list) return;
-  installedIds.value = new Set(
-    list.resources.flatMap((r) => (r.source ? [r.source.project_id] : [])),
-  );
+  installedProjects.value = installedKeys(list.resources);
 }
 watch([selected, kind], () => void loadInstalled(), { immediate: true });
 
@@ -228,7 +233,7 @@ watch(
       class="panel"
       :instance-id="selectedId"
       :kind="kind"
-      :installed-ids="installedIds"
+      :installed-keys="installedProjects"
       @install="install"
     >
       <template v-if="selected" #empty>

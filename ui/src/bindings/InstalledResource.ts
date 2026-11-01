@@ -24,4 +24,8 @@ sha1: string,
 /**
  * Modrinth 来源；不是 Modrinth 上的文件或反查失败时为 `null`。
  */
-source: ResourceSource | null, };
+source: ResourceSource | null, 
+/**
+ * CurseForge 项目 ID（十进制）；构建不带 CurseForge Key、不是 CurseForge 上的文件或反查失败时为 `null`。
+ */
+curseforge_id: string | null, };

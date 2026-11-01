@@ -225,3 +225,53 @@ async fn curseforge_without_client_is_disabled() {
         .unwrap_err();
     assert_eq!(err.code, ErrorCode::ResourcesCurseforgeDisabled);
 }
+
+/// 已安装列表按指纹标出 CurseForge 项目；CurseForge 查询失败时列表照常返回。
+#[tokio::test]
+async fn installed_list_reports_curseforge_ids() {
+    use tmcl_resources::ResourceManager;
+    let matches = json!({"data": {"exactMatches": [
+        {"id": 5, "file": file(50, 5, "other.jar", 1, OTHER, "https://x/o", json!([]))},
+    ], "unmatchedFingerprints": []}})
+    .to_string()
+    .into_bytes();
+    let api = MockServer::start(move |req, n| match req.path() {
+        "/v1/fingerprints/432" if n == 0 => Response::json(&matches),
+        _ => Response::status(500),
+    })
+    .await;
+    let modrinth_api = MockServer::start(|_, _| Response::json(b"{}")).await;
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("mods")).unwrap();
+    std::fs::write(dir.path().join("mods/other.jar"), OTHER).unwrap();
+    std::fs::write(dir.path().join("mods/local.jar"), b"local").unwrap();
+
+    let http = HttpClient::new().unwrap();
+    let retry = RetryPolicy::with_delays([Duration::ZERO; 1]);
+    let curseforge = CurseForgeClient::with_base(&http, &api.url("/v1"), "test-api-key")
+        .unwrap()
+        .with_retry(retry.clone());
+    let modrinth = ModrinthClient::with_base(&http, &modrinth_api.url("/v2"))
+        .unwrap()
+        .with_retry(retry);
+    let target = InstanceTarget {
+        game_version: "1.20.1".into(),
+        loader: Some("fabric".into()),
+    };
+    let manager = ResourceManager::new(modrinth, target, dir.path(), ResourceKind::Mod, None)
+        .unwrap()
+        .with_curseforge(Some(curseforge));
+    let ctx = TaskCtx::noop("test");
+
+    let list = manager.list(&ctx).await.unwrap();
+    let ids: Vec<(&str, Option<&str>)> = list
+        .resources
+        .iter()
+        .map(|r| (r.file_name.as_str(), r.curseforge_id.as_deref()))
+        .collect();
+    assert_eq!(ids, [("local.jar", None), ("other.jar", Some("5"))]);
+
+    let list = manager.list(&ctx).await.unwrap();
+    assert!(list.lookup_error.is_none());
+    assert!(list.resources.iter().all(|r| r.curseforge_id.is_none()));
+}
