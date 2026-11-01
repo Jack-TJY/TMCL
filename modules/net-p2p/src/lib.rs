@@ -26,7 +26,10 @@ pub mod tunnel;
 
 pub use easytier::{EASYTIER_VERSION, EasyTierAsset, EasyTierBinaries, ensure_installed};
 pub use lan::{Announcer, LanWorld};
-pub use nodes::{DEFAULT_PUBLIC_NODES, effective_nodes, validate_node};
+pub use nodes::{
+    DEFAULT_PUBLIC_NODES, effective_nodes, fetch_terracotta_nodes, validate_node,
+    with_terracotta_nodes,
+};
 pub use punch::{Peer, find_center};
 pub use relay::Relay;
 pub use room::RoomCode;
