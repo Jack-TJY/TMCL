@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { InstallPlan, InstalledResource, ResourceVersion } from "../../api/resources";
+import type {
+  InstallPlan,
+  InstalledResource,
+  ResourceHit,
+  ResourceVersion,
+} from "../../api/resources";
 import {
   defaultVersion,
   displayName,
   filterInstalled,
   formatSize,
+  installedKeys,
+  isInstalledHit,
   kindsFor,
   planBlocked,
   planSize,
@@ -26,7 +33,7 @@ function version(id: string, channel: ResourceVersion["channel"]): ResourceVersi
   };
 }
 
-function installed(file_name: string, title?: string): InstalledResource {
+function installed(file_name: string, title?: string, curseforge_id?: string): InstalledResource {
   return {
     file_name,
     enabled: !file_name.endsWith(".disabled"),
@@ -35,6 +42,29 @@ function installed(file_name: string, title?: string): InstalledResource {
     source: title
       ? { project_id: "p", version_id: "v", version_number: "1", title, icon_url: null }
       : null,
+    curseforge_id: curseforge_id ?? null,
+  };
+}
+
+function hit(
+  platform: ResourceHit["platform"],
+  project_id: string,
+  also_on: ResourceHit["also_on"] = [],
+): ResourceHit {
+  return {
+    platform,
+    project_id,
+    slug: project_id,
+    title: project_id,
+    description: "",
+    author: "",
+    icon_url: null,
+    downloads: 0,
+    follows: 0,
+    categories: [],
+    game_versions: [],
+    date_modified: "2026-10-01T00:00:00Z",
+    also_on,
   };
 }
 
@@ -104,5 +134,21 @@ describe("resources page helpers", () => {
     expect(formatSize(512)).toBe("512 B");
     expect(formatSize(1536)).toBe("1.5 KB");
     expect(formatSize(20 * 1024 * 1024)).toBe("20 MB");
+  });
+
+  it("marks hits installed by Modrinth or CurseForge project", () => {
+    const keys = installedKeys([
+      installed("a.jar", "A"),
+      installed("cf.jar", undefined, "238222"),
+      installed("local.jar"),
+    ]);
+    expect([...keys].sort()).toEqual(["curseforge:238222", "modrinth:p"]);
+    expect(isInstalledHit(hit("curseforge", "238222"), keys)).toBe(true);
+    expect(isInstalledHit(hit("modrinth", "p"), keys)).toBe(true);
+    // 同一个 ID 在另一平台上不算。
+    expect(isInstalledHit(hit("modrinth", "238222"), keys)).toBe(false);
+    const merged = hit("curseforge", "1", [{ platform: "modrinth", project_id: "p", slug: "p" }]);
+    expect(isInstalledHit(merged, keys)).toBe(true);
+    expect(isInstalledHit(hit("curseforge", "1"), keys)).toBe(false);
   });
 });

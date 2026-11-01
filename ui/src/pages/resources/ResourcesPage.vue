@@ -43,7 +43,7 @@ import InstallDialog from "./InstallDialog.vue";
 import ChannelTag from "./ChannelTag.vue";
 import InstalledPanel from "./InstalledPanel.vue";
 import { useModImport } from "../instances/modImport";
-import { kindsFor } from "./resources";
+import { installedKeys, kindsFor } from "./resources";
 import { useResourceUpdates } from "./updates";
 
 type View = "installed" | "browse";
@@ -144,12 +144,7 @@ watch([kind, world], () => {
   void loadInstalled();
 });
 
-const installedIds = computed(
-  () =>
-    new Set(
-      (installed.value?.resources ?? []).flatMap((r) => (r.source ? [r.source.project_id] : [])),
-    ),
-);
+const installedProjects = computed(() => installedKeys(installed.value?.resources ?? []));
 
 /** 本页发起的安装与更新任务；成功后重新读取已安装列表，更新结果需重新检查。 */
 const started = ref<TaskId[]>([]);
@@ -293,7 +288,7 @@ const title = computed(() =>
           class="panel"
           :instance-id="instanceId"
           :kind="kind"
-          :installed-ids="installedIds"
+          :installed-keys="installedProjects"
           @install="(hit: ResourceHit) => (installing = hit)"
         />
       </template>

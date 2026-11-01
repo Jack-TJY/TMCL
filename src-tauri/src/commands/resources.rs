@@ -491,13 +491,15 @@ pub async fn resources_install<R: Runtime>(
     ))
 }
 
-/// 列出实例中某类已安装的资源，按 SHA1 在 Modrinth 反查来源；反查失败时列表照常返回。
+/// 列出实例中某类已安装的资源，按 SHA1 在 Modrinth、按指纹在 CurseForge（构建带 Key 时）反查来源；
+/// 反查失败时列表照常返回。
 #[tauri::command]
 pub async fn resources_installed(
     state: State<'_, AppState>,
     args: ResourcesDirArgs,
 ) -> Result<InstalledList, AppError> {
-    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?;
+    let manager = manager(&state, &args.instance_id, args.kind, args.world.as_deref())?
+        .with_curseforge(state.curseforge.clone());
     manager.list(&TaskCtx::noop("resources_installed")).await
 }
 

@@ -1,4 +1,4 @@
-//! 已安装资源的管理：列出（按 SHA1 在 Modrinth 反查来源）、从本地文件导入、
+//! 已安装资源的管理：列出（按 SHA1 在 Modrinth、按指纹在 CurseForge 反查来源）、从本地文件导入、
 //! 启用/禁用（`.disabled` 后缀）、删除、检查更新与更新。
 //!
 //! 更新只替换文件本身：新版本新增的必需前置不会自动安装（可对该版本再走一次安装计划）。
@@ -13,6 +13,8 @@ use tmcl_net::Downloader;
 use ts_rs::TS;
 
 use crate::browse::{InstanceTarget, ResourceKind, ResourceVersion};
+use crate::cf_install;
+use crate::curseforge::CurseForgeClient;
 use crate::install::{
     DISABLED_SUFFIX, INSTALL_STAGE, LocalFile, file_name, io_error, is_resource_file, kind_dir,
     local_files,
@@ -48,6 +50,9 @@ pub struct InstalledResource {
     pub sha1: String,
     /// Modrinth 来源；不是 Modrinth 上的文件或反查失败时为 `null`。
     pub source: Option<ResourceSource>,
+    /// CurseForge 项目 ID（十进制）；构建不带 CurseForge Key、不是 CurseForge 上的文件或反查失败时为 `null`。
+    #[serde(default)]
+    pub curseforge_id: Option<String>,
 }
 
 /// 已安装资源列表。
@@ -112,6 +117,7 @@ pub struct ResourceImportResult {
 #[derive(Debug, Clone)]
 pub struct ResourceManager {
     client: ModrinthClient,
+    curseforge: Option<CurseForgeClient>,
     target: InstanceTarget,
     kind: ResourceKind,
     dir: PathBuf,
@@ -129,9 +135,16 @@ impl ResourceManager {
         Ok(Self {
             dir: kind_dir(game_dir, kind, world)?,
             client,
+            curseforge: None,
             target,
             kind,
         })
+    }
+
+    /// 列出时同时按指纹在 CurseForge 反查（`None` 表示不查）。
+    pub fn with_curseforge(mut self, client: Option<CurseForgeClient>) -> Self {
+        self.curseforge = client;
+        self
     }
 
     /// 资源所在目录。
@@ -139,7 +152,8 @@ impl ResourceManager {
         &self.dir
     }
 
-    /// 列出已安装的资源，并按 SHA1 反查来源；反查失败（取消除外）不影响列表。
+    /// 列出已安装的资源，并按 SHA1 在 Modrinth、按指纹在 CurseForge 反查来源；反查失败（取消除外）
+    /// 不影响列表，CurseForge 反查失败只记日志。
     pub async fn list(&self, ctx: &TaskCtx) -> AppResult<InstalledList> {
         let files = local_files(&self.dir, ctx).await?;
         let (sources, lookup_error) = match self.sources(&files, ctx).await {
@@ -147,6 +161,7 @@ impl ResourceManager {
             Err(err) if err.is_cancelled() => return Err(err),
             Err(err) => (HashMap::new(), Some(err)),
         };
+        let curseforge = self.curseforge_ids(&files, ctx).await?;
         let resources = files
             .into_iter()
             .map(|f| {
@@ -156,6 +171,7 @@ impl ResourceManager {
                     file_name,
                     size: f.size,
                     source: sources.get(&f.sha1).cloned(),
+                    curseforge_id: curseforge.get(&f.path).map(u32::to_string),
                     sha1: f.sha1,
                 }
             })
@@ -164,6 +180,26 @@ impl ResourceManager {
             resources,
             lookup_error,
         })
+    }
+
+    /// 文件路径 → CurseForge 项目 ID；没有 CurseForge 客户端或查询失败时为空。
+    async fn curseforge_ids(
+        &self,
+        files: &[LocalFile],
+        ctx: &TaskCtx,
+    ) -> AppResult<HashMap<PathBuf, u32>> {
+        let Some(client) = &self.curseforge else {
+            return Ok(HashMap::new());
+        };
+        let paths = files.iter().map(|f| f.path.clone()).collect();
+        match cf_install::match_files(client, paths, ctx).await {
+            Ok(found) => Ok(found),
+            Err(err) if err.is_cancelled() => Err(err),
+            Err(err) => {
+                tracing::warn!(code = ?err.code, "按指纹在 CurseForge 反查已安装资源失败");
+                Ok(HashMap::new())
+            }
+        }
     }
 
     async fn sources(

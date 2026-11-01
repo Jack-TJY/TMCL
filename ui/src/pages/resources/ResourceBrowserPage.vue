@@ -21,6 +21,7 @@ import InstallDialog from "./InstallDialog.vue";
 import PickInstanceDialog from "./PickInstanceDialog.vue";
 import { BROWSER_KINDS, loaderName } from "./targets";
 import { autoInstall } from "./autoInstall";
+import { installedKeys } from "./resources";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -77,18 +78,16 @@ const blockedReason = computed(() => {
 });
 const blocked = computed(() => blockedReason.value !== null);
 
-const installedIds = ref<ReadonlySet<string>>(new Set());
+const installedProjects = ref<ReadonlySet<string>>(new Set());
 async function loadInstalled() {
   const instance = selected.value;
-  installedIds.value = new Set();
+  installedProjects.value = new Set();
   if (!instance || blocked.value) return;
   const list = await resourcesInstalled({ instance_id: instance.id, kind: kind.value }).catch(
     () => null,
   );
   if (selected.value !== instance || !list) return;
-  installedIds.value = new Set(
-    list.resources.flatMap((r) => (r.source ? [r.source.project_id] : [])),
-  );
+  installedProjects.value = installedKeys(list.resources);
 }
 watch([selected, kind], () => void loadInstalled(), { immediate: true });
 
@@ -228,7 +227,7 @@ watch(
       class="panel"
       :instance-id="selectedId"
       :kind="kind"
-      :installed-ids="installedIds"
+      :installed-keys="installedProjects"
       @install="install"
     >
       <template v-if="selected" #empty>
