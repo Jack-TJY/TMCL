@@ -11,6 +11,12 @@
   "unstable": "测试版",
   "showUnstable": "显示测试版",
   "fabricApi": "同时安装 Fabric API（大多数 Fabric 模组都需要它）",
+  "fabricApiFailed": {
+    "title": "Fabric API 未能安装",
+    "content": "已为“{name}”安装好加载器，但 Fabric API 安装失败：{error}。大多数 Fabric 模组都需要它，请到该实例的资源页搜索“Fabric API”重新安装。",
+    "open": "打开资源页",
+    "later": "稍后"
+  },
   "bmclapi": "{name} 的版本列表与文件由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速，失败时自动回退官方源。",
   "change": {
     "title": "更换“{name}”的加载器",

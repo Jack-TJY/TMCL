@@ -1316,10 +1316,7 @@ fov:0.0
             ("game_versions", r#"["custom"]"#),
             ("include_changelog", "false"),
         ];
-        server.route(
-            modrinth_target("/v2/project/P7dR8mSH/version", &filter),
-            json!([version]).to_string().into_bytes(),
-        );
+        let versions_path = modrinth_target("/v2/project/P7dR8mSH/version", &filter);
         server.route(format!("/cdn/{name}"), JAR.to_vec());
         server.route(
             "/fabric/v2/versions/loader/custom/0.16.5/profile/json",
@@ -1327,13 +1324,35 @@ fov:0.0
                  "mainClass":"net.fabricmc.loader.impl.launch.knot.KnotClient","libraries":[]}"#
                 .to_vec(),
         );
+        let (tx, warnings) = mpsc::channel();
+        app.listen(crate::events::LOADER_FABRIC_API_FAILED, move |event| {
+            let payload: Value = serde_json::from_str(event.payload()).unwrap();
+            tx.send(payload).unwrap();
+        });
         let id = config["id"].as_str().unwrap();
         let body = json!({ "args": { "instance_id": id, "kind": "fabric", "version": "0.16.5",
             "with_fabric_api": true } });
+        let mods = DataPaths::at(dir.path()).instance_game_dir(id).join("mods");
+
+        // Modrinth 返回无法解析的响应：加载器照常装好并写回，另推送一次警告。
+        server.route(versions_path.clone(), b"not json".to_vec());
+        let finished = run_task(&webview, &finished_rx, "loader_install", body.clone());
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+        let warning = warnings.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(warning["task_id"], json!(finished.task_id));
+        assert_eq!(warning["instance_id"], id);
+        assert_eq!(warning["instance_name"], "x");
+        assert!(warning["error"]["code"].is_string());
+        let get = json!({ "args": { "id": id } });
+        let loader = invoke(&webview, "instance_get", get).unwrap()["loader"].clone();
+        assert_eq!(loader, json!({ "kind": "fabric", "version": "0.16.5" }));
+        assert!(!mods.join(name).exists());
+
+        server.route(versions_path, json!([version]).to_string().into_bytes());
         let finished = run_task(&webview, &finished_rx, "loader_install", body);
         assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
-        let mods = DataPaths::at(dir.path()).instance_game_dir(id).join("mods");
         assert_eq!(std::fs::read(mods.join(name)).unwrap(), JAR);
+        assert!(warnings.try_recv().is_err());
     }
 
     /// 本地服务器上 Modrinth 请求的路径加查询串，编码方式与客户端相同。

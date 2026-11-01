@@ -58,7 +58,7 @@ use crate::commands::sync::{
     SyncSaveMasterArgs, SyncTargetsArgs,
 };
 use crate::commands::task::{TaskCancelArgs, TaskCancelResult, TaskList};
-use crate::events::{DeviceCode, GameExited, GameLog, TaskStarted};
+use crate::events::{DeviceCode, FabricApiFailed, GameExited, GameLog, TaskStarted};
 use tmcl_skin::SkinProfile;
 
 /// 置为 `1` 时测试改为写入生成物。
@@ -78,6 +78,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     TaskProgress::export_all(&cfg)?;
     TaskStarted::export_all(&cfg)?;
     DeviceCode::export_all(&cfg)?;
+    FabricApiFailed::export_all(&cfg)?;
     GameExited::export_all(&cfg)?;
     GameLog::export_all(&cfg)?;
     // app

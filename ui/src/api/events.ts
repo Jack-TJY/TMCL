@@ -1,6 +1,7 @@
 // 后端事件订阅（PLAN.md 第 3.3 节）。启动长耗时任务前先订阅，避免漏掉首条进度。
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { DeviceCode } from "../bindings/DeviceCode";
+import type { FabricApiFailed } from "../bindings/FabricApiFailed";
 import type { TaskFinished } from "../bindings/TaskFinished";
 import type { TaskProgress } from "../bindings/TaskProgress";
 
@@ -9,6 +10,7 @@ export const EVENTS = {
   taskProgress: "task:progress",
   taskFinished: "task:finished",
   authDeviceCode: "auth:device-code",
+  loaderFabricApiFailed: "loader:fabric-api-failed",
 } as const;
 
 /** 订阅任务进度，返回取消订阅函数。 */
@@ -24,4 +26,9 @@ export function onTaskFinished(handler: (finished: TaskFinished) => void): Promi
 /** 订阅微软登录的设备码，返回取消订阅函数。 */
 export function onDeviceCode(handler: (code: DeviceCode) => void): Promise<UnlistenFn> {
   return listen<DeviceCode>(EVENTS.authDeviceCode, (event) => handler(event.payload));
+}
+
+/** 订阅“加载器已装好但 Fabric API 安装失败”，返回取消订阅函数。 */
+export function onFabricApiFailed(handler: (failed: FabricApiFailed) => void): Promise<UnlistenFn> {
+  return listen<FabricApiFailed>(EVENTS.loaderFabricApiFailed, (event) => handler(event.payload));
 }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { AppError } from "../../bindings/AppError";
 import type { LoaderVersion } from "../../bindings/LoaderVersion";
-import { defaultVersion, loaderInstallArgs, toState, visibleVersions } from "./loaders";
+import {
+  defaultVersion,
+  fabricApiRetryRoute,
+  loaderInstallArgs,
+  toState,
+  visibleVersions,
+} from "./loaders";
 
 const v = (version: string, stable = true, recommended = false): LoaderVersion => ({
   kind: "forge",
@@ -68,5 +74,15 @@ describe("loaderInstallArgs", () => {
     expect(loaderInstallArgs("i", { kind: "quilt", version: "0.26.0" }, true).with_fabric_api).toBe(
       false,
     );
+  });
+});
+
+describe("fabricApiRetryRoute", () => {
+  it("opens the mod tab of the instance's resource page", () => {
+    expect(fabricApiRetryRoute("abc")).toEqual({
+      name: "instance-resources",
+      params: { id: "abc" },
+      query: { kind: "mod" },
+    });
   });
 });

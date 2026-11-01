@@ -5,12 +5,14 @@ import { NIcon, NTooltip } from "naive-ui";
 import { onBeforeUnmount, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
+import { useFabricApiWarning } from "../components/loader-picker/useFabricApiWarning";
 import TaskCenter from "../components/tasks/TaskCenter.vue";
 import { FOOTER_NAV, MAIN_NAV, type NavItem } from "./nav";
 import TitleBar from "./TitleBar.vue";
 
 const { t } = useI18n();
 const route = useRoute();
+useFabricApiWarning();
 
 /** 与 Win11 NavigationView 一致：窗口宽度小于 1008 px 时收起为图标栏，用户仍可手动展开。 */
 const narrow = window.matchMedia("(max-width: 1007px)");

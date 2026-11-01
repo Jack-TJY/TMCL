@@ -63,3 +63,12 @@ export function loaderInstallArgs(
     with_fabric_api: spec.kind === "fabric" && fabricApi,
   };
 }
+
+/** Fabric API 安装失败时引导用户前往的页面：该实例资源页的 Mod 标签。 */
+export function fabricApiRetryRoute(instanceId: string) {
+  return {
+    name: "instance-resources",
+    params: { id: instanceId },
+    query: { kind: "mod" },
+  } as const;
+}
