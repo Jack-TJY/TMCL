@@ -50,7 +50,7 @@
 
 `p2p/`（`DataPaths::p2p_dir()`，首次联机时创建）：`easytier/<版本>/` 下是从 EasyTier 官方 GitHub Releases 下载、按内置 SHA-256 校验后解压的 `easytier-core`、`easytier-cli`（Windows 另有 `Packet.dll`），解压完成后写入 `.complete`；没有 `.complete` 的目录视为未安装，下次重新下载。
 
-`p2p/easytier.log`：`easytier-core` 的启动参数与 stdout/stderr（网络密钥已替换为 `***`），用于排查各节点的连接情况。每次启动 `easytier-core` 时把已有文件改名为 `easytier.old.log`（覆盖更旧的），单个文件超过 2 MB 时再轮转，因此最多两份、每份不超过 2 MB。日志保留对端与公共节点的公网 IP（排查节点连通性需要）。导出诊断信息时两份都以 `p2p/easytier.log`、`p2p/easytier.old.log` 放进包内，并与其他文件一样脱敏（令牌、玩家名、UUID、账号 ID、主目录、路径中的用户名、系统用户名、计算机名、邮箱）。
+`p2p/easytier.log`：`easytier-core` 的启动参数与 stdout/stderr（网络密钥已替换为 `***`），用于排查各节点的连接情况。每次启动 `easytier-core` 时把已有文件改名为 `easytier.old.log`（覆盖更旧的），单个文件超过 2 MB 时再轮转，因此最多两份、每份不超过 2 MB。本机日志保留对端与公共节点的公网 IP（排查节点连通性需要）。导出诊断信息时两份都以 `p2p/easytier.log`、`p2p/easytier.old.log` 放进包内：IPv4 / IPv6 地址替换为 `<ip>`（端口保留，如 `<ip>:11010`），并与其他文件一样脱敏（令牌、玩家名、UUID、账号 ID、主目录、路径中的用户名、系统用户名、计算机名、邮箱）。
 
 ## 3. config.json
 

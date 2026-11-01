@@ -1,7 +1,7 @@
 //! `diagnostics_*` 命令：导出诊断信息包（PLAN.md M2-16）。
 //!
 //! 包内容：系统信息、`config.json`、账号概况、实例列表与配置、检测到的 Java、
-//! 最近 7 天的启动器日志、EasyTier 日志（`p2p/easytier*.log`）。写入前全部经过
+//! 最近 7 天的启动器日志、EasyTier 日志（`p2p/easytier*.log`，IP 地址替换为 `<ip>`）。写入前全部经过
 //! [`Scrubber`]：令牌、玩家名、玩家 UUID、账号 ID、用户主目录、路径中的用户名、
 //! 系统用户名、计算机名与邮箱都会被替换。
 
@@ -10,7 +10,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::State;
-use tmcl_common::diagnostics::{Scrubber, read_log, read_logs, write_bundle};
+use tmcl_common::diagnostics::{Scrubber, read_log, read_logs, strip_ips, write_bundle};
 use tmcl_common::{AppError, AppResult, DataPaths, ErrorCode};
 use tmcl_instance::InstanceStore;
 use ts_rs::TS;
@@ -77,9 +77,10 @@ async fn export(state: &AppState, dest: &str) -> AppResult<DiagnosticsExported> 
         for (name, text) in read_logs(&paths.logs_dir())? {
             files.push((format!("logs/{name}"), text));
         }
+        // 本机的 EasyTier 日志保留 IP 便于排查；放进诊断包时去掉。
         for name in [tmcl_p2p::EASYTIER_LOG_OLD, tmcl_p2p::EASYTIER_LOG] {
             if let Some(text) = read_log(&paths.p2p_dir().join(name))? {
-                files.push((format!("p2p/{name}"), text));
+                files.push((format!("p2p/{name}"), strip_ips(&text)));
             }
         }
         write_bundle(&dest, &files, &scrubber)?;
@@ -285,7 +286,7 @@ mod tests {
         std::fs::write(
             paths.p2p_dir().join(tmcl_p2p::EASYTIER_LOG),
             format!(
-                "peer {} connected, player Jack_TJY, dir {}\n",
+                "peer {} connected at 203.0.113.7:11010, player Jack_TJY, dir {}\n",
                 host.as_deref().unwrap_or("node"),
                 home.join("tmcl").display()
             ),
@@ -337,7 +338,9 @@ mod tests {
         let expected_host = if host.is_some() { "<hostname>" } else { "node" };
         assert_eq!(
             easytier,
-            format!("peer {expected_host} connected, player <player-1>, dir <home>{sep}tmcl\n")
+            format!(
+                "peer {expected_host} connected at <ip>:11010, player <player-1>, dir <home>{sep}tmcl\n"
+            )
         );
     }
 }
