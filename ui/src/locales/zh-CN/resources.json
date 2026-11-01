@@ -154,7 +154,8 @@
     "needsLoader": "Mod 需要选择一个加载器",
     "confirm": "创建并下载",
     "started": "已开始下载“{name}”，完成后会继续安装",
-    "ready": "“{name}”已就绪，继续安装“{title}”"
+    "ready": "“{name}”已就绪，继续安装“{title}”",
+    "manual": "“{name}”已就绪，但“{title}”需要手动选择版本或处理冲突，请在资源页选中该实例后安装"
   },
   "creditBoth": "数据来自 Modrinth 与 CurseForge"
 }

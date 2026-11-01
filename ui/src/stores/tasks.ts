@@ -69,6 +69,8 @@ export const useTasksStore = defineStore("tasks", () => {
   const entries = ref<TaskEntry[]>([]);
   /** 事件先于 `start` 返回到达时，暂存的结束事件。 */
   const early = new Map<TaskId, TaskFinished>();
+  /** 任务成功后要执行的后续动作（例如新建实例后继续安装资源），与页面是否还在无关。 */
+  const followUps = new Map<TaskId, () => void>();
   let initialized: Promise<void> | null = null;
 
   const running = computed(() => entries.value.filter((e) => e.status === "running"));
@@ -124,6 +126,19 @@ export const useTasksStore = defineStore("tasks", () => {
     entry.status = finished.state;
     entry.finished_at = Date.now();
     entry.error = finished.error ?? null;
+    const next = followUps.get(finished.task_id);
+    followUps.delete(finished.task_id);
+    if (next && finished.state === "succeeded") next();
+  }
+
+  /**
+   * 任务成功后执行 `fn`；任务已经成功时立即执行，失败或取消时丢弃。
+   * 放在 store 里而不是页面里，用户离开页面后照样执行。
+   */
+  function afterSuccess(taskId: TaskId, fn: () => void) {
+    const entry = find(taskId);
+    if (entry?.status === "succeeded") fn();
+    else if (!entry || entry.status === "running") followUps.set(taskId, fn);
   }
 
   /** 订阅事件并读取已有任务；重复调用只执行一次。没有后端时保持空列表。 */
@@ -208,6 +223,7 @@ export const useTasksStore = defineStore("tasks", () => {
     installing,
     init,
     start,
+    afterSuccess,
     retry,
     cancel,
     dismiss,

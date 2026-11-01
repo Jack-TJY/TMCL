@@ -74,6 +74,30 @@ describe("tasks store", () => {
     expect(store.overallProgress).toBeNull();
   });
 
+  it("runs a follow-up only after its task succeeds", async () => {
+    tauriInvoke.mockResolvedValueOnce({ tasks: [] });
+    const store = useTasksStore();
+    const start = vi
+      .fn()
+      .mockResolvedValueOnce({ task_id: "ok" })
+      .mockResolvedValueOnce({ task_id: "bad" });
+    await store.start({ kind: "loader_install", label: "a", start });
+    await store.start({ kind: "loader_install", label: "b", start });
+    const onOk = vi.fn();
+    const onBad = vi.fn();
+    store.afterSuccess("ok", onOk);
+    store.afterSuccess("bad", onBad);
+
+    emit("task:finished", { task_id: "ok", state: "succeeded" });
+    emit("task:finished", { task_id: "bad", state: "failed", error: NETWORK_ERROR });
+    expect(onOk).toHaveBeenCalledOnce();
+    expect(onBad).not.toHaveBeenCalled();
+
+    const late = vi.fn();
+    store.afterSuccess("ok", late);
+    expect(late).toHaveBeenCalledOnce();
+  });
+
   it("applies a finish event that arrives before start returns", async () => {
     tauriInvoke.mockResolvedValueOnce({ tasks: [] });
     const store = useTasksStore();

@@ -154,7 +154,8 @@
     "needsLoader": "Mods need a loader",
     "confirm": "Create and download",
     "started": "Downloading \"{name}\"; installation continues when it finishes",
-    "ready": "\"{name}\" is ready; continuing to install \"{title}\""
+    "ready": "\"{name}\" is ready; continuing to install \"{title}\"",
+    "manual": "\"{name}\" is ready, but \"{title}\" needs a version choice or has conflicts; select the instance on the Resources page to install it"
   },
   "creditBoth": "Data from Modrinth and CurseForge"
 }
