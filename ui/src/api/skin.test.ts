@@ -7,6 +7,8 @@ import {
   skinFileRead,
   skinLibraryAddTexture,
   skinLibraryList,
+  skinLibraryLocation,
+  skinLibrarySetLocation,
   skinSetCape,
   skinTexture,
 } from "./skin";
@@ -45,5 +47,20 @@ describe("skin commands", () => {
     const error = { code: "SKIN_INVALID_IMAGE", params: {}, detail: null };
     tauriInvoke.mockRejectedValue(error);
     await expect(skinFileRead({ path: "x.png" })).rejects.toEqual(error);
+  });
+
+  it("reads and changes the library location", async () => {
+    const location = { dir: "D:\\OneDrive\\TMCL skins", custom: true };
+    tauriInvoke.mockResolvedValue(location);
+    expect(await skinLibraryLocation()).toEqual(location);
+    expect(tauriInvoke).toHaveBeenLastCalledWith("skin_library_location", undefined);
+    await skinLibrarySetLocation({ dir: location.dir, copy_existing: true });
+    expect(tauriInvoke).toHaveBeenLastCalledWith("skin_library_set_location", {
+      args: { dir: location.dir, copy_existing: true },
+    });
+    await skinLibrarySetLocation({ copy_existing: false });
+    expect(tauriInvoke).toHaveBeenLastCalledWith("skin_library_set_location", {
+      args: { copy_existing: false },
+    });
   });
 });

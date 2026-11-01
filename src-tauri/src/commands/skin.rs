@@ -1,20 +1,21 @@
 //! `skin_*` 命令（PLAN.md M2-07）：本地皮肤库、正版账号的皮肤与披风、外置登录账号的皮肤站。
 //!
-//! 皮肤库位于 `<data_root>/skins/`，界面经 `skin_library_read` 取回图片内容，不直接访问文件系统；
+//! 皮肤库默认位于 `<data_root>/skins/`，可经 `skin_library_set_location` 改到任意文件夹
+//! （例如网盘同步文件夹），位置记在 `config.json` 的 `skins.library_dir`。界面经 `skin_library_read` 取回图片内容，不直接访问文件系统；
 //! 拖入的 PNG 经 `skin_file_read`、档案中的图片经 `skin_texture` 取回；
 //! 档案中正在使用的皮肤经 `skin_library_add_texture` 加入皮肤库。
 //! 正版接口使用的 Minecraft 访问令牌经 `tmcl_auth::store::prepare_launch` 取得（快过期时续期），
 //! 不写入日志。
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use tauri::ipc::Response;
 use tmcl_auth::accounts::{self, Account};
 use tmcl_auth::{AccountKind, AuthlibServer, store};
-use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
+use tmcl_common::{AppError, AppResult, Config, DataPaths, ErrorCode, TaskCtx, write_atomic};
 use tmcl_net::HttpClient;
 use tmcl_skin::library::MAX_SKIN_BYTES;
 use tmcl_skin::{
@@ -117,8 +118,110 @@ pub struct SkinSite {
     pub url: String,
 }
 
+/// 皮肤库的位置。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct SkinLibraryLocation {
+    /// 皮肤库文件夹的绝对路径。
+    pub dir: String,
+    /// 是否为用户自定义的位置（否则是默认的 `<data_root>/skins/`）。
+    pub custom: bool,
+}
+
+/// `skin_library_set_location` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SkinSetLocationArgs {
+    /// 新位置的绝对路径；`null` 恢复默认位置。
+    #[serde(default)]
+    #[ts(optional)]
+    pub dir: Option<String>,
+    /// 是否把当前皮肤库中新位置还没有的皮肤复制过去（不删除原有文件）。
+    pub copy_existing: bool,
+}
+
+/// 读取 `config.json` 中的自定义位置；文件缺失或损坏时用默认位置（只读不备份）。
+fn custom_dir(paths: &DataPaths) -> Option<PathBuf> {
+    fs::read(paths.config_file())
+        .ok()
+        .and_then(|bytes| Config::parse(&bytes).ok())
+        .and_then(|config| config.skins.library_dir)
+        .map(PathBuf::from)
+        .filter(|dir| dir.is_absolute())
+}
+
+fn location(paths: &DataPaths) -> (PathBuf, bool) {
+    match custom_dir(paths) {
+        Some(dir) => (dir, true),
+        None => (paths.skins_dir(), false),
+    }
+}
+
 fn library(state: &AppState) -> AppResult<SkinLibrary> {
-    Ok(SkinLibrary::new(state.data()?.skins_dir()))
+    Ok(SkinLibrary::new(location(state.data()?).0))
+}
+
+fn location_of(paths: &DataPaths) -> SkinLibraryLocation {
+    let (dir, custom) = location(paths);
+    SkinLibraryLocation {
+        dir: dir.display().to_string(),
+        custom,
+    }
+}
+
+/// 确认文件夹可用：绝对路径、能创建、能写入。
+fn check_writable(dir: &Path) -> AppResult<()> {
+    if !dir.is_absolute() {
+        return Err(AppError::new(ErrorCode::CommonInternal)
+            .with_param("path", dir.display())
+            .with_detail("skin library dir must be absolute"));
+    }
+    let io_error = |e: std::io::Error| AppError::from(e).with_param("path", dir.display());
+    fs::create_dir_all(dir).map_err(io_error)?;
+    let probe = dir.join(".tmcl-write-test");
+    write_atomic(&probe, b"").map_err(|e| e.with_param("path", dir.display()))?;
+    fs::remove_file(&probe).map_err(io_error)
+}
+
+/// 皮肤库的当前位置。
+#[tauri::command]
+pub async fn skin_library_location(
+    state: State<'_, AppState>,
+) -> Result<SkinLibraryLocation, AppError> {
+    Ok(location_of(state.data()?))
+}
+
+/// 更改皮肤库位置，可选把当前的皮肤复制过去；返回新的位置。
+/// 路径不是绝对路径返回 `COMMON_INTERNAL`，无法创建或写入返回 `COMMON_IO`（`params.path`）。
+#[tauri::command]
+pub async fn skin_library_set_location(
+    state: State<'_, AppState>,
+    args: SkinSetLocationArgs,
+) -> Result<SkinLibraryLocation, AppError> {
+    let paths = state.data()?;
+    let _guard = state.config_lock.lock().await;
+    let current = SkinLibrary::new(location(paths).0);
+    // 选中默认位置等同于恢复默认。
+    let dir = args
+        .dir
+        .map(PathBuf::from)
+        .filter(|dir| *dir != paths.skins_dir());
+    let target = SkinLibrary::new(dir.clone().unwrap_or_else(|| paths.skins_dir()));
+    check_writable(target.dir())?;
+    if args.copy_existing && current.dir() != target.dir() {
+        current.copy_into(&target)?;
+    }
+    let path = paths.config_file();
+    let mut config = Config::load(&path)?.config;
+    config.skins.library_dir = dir.map(|dir| dir.display().to_string());
+    config.save(&path)?;
+    Ok(location_of(paths))
+}
+
+/// 在系统文件管理器中打开皮肤库文件夹（不存在时先创建）。
+#[tauri::command]
+pub async fn skin_library_open_dir(state: State<'_, AppState>) -> Result<(), AppError> {
+    let dir = location(state.data()?).0;
+    fs::create_dir_all(&dir).map_err(|e| AppError::from(e).with_param("path", dir.display()))?;
+    open_in_file_manager(&dir)
 }
 
 /// 皮肤库中的所有皮肤。

@@ -195,6 +195,15 @@ impl Default for P2pConfig {
     }
 }
 
+/// 皮肤库设置。
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(default)]
+pub struct SkinsConfig {
+    /// 皮肤库文件夹的绝对路径；`null` 为默认的 `<data_root>/skins/`。
+    /// 指向网盘同步文件夹或另一个安装目录的皮肤库，即可在多台电脑、多个 TMCL 间共用。
+    pub library_dir: Option<String>,
+}
+
 /// 启动器设置。缺失的字段取默认值，未知字段被忽略。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default)]
@@ -213,6 +222,8 @@ pub struct Config {
     pub download: DownloadConfig,
     /// P2P 联机设置。
     pub p2p: P2pConfig,
+    /// 皮肤库设置。
+    pub skins: SkinsConfig,
 }
 
 impl Default for Config {
@@ -225,6 +236,7 @@ impl Default for Config {
             memory: MemoryConfig::default(),
             download: DownloadConfig::default(),
             p2p: P2pConfig::default(),
+            skins: SkinsConfig::default(),
         }
     }
 }
@@ -412,6 +424,14 @@ mod tests {
         let err = Config::parse(br#"{"schema": 3}"#).unwrap_err();
         assert_eq!(err.code, ErrorCode::CommonConfigSchemaUnsupported);
         assert_eq!(err.params.get("schema").map(String::as_str), Some("3"));
+    }
+
+    #[test]
+    fn skins_library_dir_defaults_to_none() {
+        assert_eq!(Config::default().skins.library_dir, None);
+        let config =
+            Config::parse(br#"{"schema": 2, "skins": {"library_dir": "D:\\Skins"}}"#).unwrap();
+        assert_eq!(config.skins.library_dir.as_deref(), Some("D:\\Skins"));
     }
 
     #[test]

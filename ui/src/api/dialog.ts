@@ -20,6 +20,12 @@ export async function pickFiles(filters: FileFilter[]): Promise<string[]> {
   return typeof picked === "string" ? [picked] : [];
 }
 
+/** 选择一个文件夹；取消时为 `null`。 */
+export async function pickFolder(): Promise<string | null> {
+  const picked = await open({ multiple: false, directory: true });
+  return typeof picked === "string" ? picked : null;
+}
+
 /** 选择保存位置；`defaultPath` 为建议的完整路径或文件名，取消时为 `null`。 */
 export async function pickSavePath(
   filters: FileFilter[],

@@ -49,7 +49,8 @@ use crate::commands::settings::{
 };
 use crate::commands::skin::{
     SkinAccountArgs, SkinAddTextureArgs, SkinFileArgs, SkinIdArgs, SkinImportArgs, SkinLibraryList,
-    SkinSetCapeArgs, SkinSite, SkinTextureArgs, SkinUpdateArgs, SkinUploadArgs,
+    SkinLibraryLocation, SkinSetCapeArgs, SkinSetLocationArgs, SkinSite, SkinTextureArgs,
+    SkinUpdateArgs, SkinUploadArgs,
 };
 use crate::commands::sync::{
     SyncApplyResult, SyncCaptureArgs, SyncMaster, SyncPreview, SyncRestoreArgs, SyncRestoreResult,
@@ -180,8 +181,10 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SkinIdArgs::export_all(&cfg)?;
     SkinImportArgs::export_all(&cfg)?;
     SkinLibraryList::export_all(&cfg)?;
+    SkinLibraryLocation::export_all(&cfg)?;
     SkinProfile::export_all(&cfg)?;
     SkinSetCapeArgs::export_all(&cfg)?;
+    SkinSetLocationArgs::export_all(&cfg)?;
     SkinSite::export_all(&cfg)?;
     SkinTextureArgs::export_all(&cfg)?;
     SkinUpdateArgs::export_all(&cfg)?;
