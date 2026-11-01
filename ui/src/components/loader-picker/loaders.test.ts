@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AppError } from "../../bindings/AppError";
 import type { LoaderVersion } from "../../bindings/LoaderVersion";
-import { defaultVersion, toState, visibleVersions } from "./loaders";
+import { defaultVersion, loaderInstallArgs, toState, visibleVersions } from "./loaders";
 
 const v = (version: string, stable = true, recommended = false): LoaderVersion => ({
   kind: "forge",
@@ -51,5 +51,22 @@ describe("visibleVersions", () => {
     expect(visibleVersions(versions, true, null)).toHaveLength(3);
     expect(visibleVersions(versions, false, "0.17.0")).toHaveLength(3);
     expect(visibleVersions([v("1-beta", false)], false, null)).toHaveLength(1);
+  });
+});
+
+describe("loaderInstallArgs", () => {
+  it("asks for Fabric API only with Fabric", () => {
+    expect(loaderInstallArgs("i", { kind: "fabric", version: "0.16.5" }, true)).toEqual({
+      instance_id: "i",
+      kind: "fabric",
+      version: "0.16.5",
+      with_fabric_api: true,
+    });
+    expect(
+      loaderInstallArgs("i", { kind: "fabric", version: "0.16.5" }, false).with_fabric_api,
+    ).toBe(false);
+    expect(loaderInstallArgs("i", { kind: "quilt", version: "0.26.0" }, true).with_fabric_api).toBe(
+      false,
+    );
   });
 });

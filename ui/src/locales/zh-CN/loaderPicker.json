@@ -10,6 +10,7 @@
   "recommended": "推荐",
   "unstable": "测试版",
   "showUnstable": "显示测试版",
+  "fabricApi": "同时安装 Fabric API（大多数 Fabric 模组都需要它）",
   "bmclapi": "{name} 的版本列表与文件由 BMCLAPI（bangbang93，bmclapidoc.bangbang93.com）提供镜像加速，失败时自动回退官方源。",
   "change": {
     "title": "更换“{name}”的加载器",

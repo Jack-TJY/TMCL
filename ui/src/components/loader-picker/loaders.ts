@@ -1,6 +1,8 @@
 // 加载器选择组件的纯逻辑：加载状态、默认版本与可见版本，便于单元测试。
 import type { AppError } from "../../bindings/AppError";
+import type { LoaderInstallArgs } from "../../bindings/LoaderInstallArgs";
 import type { LoaderKind } from "../../bindings/LoaderKind";
+import type { LoaderSpec } from "../../bindings/LoaderSpec";
 import type { LoaderVersion } from "../../bindings/LoaderVersion";
 
 /** 界面中的加载器顺序。 */
@@ -46,4 +48,18 @@ export function visibleVersions(
   const stable = versions.filter((v) => v.stable);
   const selectedUnstable = versions.some((v) => v.version === selected && !v.stable);
   return showUnstable || stable.length === 0 || selectedUnstable ? [...versions] : stable;
+}
+
+/** `loader_install` 的参数：只有 Fabric 才带上“同时安装 Fabric API”的选择。 */
+export function loaderInstallArgs(
+  instanceId: string,
+  spec: LoaderSpec,
+  fabricApi: boolean,
+): LoaderInstallArgs {
+  return {
+    instance_id: instanceId,
+    kind: spec.kind,
+    version: spec.version,
+    with_fabric_api: spec.kind === "fabric" && fabricApi,
+  };
 }

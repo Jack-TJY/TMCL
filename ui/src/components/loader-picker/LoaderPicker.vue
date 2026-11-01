@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 加载器选择组件（PLAN.md M1-15）：按游戏版本列出四种加载器及其版本，默认选中推荐版本，
-// 不兼容的加载器灰显。`v-model` 为 `LoaderSpec`，`null` 表示原版。
+// 不兼容的加载器灰显。`v-model` 为 `LoaderSpec`，`null` 表示原版；选中 Fabric 时提供
+// “同时安装 Fabric API”（`v-model:fabric-api`，默认勾选）。
 import { NButton, NCheckbox, NSelect, NTag, type SelectOption } from "naive-ui";
 import { computed, h, ref, toRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -13,6 +14,7 @@ import { useLoaderVersions } from "./useLoaderVersions";
 
 const props = defineProps<{ gameVersion: string | null; disabled?: boolean }>();
 const model = defineModel<LoaderSpec | null>({ required: true });
+const fabricApi = defineModel<boolean>("fabricApi", { default: true });
 
 const { t } = useI18n();
 const settings = useSettingsStore();
@@ -173,6 +175,10 @@ const sourceNote = computed(() => {
         {{ t("loaderPicker.showUnstable") }}
       </NCheckbox>
     </div>
+
+    <NCheckbox v-if="model?.kind === 'fabric'" v-model:checked="fabricApi" :disabled="disabled">
+      {{ t("loaderPicker.fabricApi") }}
+    </NCheckbox>
 
     <div v-for="item in errorText" :key="item.kind" class="note error">
       <span>{{

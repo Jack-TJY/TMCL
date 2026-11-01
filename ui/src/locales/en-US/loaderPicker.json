@@ -10,6 +10,7 @@
   "recommended": "Recommended",
   "unstable": "Beta",
   "showUnstable": "Show beta versions",
+  "fabricApi": "Also install Fabric API (required by most Fabric mods)",
   "bmclapi": "{name} versions and files are mirrored by BMCLAPI (bangbang93, bmclapidoc.bangbang93.com), falling back to the official source on failure.",
   "change": {
     "title": "Change mod loader of \"{name}\"",
