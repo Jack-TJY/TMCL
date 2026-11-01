@@ -291,7 +291,7 @@ fn options(state: &AppState, player_name: &str) -> AppResult<SessionOptions> {
     })
 }
 
-/// 用陶瓦联机（HMCL）最新的节点列表替换内置的备用节点，提高与 HMCL / PCL-CE 共用节点的机会。
+/// 在内置的陶瓦备用节点之后加上陶瓦联机（HMCL）最新的节点列表，提高与 HMCL / PCL-CE 共用节点的机会。
 async fn with_latest_nodes(mut options: SessionOptions, ctx: &TaskCtx) -> SessionOptions {
     if let Ok(http) = tmcl_net::HttpClient::new() {
         let fetched = fetch_terracotta_nodes(&http, ctx).await;
