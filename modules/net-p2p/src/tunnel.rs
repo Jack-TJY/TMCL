@@ -4,10 +4,11 @@
 //! `--tcp-whitelist` / `--udp-whitelist` 只放行 Minecraft 端口和 Scaffolding 信令端口，
 //! 房客的白名单为 `0`，不接受任何入站连接（PLAN.md M2-12 安全验收项）。
 //! 网络密钥经环境变量 `ET_NETWORK_SECRET` 传入，不出现在命令行上。
+//! 输出（已去掉网络密钥）保留最近 200 行在内存中，并可写入 [`RotatingLog`]。
 
 use std::collections::VecDeque;
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -17,6 +18,7 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::{Child, Command};
 
 use crate::easytier::EasyTierBinaries;
+use crate::logfile::RotatingLog;
 use crate::punch::{Peer, parse_peers};
 use crate::room::{RoomCode, center_hostname};
 
@@ -159,12 +161,34 @@ pub struct Tunnel {
 }
 
 impl Tunnel {
-    /// 启动 `easytier-core`；进程在启动后很快退出时返回 `P2P_TUNNEL_EXITED`。
+    /// 启动 `easytier-core`，输出只保留在内存中；进程在启动后很快退出时返回 `P2P_TUNNEL_EXITED`。
     pub async fn start(binaries: &EasyTierBinaries, config: &TunnelConfig) -> AppResult<Self> {
+        Self::start_logged(binaries, config, None).await
+    }
+
+    /// 同 [`Tunnel::start`]，并把输出写到 `log_dir` 下的 `easytier.log`（启动时轮转上一份）。
+    /// 日志文件打不开时只记警告，不影响联机。
+    pub async fn start_logged(
+        binaries: &EasyTierBinaries,
+        config: &TunnelConfig,
+        log_dir: Option<&Path>,
+    ) -> AppResult<Self> {
         let rpc_port = free_local_port()?;
+        let args = config.args(rpc_port);
+        let file = log_dir.and_then(|dir| match RotatingLog::open(dir) {
+            Ok(mut file) => {
+                // 命令行里没有网络密钥，记下参数便于对照各节点的连接情况。
+                let _ = file.write_line(&format!("easytier-core {}", args.join(" ")));
+                Some(Arc::new(Mutex::new(file)))
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "无法打开 EasyTier 日志文件");
+                None
+            }
+        });
         let mut command = Command::new(&binaries.core);
         command
-            .args(config.args(rpc_port))
+            .args(args)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -187,10 +211,10 @@ impl Tunnel {
         let log = Arc::new(Mutex::new(VecDeque::with_capacity(LOG_LINES)));
         let secret = config.network_secret.clone();
         if let Some(out) = child.stdout.take() {
-            collect_lines(out, log.clone(), secret.clone());
+            collect_lines(out, log.clone(), file.clone(), secret.clone());
         }
         if let Some(err) = child.stderr.take() {
-            collect_lines(err, log.clone(), secret);
+            collect_lines(err, log.clone(), file, secret);
         }
         let mut tunnel = Self {
             child,
@@ -309,8 +333,12 @@ fn free_local_port() -> AppResult<u16> {
     Ok(listener.local_addr()?.port())
 }
 
-fn collect_lines<R>(reader: R, log: Arc<Mutex<VecDeque<String>>>, secret: String)
-where
+fn collect_lines<R>(
+    reader: R,
+    log: Arc<Mutex<VecDeque<String>>>,
+    file: Option<Arc<Mutex<RotatingLog>>>,
+    secret: String,
+) where
     R: AsyncRead + Unpin + Send + 'static,
 {
     tokio::spawn(async move {
@@ -322,6 +350,9 @@ where
                 line.replace(&secret, "***")
             };
             tracing::debug!(target: "easytier", "{line}");
+            if let Some(Ok(mut file)) = file.as_ref().map(|f| f.lock()) {
+                let _ = file.write_line(&line);
+            }
             if let Ok(mut log) = log.lock() {
                 if log.len() == LOG_LINES {
                     log.pop_front();
