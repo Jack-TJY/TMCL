@@ -2,7 +2,8 @@
 //!
 //! - 已安装的项目按 CurseForge 指纹反查（`mods/` 与目标目录），按项目判断，不论版本。
 //! - 必需前置（`relationType` = 3）在依赖项目中按实例过滤选文件：最新的正式版，没有时取最新。
-//!   找不到可用文件的前置记入 [`InstallPlan::unavailable`]。前置一律按 mod 安装。
+//!   找不到可用文件的前置改从 Modrinth 按短名或名称查找（见 [`crate::cross`]），仍找不到的
+//!   记入 [`crate::InstallPlan::unavailable`]。前置一律按 mod 安装。
 //! - 不兼容（`relationType` = 5）覆盖“计划 × 计划”与“计划 × 已安装”。
 //! - 作者禁止第三方分发的文件与整合包同样处理：先找 Modrinth 上 SHA1 相同的文件，再走
 //!   MCIM；都不行（没有 SHA1）时记为找不到可用文件。
@@ -13,15 +14,13 @@ use std::path::{Path, PathBuf};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
 use tmcl_net::DownloadItem;
 
-use crate::browse::{InstanceTarget, ResourceKind};
+use crate::browse::{InstanceTarget, ResourceKind, ResourcePlatform};
 use crate::curseforge::{
     CurseForgeClient, File, FileFilter, RelationType, ReleaseType, fingerprint,
 };
 use crate::deps::{Conflict, UnavailableDependency};
-use crate::install::{
-    InstallPlan, InstallRequest, PlannedFile, Prepared, file_name, kind_dir, local_files,
-};
-use crate::merged::curseforge_loader;
+use crate::install::{InstallRequest, PlannedFile, Prepared, file_name, kind_dir, local_files};
+use crate::merged::{curseforge_loader, same_name};
 use crate::modpack::curseforge::{MIRROR_BASE, mirror_url};
 use crate::modrinth::{HashAlgorithm, ModrinthClient};
 
@@ -29,11 +28,23 @@ use crate::modrinth::{HashAlgorithm, ModrinthClient};
 const MAX_FILES: usize = 64;
 
 /// 计划中的一个 CurseForge 文件。
-struct Planned {
+pub(crate) struct Planned {
     file: File,
     kind: ResourceKind,
-    title: String,
+    pub(crate) title: String,
     required_by: Option<String>,
+}
+
+/// 项目 ID → （名称，短名）。
+pub(crate) type Titles = HashMap<u32, (String, String)>;
+
+/// [`resolve`] 的结果。
+pub(crate) struct CfResolution {
+    pub(crate) planned: Vec<Planned>,
+    pub(crate) conflicts: Vec<Conflict>,
+    /// 在 CurseForge 上找不到可用文件的必需前置。
+    pub(crate) unavailable: Vec<UnavailableDependency>,
+    pub(crate) titles: Titles,
 }
 
 /// 生成 CurseForge 版本（文件 ID）的安装计划。文件不存在返回 `RESOURCES_VERSION_NOT_FOUND`。
@@ -64,36 +75,93 @@ pub(crate) async fn prepare(
         dirs.push(root_dir);
     }
     let installed = installed_projects(client, &dirs, ctx).await?;
+    let resolution = resolve(
+        client,
+        target,
+        &installed,
+        vec![(root, request.kind, None)],
+        &[],
+        ctx,
+    )
+    .await?;
 
-    let mut titles = HashMap::new();
-    let mut plan = InstallPlan {
-        files: Vec::new(),
+    // 在 CurseForge 上没有可用文件的前置改从 Modrinth 找。
+    let names: Vec<String> = resolution.planned.iter().map(|p| p.title.clone()).collect();
+    let inst = crate::cross::Instance {
+        target,
+        game_dir,
+        world,
+    };
+    let extra = crate::cross::from_modrinth(
+        modrinth,
+        &inst,
+        resolution.unavailable,
+        &resolution.titles,
+        &names,
+        ctx,
+    )
+    .await?;
+    let mut prepared = Prepared::default();
+    prepared.plan.conflicts = resolution.conflicts;
+    push_planned(
+        modrinth,
+        game_dir,
+        world,
+        &installed,
+        resolution.planned,
+        &mut prepared,
+        ctx,
+    )
+    .await?;
+    prepared.extend(extra);
+    Ok(prepared)
+}
+
+/// 从 `roots` 出发在 CurseForge 上递归解析必需前置并检查不兼容。已安装、已在计划中，或名称与
+/// `satisfied` 中某项相同（已从另一平台计划安装）的前置不再安装。
+pub(crate) async fn resolve(
+    client: &CurseForgeClient,
+    target: &InstanceTarget,
+    installed: &HashMap<u32, Vec<PathBuf>>,
+    roots: Vec<(File, ResourceKind, Option<String>)>,
+    satisfied: &[String],
+    ctx: &TaskCtx,
+) -> AppResult<CfResolution> {
+    let mut out = CfResolution {
+        planned: Vec::new(),
         conflicts: Vec::new(),
         unavailable: Vec::new(),
+        titles: Titles::new(),
     };
-    let mut planned: Vec<Planned> = Vec::new();
-    let mut queue = VecDeque::from([(root, request.kind, None::<String>)]);
+    let mut queue = VecDeque::from(roots);
     let mut seen = HashSet::new();
     while let Some((file, kind, required_by)) = queue.pop_front() {
-        if !seen.insert(file.mod_id) || planned.len() >= MAX_FILES {
+        if !seen.insert(file.mod_id) || out.planned.len() >= MAX_FILES {
             continue;
         }
         let deps: Vec<u32> = file.dependencies.iter().map(|d| d.mod_id).collect();
-        load_titles(client, &mut titles, file.mod_id, &deps, ctx).await?;
-        let title = title_of(&titles, file.mod_id);
+        load_titles(client, &mut out.titles, file.mod_id, &deps, ctx).await?;
+        let title = title_of(&out.titles, file.mod_id);
         for dep in &file.dependencies {
             match dep.relation_type {
                 RelationType::RequiredDependency => {
-                    if installed.contains_key(&dep.mod_id) || seen.contains(&dep.mod_id) {
+                    let elsewhere = out
+                        .titles
+                        .get(&dep.mod_id)
+                        .is_some_and(|(name, _)| satisfied.iter().any(|s| same_name(s, name)));
+                    if installed.contains_key(&dep.mod_id)
+                        || seen.contains(&dep.mod_id)
+                        || elsewhere
+                    {
                         continue;
                     }
                     match pick_file(client, target, dep.mod_id, ctx).await? {
                         Some(f) => {
                             queue.push_back((f, ResourceKind::Mod, Some(file.mod_id.to_string())))
                         }
-                        None => plan.unavailable.push(UnavailableDependency {
+                        None => out.unavailable.push(UnavailableDependency {
                             project_id: Some(dep.mod_id.to_string()),
-                            title: titles.get(&dep.mod_id).cloned(),
+                            title: out.titles.get(&dep.mod_id).map(|(name, _)| name.clone()),
                             required_by: file.mod_id.to_string(),
                         }),
                     }
@@ -101,11 +169,11 @@ pub(crate) async fn prepare(
                 RelationType::Incompatible => {
                     let with_installed = installed.contains_key(&dep.mod_id);
                     if with_installed || seen.contains(&dep.mod_id) {
-                        plan.conflicts.push(Conflict {
+                        out.conflicts.push(Conflict {
                             project_id: file.mod_id.to_string(),
                             title: title.clone(),
                             with_project_id: dep.mod_id.to_string(),
-                            with_title: title_of(&titles, dep.mod_id),
+                            with_title: title_of(&out.titles, dep.mod_id),
                             with_installed,
                         });
                     }
@@ -113,19 +181,26 @@ pub(crate) async fn prepare(
                 _ => {}
             }
         }
-        planned.push(Planned {
+        out.planned.push(Planned {
             file,
             kind,
             title,
             required_by,
         });
     }
+    Ok(out)
+}
 
-    let mut prepared = Prepared {
-        plan,
-        downloads: Vec::new(),
-        replaced: Vec::new(),
-    };
+/// 把解析出的文件加入计划：确定下载地址（见 [`download_item`]），无法下载的记为缺失。
+pub(crate) async fn push_planned(
+    modrinth: &ModrinthClient,
+    game_dir: &Path,
+    world: Option<&str>,
+    installed: &HashMap<u32, Vec<PathBuf>>,
+    planned: Vec<Planned>,
+    prepared: &mut Prepared,
+    ctx: &TaskCtx,
+) -> AppResult<()> {
     let blocked: Vec<String> = planned
         .iter()
         .filter(|p| p.file.download_item(Path::new("")).is_none())
@@ -160,13 +235,14 @@ pub(crate) async fn prepare(
             size: p.file.file_length,
             required_by: p.required_by,
             replaces: old.as_deref().map(file_name),
+            platform: ResourcePlatform::Curseforge,
         });
         if let Some(old) = old {
             prepared.replaced.push(old);
         }
         prepared.downloads.push(item);
     }
-    Ok(prepared)
+    Ok(())
 }
 
 /// 下载项：能直接下载的用官方地址；否则用 Modrinth 上的同一文件，再否则用 MCIM（需要 SHA1）。
@@ -224,7 +300,7 @@ async fn modrinth_urls(
 }
 
 /// 依赖项目中适用于实例的文件：最新的正式版，没有时取最新的可用文件。
-async fn pick_file(
+pub(crate) async fn pick_file(
     client: &CurseForgeClient,
     target: &InstanceTarget,
     mod_id: u32,
@@ -257,7 +333,7 @@ async fn pick_file(
 /// 补齐 `ids` 中还没有标题的项目。
 async fn load_titles(
     client: &CurseForgeClient,
-    titles: &mut HashMap<u32, String>,
+    titles: &mut Titles,
     id: u32,
     deps: &[u32],
     ctx: &TaskCtx,
@@ -267,17 +343,19 @@ async fn load_titles(
         .filter(|id| !titles.contains_key(id))
         .collect();
     for project in client.projects(&missing, ctx).await? {
-        titles.insert(project.id, project.name);
+        titles.insert(project.id, (project.name, project.slug));
     }
     Ok(())
 }
 
-fn title_of(titles: &HashMap<u32, String>, id: u32) -> String {
-    titles.get(&id).cloned().unwrap_or_else(|| id.to_string())
+fn title_of(titles: &Titles, id: u32) -> String {
+    titles
+        .get(&id)
+        .map_or_else(|| id.to_string(), |(name, _)| name.clone())
 }
 
 /// 目录中能在 CurseForge 按指纹找到的文件：项目 ID → 文件路径。
-async fn installed_projects(
+pub(crate) async fn installed_projects(
     client: &CurseForgeClient,
     dirs: &[PathBuf],
     ctx: &TaskCtx,

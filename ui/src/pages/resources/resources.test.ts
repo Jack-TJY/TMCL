@@ -87,6 +87,7 @@ describe("resources page helpers", () => {
       size: 100,
       required_by: null,
       replaces: null,
+      platform: "modrinth" as const,
     };
     expect(planSize({ ...emptyPlan, files: [file, { ...file, size: 50 }] })).toBe(150);
   });

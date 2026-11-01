@@ -263,12 +263,25 @@ async function confirm() {
             }}
           </div>
           <ul class="files">
-            <li v-for="file in plan.files" :key="file.version_id">
+            <li v-for="file in plan.files" :key="`${file.platform}-${file.version_id}`">
               <div class="file-main">
                 <span class="file-title">{{ file.title }}</span>
                 <span class="file-version">{{ file.version_number }}</span>
                 <NTag v-if="file.required_by" size="small" round :bordered="false">
                   {{ t("resources.install.dependency") }}
+                </NTag>
+                <NTag
+                  v-if="file.platform !== platform"
+                  size="small"
+                  round
+                  type="info"
+                  :bordered="false"
+                >
+                  {{
+                    t("resources.install.fromPlatform", {
+                      platform: t(`resources.browse.platform.${file.platform}`),
+                    })
+                  }}
                 </NTag>
                 <span class="file-size">{{ formatSize(file.size) }}</span>
               </div>

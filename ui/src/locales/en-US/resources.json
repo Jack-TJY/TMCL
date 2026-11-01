@@ -84,7 +84,8 @@
     "cancel": "Cancel",
     "confirm": "Install",
     "started": "Installing \"{name}\". Check the task center for progress",
-    "source": "Source"
+    "source": "Source",
+    "fromPlatform": "From {platform}"
   },
   "channel": {
     "release": "Release",
