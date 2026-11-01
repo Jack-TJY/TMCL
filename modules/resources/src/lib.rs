@@ -6,6 +6,7 @@
 //! - [`curseforge`]：CurseForge API v1 客户端，key 在构建期注入，没有 key 时整体隐藏。
 //! - [`browse`]：按实例的游戏版本与加载器统一搜索 mod、资源包、光影、数据包。
 //! - [`deps`]：递归解析必需前置，安装前检查不兼容。
+//! - [`fabric_api`]：安装 Fabric 加载器时一同安装匹配的 Fabric API。
 //! - [`install`]：生成安装计划并下载到实例的对应目录（Modrinth 或 CurseForge）。
 //! - [`merged`]：合并 Modrinth 与 CurseForge 的资源搜索。
 //! - [`modpack`]：Modrinth 整合包（`.mrpack`）安装为新实例，或把实例导出为 `.mrpack`。
@@ -15,6 +16,7 @@ pub mod browse;
 mod cf_install;
 pub mod curseforge;
 pub mod deps;
+pub mod fabric_api;
 pub mod install;
 pub mod merged;
 pub mod modpack;
@@ -23,7 +25,7 @@ pub mod update;
 
 pub use browse::{
     BrowseQuery, InstanceTarget, ResourceChannel, ResourceHit, ResourceKind, ResourcePage,
-    ResourcePlatform, ResourceRef, ResourceSort, ResourceVersion,
+    ResourcePlatform, ResourceRef, ResourceSort, ResourceTarget, ResourceVersion,
 };
 pub use deps::{Conflict, InstalledVersion, Resolution, Resolved, UnavailableDependency};
 pub use install::{InstallPlan, InstallRequest, PlannedFile, ResourceInstaller};

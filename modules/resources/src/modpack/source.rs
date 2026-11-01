@@ -110,6 +110,7 @@ pub async fn versions(
         loaders: Vec::new(),
         game_versions: game_version.map(ToOwned::to_owned).into_iter().collect(),
         featured: None,
+        without_changelog: false,
     };
     let versions = match client.project_versions(project_id, &filter, ctx).await {
         Ok(versions) => versions,

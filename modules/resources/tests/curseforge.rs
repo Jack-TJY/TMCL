@@ -280,3 +280,29 @@ async fn online_search_and_cdn_download() {
         .unwrap();
     assert_eq!(fingerprint::of_bytes(&bytes), file.file_fingerprint);
 }
+
+#[tokio::test]
+async fn targets_come_from_latest_file_indexes() {
+    let server = MockServer::start(|req, _| match req.path() {
+        "/v1/mods/238222" => Response::json(MOD),
+        _ => Response::status(404),
+    })
+    .await;
+    let client = client(&server);
+    let targets = tmcl_resources::merged::targets_curseforge(&client, "238222", &ctx())
+        .await
+        .unwrap();
+    let pairs: Vec<(&str, &[String])> = targets
+        .iter()
+        .map(|t| (t.game_version.as_str(), t.loaders.as_slice()))
+        .collect();
+    assert_eq!(pairs[0].0, "1.21.11");
+    assert_eq!(pairs[0].1, ["neoforge", "fabric"]);
+    assert_eq!(pairs[1], ("26.1", &["neoforge".to_owned()][..]));
+    for missing in ["1", "not-a-number"] {
+        let none = tmcl_resources::merged::targets_curseforge(&client, missing, &ctx())
+            .await
+            .unwrap();
+        assert!(none.is_empty(), "{missing}");
+    }
+}
