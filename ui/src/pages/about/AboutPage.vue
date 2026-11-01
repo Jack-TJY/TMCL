@@ -56,7 +56,7 @@ const selectedTexts = computed(() =>
               : t("about.versionUnknown")
           }}
         </div>
-        <div class="secondary">https://github.com/Jack-TJY/TMCL</div>
+        <div class="secondary url">https://github.com/Jack-TJY/TMCL</div>
       </div>
     </section>
 
@@ -73,7 +73,7 @@ const selectedTexts = computed(() =>
           <span class="name">EasyTier</span>
           <span class="secondary version">{{ easytierVersion ?? "" }}</span>
           <span class="secondary license">LGPL-3.0</span>
-          <span class="secondary">https://github.com/EasyTier/EasyTier</span>
+          <span class="secondary url">https://github.com/EasyTier/EasyTier</span>
         </li>
       </ul>
       <p class="secondary runtime-note">{{ t("about.runtime.easytier") }}</p>
@@ -113,7 +113,7 @@ const selectedTexts = computed(() =>
       :title="selected ? `${selected.name} ${selected.version}` : ''"
     >
       <template v-if="selected">
-        <p class="secondary">{{ selected.license }} · {{ selected.url }}</p>
+        <p class="secondary url">{{ selected.license }} · {{ selected.url }}</p>
         <pre v-for="(text, index) in selectedTexts" :key="index" class="license-text">{{
           text
         }}</pre>
@@ -210,9 +210,16 @@ section + section {
   cursor: pointer;
 }
 
+/* `<li>` 默认是 content-box，`width: 100%` 加左右内边距会超出列表边框。 */
 .runtime {
+  box-sizing: border-box;
   flex-wrap: wrap;
   cursor: default;
+}
+
+.url {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .runtime-note {
