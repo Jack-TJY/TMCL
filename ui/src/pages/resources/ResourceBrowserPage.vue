@@ -145,10 +145,16 @@ async function openLoaderDialog() {
   }
 }
 
+/**
+ * 本页发起的安装、加载器任务；成功后重新读取实例与已安装列表。
+ * 只在有任务结束时才改写 `watched`：getter 每次返回新数组，回调里无条件赋值会让
+ * 侦听器反复触发自己，界面卡死（beta.1 冒烟 R2）。
+ */
 const watched = ref<TaskId[]>([]);
 watch(
   () => watched.value.map((id) => tasks.entries.find((e) => e.task_id === id)?.status ?? "running"),
   (statuses) => {
+    if (statuses.every((s) => s === "running")) return;
     if (statuses.some((s) => s === "succeeded")) {
       void loadInstances().then(loadInstalled);
     }
