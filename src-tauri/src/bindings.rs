@@ -33,12 +33,13 @@ use crate::commands::layout::{LayoutSaveArgs, LayoutSnapshot};
 use crate::commands::loader::{LoaderInstallArgs, LoaderListArgs, LoaderVersionList};
 use crate::commands::p2p::{LanWorldList, P2pHostArgs, P2pInfo, P2pJoinArgs, P2pStatus};
 use crate::commands::resources::{
-    DetectedPack, ResourceSources, ResourceUpdateList, ResourceVersionList, ResourceWorldList,
-    ResourcesDirArgs, ResourcesImportArgs, ResourcesInstallArgs, ResourcesModpackExportArgs,
-    ResourcesModpackInspectArgs, ResourcesModpackInstallArgs, ResourcesModpackSearchArgs,
-    ResourcesModpackVersionsArgs, ResourcesOpenPageArgs, ResourcesPackDetectArgs,
-    ResourcesRemoveArgs, ResourcesSearchAnyArgs, ResourcesSearchArgs, ResourcesSetEnabledArgs,
-    ResourcesSetEnabledResult, ResourcesUpdateArgs, ResourcesVersionsArgs, ResourcesWorldsArgs,
+    DetectedPack, ResourceSources, ResourceTargetList, ResourceUpdateList, ResourceVersionList,
+    ResourceWorldList, ResourcesDirArgs, ResourcesImportArgs, ResourcesInstallArgs,
+    ResourcesModpackExportArgs, ResourcesModpackInspectArgs, ResourcesModpackInstallArgs,
+    ResourcesModpackSearchArgs, ResourcesModpackVersionsArgs, ResourcesOpenPageArgs,
+    ResourcesPackDetectArgs, ResourcesRemoveArgs, ResourcesSearchAnyArgs, ResourcesSearchArgs,
+    ResourcesSetEnabledArgs, ResourcesSetEnabledResult, ResourcesTargetsArgs, ResourcesUpdateArgs,
+    ResourcesVersionsArgs, ResourcesWorldsArgs,
 };
 use crate::commands::sakura::{
     SakuraKeyArgs, SakuraNodeList, SakuraPing, SakuraPingArgs, SakuraStatus, SakuraTunnelArgs,
@@ -130,6 +131,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ModpackInfo::export_all(&cfg)?;
     ResourcePage::export_all(&cfg)?;
     ResourceSources::export_all(&cfg)?;
+    ResourceTargetList::export_all(&cfg)?;
     ResourceUpdateList::export_all(&cfg)?;
     ResourceVersionList::export_all(&cfg)?;
     ResourceWorldList::export_all(&cfg)?;
@@ -149,6 +151,7 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     ResourcesSearchAnyArgs::export_all(&cfg)?;
     ResourcesSetEnabledArgs::export_all(&cfg)?;
     ResourcesSetEnabledResult::export_all(&cfg)?;
+    ResourcesTargetsArgs::export_all(&cfg)?;
     ResourcesUpdateArgs::export_all(&cfg)?;
     ResourcesVersionsArgs::export_all(&cfg)?;
     ResourcesWorldsArgs::export_all(&cfg)?;

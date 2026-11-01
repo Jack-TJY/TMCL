@@ -87,6 +87,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::resources::resources_search_any,
         commands::resources::resources_set_enabled,
         commands::resources::resources_sources,
+        commands::resources::resources_targets,
         commands::resources::resources_update,
         commands::resources::resources_versions,
         commands::resources::resources_worlds,
@@ -1226,6 +1227,10 @@ fov:0.0
         let mut state = AppState::with_data(Ok(paths));
         state.game.manifest_url = server.url("/manifest.json");
         state.loader.fabric_meta = server.url("/fabric");
+        state.modrinth = tmcl_resources::modrinth::ModrinthClient::with_base(
+            &tmcl_net::HttpClient::new().unwrap(),
+            &server.url("/v2"),
+        );
         let (app, webview) = mock_app_with(state);
         let body = json!({ "args": { "name": "x", "game_version": "custom" } });
         let config = invoke(&webview, "instance_create", body).unwrap();
@@ -1291,6 +1296,44 @@ fov:0.0
         assert_eq!(loader, json!({ "kind": "fabric", "version": "0.16.5" }));
         let list = invoke(&webview, "task_list", json!({})).unwrap();
         assert_eq!(list["tasks"][0]["kind"], "loader_install");
+    }
+
+    #[test]
+    fn loader_install_adds_fabric_api_when_asked() {
+        let (app, webview, server, dir, config) = loader_app();
+        let finished_rx = finished_events(&app);
+        let probe = dir.path().join("probe.jar");
+        std::fs::write(&probe, JAR).unwrap();
+        let sha1 = tauri::async_runtime::block_on(tmcl_net::sha1_file(&probe)).unwrap();
+        let name = "fabric-api-0.1.0+custom.jar";
+        let version = json!({ "id": "fa1", "project_id": "P7dR8mSH", "name": "Fabric API",
+            "version_number": "0.1.0+custom", "version_type": "release",
+            "game_versions": ["custom"], "loaders": ["fabric"],
+            "files": [{ "hashes": { "sha1": sha1 }, "url": server.url(&format!("/cdn/{name}")),
+                "filename": name, "primary": true, "size": JAR.len() }] });
+        let filter = [
+            ("loaders", r#"["fabric"]"#),
+            ("game_versions", r#"["custom"]"#),
+            ("include_changelog", "false"),
+        ];
+        server.route(
+            modrinth_target("/v2/project/P7dR8mSH/version", &filter),
+            json!([version]).to_string().into_bytes(),
+        );
+        server.route(format!("/cdn/{name}"), JAR.to_vec());
+        server.route(
+            "/fabric/v2/versions/loader/custom/0.16.5/profile/json",
+            br#"{"id":"fabric-loader-0.16.5-custom","inheritsFrom":"custom","type":"release",
+                 "mainClass":"net.fabricmc.loader.impl.launch.knot.KnotClient","libraries":[]}"#
+                .to_vec(),
+        );
+        let id = config["id"].as_str().unwrap();
+        let body = json!({ "args": { "instance_id": id, "kind": "fabric", "version": "0.16.5",
+            "with_fabric_api": true } });
+        let finished = run_task(&webview, &finished_rx, "loader_install", body);
+        assert_eq!(finished.state, TaskState::Succeeded, "{:?}", finished.error);
+        let mods = DataPaths::at(dir.path()).instance_game_dir(id).join("mods");
+        assert_eq!(std::fs::read(mods.join(name)).unwrap(), JAR);
     }
 
     /// 本地服务器上 Modrinth 请求的路径加查询串，编码方式与客户端相同。
@@ -1370,6 +1413,10 @@ fov:0.0
                 json!([version]),
             ),
             (
+                modrinth_target("/v2/project/P/version", &[("include_changelog", "false")]),
+                json!([version]),
+            ),
+            (
                 modrinth_target(
                     "/v2/search",
                     &[
@@ -1430,6 +1477,13 @@ fov:0.0
         let body = json!({ "args": { "kind": "mod", "query": "sod" } });
         let page = invoke(&webview, "resources_search_any", body).unwrap();
         assert_eq!(page["hits"][0]["game_versions"], json!(["1.20.1"]));
+
+        let body = json!({ "args": { "project_id": "P" } });
+        let list = invoke(&webview, "resources_targets", body).unwrap();
+        assert_eq!(
+            list["targets"],
+            json!([{ "game_version": "1.20.1", "loaders": ["fabric"] }])
+        );
 
         let body = json!({ "args": { "instance_id": "missing", "kind": "mod", "query": "" } });
         let err: AppError =

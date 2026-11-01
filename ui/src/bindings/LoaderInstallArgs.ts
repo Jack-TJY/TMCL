@@ -16,4 +16,9 @@ kind: LoaderKind,
 /**
  * 加载器版本，来自 `loader_list`。
  */
-version: string, };
+version: string, 
+/**
+ * 加载器为 Fabric 时是否同时把匹配游戏版本的 Fabric API 装进 `mods/`（已安装或该游戏版本
+ * 没有 Fabric API 时跳过）。省略表示不安装。
+ */
+with_fabric_api?: boolean, };

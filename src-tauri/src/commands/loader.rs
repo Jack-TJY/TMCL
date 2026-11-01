@@ -5,6 +5,7 @@ use tauri::{AppHandle, Runtime, State};
 use tmcl_common::{AppError, AppResult, DataPaths, Db, ErrorCode, TaskCtx};
 use tmcl_instance::{InstanceStore, JavaSetting, LoaderKind, LoaderSpec};
 use tmcl_loader::{JavaChoice, LoaderInstaller, LoaderVersion, list_versions};
+use tmcl_resources::fabric_api::install_fabric_api;
 use ts_rs::TS;
 
 use crate::events::{TaskStarted, spawn_task};
@@ -38,6 +39,11 @@ pub struct LoaderInstallArgs {
     pub kind: LoaderKind,
     /// 加载器版本，来自 `loader_list`。
     pub version: String,
+    /// 加载器为 Fabric 时是否同时把匹配游戏版本的 Fabric API 装进 `mods/`（已安装或该游戏版本
+    /// 没有 Fabric API 时跳过）。省略表示不安装。
+    #[serde(default)]
+    #[ts(optional)]
+    pub with_fabric_api: Option<bool>,
 }
 
 /// 列出 `kind` 在该游戏版本上可安装的版本，新版本在前。
@@ -65,7 +71,8 @@ pub async fn loader_list(
 
 /// 在实例上安装（或更换为）指定的加载器，立即返回任务 ID。
 ///
-/// 必要时先补全原版文件；安装成功后才把实例的 `loader` 改为新加载器，失败或取消时实例不变。
+/// 必要时先补全原版文件；Fabric 且 `with_fabric_api` 时随后安装 Fabric API。全部成功后才把
+/// 实例的 `loader` 改为新加载器，失败或取消时实例不变。
 #[tauri::command]
 pub async fn loader_install<R: Runtime>(
     app: AppHandle<R>,
@@ -83,6 +90,12 @@ pub async fn loader_install<R: Runtime>(
         .with_endpoints(state.loader.clone())
         .with_game_options(state.game.clone())
         .with_java(java);
+    let fabric_api = if args.kind == LoaderKind::Fabric && args.with_fabric_api == Some(true) {
+        let game_dir = paths.instance_game_dir(&args.instance_id);
+        Some((state.modrinth()?.clone(), state.downloader()?, game_dir))
+    } else {
+        None
+    };
     let game_version = config.game_version;
     Ok(spawn_task(
         &app,
@@ -91,6 +104,9 @@ pub async fn loader_install<R: Runtime>(
             installer
                 .install(args.kind, &game_version, &args.version, &ctx)
                 .await?;
+            if let Some((client, downloader, game_dir)) = &fabric_api {
+                install_fabric_api(client, downloader, game_dir, &game_version, &ctx).await?;
+            }
             ctx.check_cancelled()?;
             let loader = LoaderSpec {
                 kind: args.kind,
