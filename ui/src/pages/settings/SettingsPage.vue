@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 设置页（PLAN.md M1-11）：外观（背景与透明度见 appearance/，M1-19）、下载、联机节点（M2-12）、游戏、存储与关于。
-// 下载源与 Java 列表暂由 api/__mocks__ 提供，见该文件说明。
+// 下载源暂由 api/__mocks__ 提供，见该文件说明。
 import {
   ArrowDownload24Regular,
   Bug24Regular,
@@ -19,13 +19,15 @@ import { NButton, NColorPicker, NInputNumber, NSelect, NSlider, NTag, useMessage
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { mockJavaList, type DownloadSource, type JavaInstall } from "../../api/__mocks__/settings";
+import type { DownloadSource } from "../../api/__mocks__/settings";
 import { appInfo } from "../../api/app";
-import { pickSavePath } from "../../api/dialog";
+import { inUserDir, pickSavePath } from "../../api/dialog";
 import { diagnosticsExport } from "../../api/diagnostics";
 import { toAppError } from "../../api/invoke";
+import { javaList } from "../../api/java";
 import { settingsOpenDataDir } from "../../api/settings";
 import type { AppInfo } from "../../bindings/AppInfo";
+import type { JavaInstall } from "../../bindings/JavaInstall";
 import type { ThemeMode } from "../../bindings/ThemeMode";
 import { formatError, isLocale, LOCALE_NAMES, setLocale, SUPPORTED_LOCALES } from "../../i18n";
 import { useSettingsStore, type Settings } from "../../stores/settings";
@@ -59,9 +61,14 @@ const router = useRouter();
 
 const info = ref<AppInfo | null>(null);
 const javas = ref<JavaInstall[]>([]);
+/** Java 探测要逐个运行 `java`，较慢；完成前不显示“尚未发现”。 */
+const javaDetecting = ref(true);
 
 onMounted(async () => {
-  javas.value = await mockJavaList();
+  javaList()
+    .then((list) => (javas.value = list.javas))
+    .catch(() => (javas.value = []))
+    .finally(() => (javaDetecting.value = false));
   // 浏览器中调试时没有后端，版本号显示为占位符。
   info.value = await appInfo().catch(() => null);
 });
@@ -120,17 +127,18 @@ function openDataDir() {
 
 const exporting = ref(false);
 
-/** 默认文件名，例如 `tmcl-diagnostics-20261030-1903.zip`。 */
+/** 默认文件名，例如 `tmcl-diagnostics-20261030-190312.zip`。 */
 function diagnosticsFileName(now = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
-  return `tmcl-diagnostics-${date}-${pad(now.getHours())}${pad(now.getMinutes())}.zip`;
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return `tmcl-diagnostics-${date}-${time}.zip`;
 }
 
 async function exportDiagnostics() {
   const dest = await pickSavePath(
     [{ name: t("settings.diagnostics.filter"), extensions: ["zip"] }],
-    diagnosticsFileName(),
+    await inUserDir(diagnosticsFileName()),
   ).catch((err: unknown) => {
     showError(err);
     return null;
@@ -287,14 +295,18 @@ function setConcurrency(value: number | null) {
         :icon="DrinkCoffee24Regular"
         :title="t('settings.java.label')"
         :description="
-          javas.length ? t('settings.java.found', { count: javas.length }) : t('settings.java.none')
+          javaDetecting
+            ? t('settings.java.detecting')
+            : javas.length
+              ? t('settings.java.found', { count: javas.length })
+              : t('settings.java.none')
         "
       />
       <SettingRow
         v-for="java in javas"
         :key="java.path"
         :icon="DrinkCoffee24Regular"
-        :title="`Java ${java.version} · ${java.vendor} · ${java.arch}`"
+        :title="[`Java ${java.version}`, java.vendor, java.arch].filter(Boolean).join(' · ')"
         :description="java.path"
       >
         <NTag v-if="java.managed" size="small" :bordered="false">

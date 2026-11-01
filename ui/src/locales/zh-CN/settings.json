@@ -42,6 +42,7 @@
   },
   "java": {
     "label": "Java",
+    "detecting": "正在查找 Java…",
     "found": "已发现 {count} 个 Java",
     "none": "尚未发现 Java，启动游戏时会自动选择或下载",
     "managed": "由启动器管理"
@@ -52,7 +53,7 @@
   },
   "diagnostics": {
     "label": "导出诊断信息",
-    "description": "把启动器日志、系统信息和实例列表打包成 zip，反馈问题时附上。令牌、玩家名、账号 ID 和路径中的用户名会被替换",
+    "description": "把启动器与 EasyTier 日志、系统信息和实例列表打包成 zip，反馈问题时附上。令牌、玩家名、账号 ID、用户名和计算机名会被替换",
     "export": "导出",
     "done": "已导出诊断信息",
     "filter": "诊断信息包"

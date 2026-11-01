@@ -52,6 +52,8 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::instance::instance_refresh,
         commands::instance::instance_rename,
         commands::instance::instance_save,
+        // java
+        commands::java::java_list,
         // launch
         commands::launch::launch_kill,
         commands::launch::launch_running,

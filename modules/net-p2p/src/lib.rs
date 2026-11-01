@@ -8,6 +8,7 @@
 //! - [`easytier`]：运行时下载并校验 EasyTier。
 //! - [`nodes`]：默认公共节点与用户自定义节点。
 //! - [`tunnel`]：`easytier-core` 子进程与端口转发。
+//! - [`logfile`]：EasyTier 输出的日志文件与轮转。
 //! - [`punch`]：读取连接与 NAT 状态、查找联机中心。
 //! - [`signal`]：Scaffolding 联机信息获取协议（联机中心服务与房客客户端）。
 //! - [`session`]：开房与加入房间的完整流程。
@@ -16,6 +17,7 @@
 
 pub mod easytier;
 pub mod lan;
+pub mod logfile;
 pub mod nodes;
 pub mod punch;
 pub mod relay;
@@ -26,6 +28,7 @@ pub mod tunnel;
 
 pub use easytier::{EASYTIER_VERSION, EasyTierAsset, EasyTierBinaries, ensure_installed};
 pub use lan::{Announcer, LanWorld};
+pub use logfile::{EASYTIER_LOG, EASYTIER_LOG_OLD, RotatingLog};
 pub use nodes::{
     DEFAULT_PUBLIC_NODES, effective_nodes, fetch_terracotta_nodes, validate_node,
     with_terracotta_nodes,

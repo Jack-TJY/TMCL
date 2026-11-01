@@ -1,4 +1,5 @@
 // 系统文件对话框（tauri-plugin-dialog）。只返回用户选中的路径，不读写文件。
+import { documentDir, downloadDir, homeDir, join } from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 
 /** 文件类型筛选；`extensions` 不带点。 */
@@ -32,4 +33,19 @@ export async function pickSavePath(
   defaultPath?: string,
 ): Promise<string | null> {
   return (await save({ filters, defaultPath })) ?? null;
+}
+
+/**
+ * 把文件名放进用户的“下载”目录，取不到时依次退回“文档”与主目录；都取不到时原样返回文件名。
+ * 用作 {@link pickSavePath} 的 `defaultPath`：只给文件名时部分平台会从根目录打开对话框。
+ */
+export async function inUserDir(fileName: string): Promise<string> {
+  for (const dir of [downloadDir, documentDir, homeDir]) {
+    try {
+      return await join(await dir(), fileName);
+    } catch {
+      // 该目录在当前平台不存在，换下一个。
+    }
+  }
+  return fileName;
 }

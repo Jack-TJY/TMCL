@@ -42,7 +42,7 @@ pub struct SessionOptions {
     pub player: PlayerProfile,
     /// EasyTier 公共节点。
     pub peers: Vec<String>,
-    /// 写入进程号文件的目录（`DataPaths::p2p_dir()`）。
+    /// 写入进程号文件与 EasyTier 日志的目录（`DataPaths::p2p_dir()`）。
     pub state_dir: PathBuf,
 }
 
@@ -120,7 +120,7 @@ impl Session {
         let me = player.machine_id.clone();
         let server = SignalServer::start(player, mc_port).await?;
         let config = TunnelConfig::host(&room, options.peers, server.port(), mc_port);
-        let tunnel = Tunnel::start(binaries, &config).await?;
+        let tunnel = Tunnel::start_logged(binaries, &config, Some(&options.state_dir)).await?;
         write_pid(&options.state_dir, &tunnel);
         tracing::info!(?room, mc_port, "已开房");
         let tunnel = Arc::new(tokio::sync::Mutex::new(tunnel));
@@ -146,8 +146,8 @@ impl Session {
     ) -> AppResult<Self> {
         ctx.report(ProgressUpdate::new("p2p_connect"));
         cleanup_orphan(&options.state_dir).await;
-        let mut tunnel =
-            Tunnel::start(binaries, &TunnelConfig::guest(&room, options.peers)).await?;
+        let config = TunnelConfig::guest(&room, options.peers);
+        let mut tunnel = Tunnel::start_logged(binaries, &config, Some(&options.state_dir)).await?;
         write_pid(&options.state_dir, &tunnel);
         // 出错时结束 EasyTier 再返回；`?` 之外的路径都显式停止。
         match connect(&mut tunnel, options.player, ctx).await {

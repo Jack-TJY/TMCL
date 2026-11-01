@@ -370,9 +370,15 @@ function onAction(instance: InstanceSummary, action: CardAction) {
   margin-bottom: 12px;
 }
 
+/* 基准宽度不为 0：空间不足时整行换行，而不是把搜索框和“开始游戏”挤扁。 */
 .search {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 200px;
   max-width: 320px;
+}
+
+.toolbar > :deep(.launch) {
+  flex-shrink: 0;
 }
 
 .sort {

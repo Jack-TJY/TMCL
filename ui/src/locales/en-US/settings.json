@@ -42,6 +42,7 @@
   },
   "java": {
     "label": "Java",
+    "detecting": "Looking for Java…",
     "found": "{count} Java installations found",
     "none": "No Java found yet. One will be chosen or downloaded when the game starts",
     "managed": "Managed by TMCL"
@@ -52,7 +53,7 @@
   },
   "diagnostics": {
     "label": "Export diagnostics",
-    "description": "Bundle launcher logs, system info and the instance list into a zip to attach to bug reports. Tokens, player names, account IDs and user names in paths are removed",
+    "description": "Bundle launcher and EasyTier logs, system info and the instance list into a zip to attach to bug reports. Tokens, player names, account IDs, user names and the computer name are removed",
     "export": "Export",
     "done": "Diagnostics exported",
     "filter": "Diagnostics bundle"
