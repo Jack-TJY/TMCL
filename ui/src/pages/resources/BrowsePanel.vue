@@ -14,6 +14,7 @@ import {
   NSpin,
   NTag,
 } from "naive-ui";
+import { storeToRefs } from "pinia";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { toAppError } from "../../api/invoke";
@@ -28,6 +29,7 @@ import {
 } from "../../api/resources";
 import type { AppError } from "../../bindings/AppError";
 import { formatError } from "../../i18n";
+import { useResourceBrowseState } from "./browseState";
 import ResourceIcon from "./ResourceIcon.vue";
 import { formatCount, isInstalledHit, PAGE_SIZE, RESOURCE_SORTS } from "./resources";
 import { hitLoaders, loaderName, versionSummary } from "./targets";
@@ -46,8 +48,8 @@ const { t, locale } = useI18n();
 const query = ref("");
 const sort = ref<ResourceSort>("relevance");
 const page = ref(1);
-/** 平台过滤：`all` 为合并显示。 */
-const platform = ref<ResourcePlatform | "all">("all");
+/** 平台过滤：`all` 为合并显示；在本次运行中保留（B4）。 */
+const { platform } = storeToRefs(useResourceBrowseState());
 const curseforge = ref(false);
 const failed = ref<ResourcePlatform[]>([]);
 resourcesSources()
