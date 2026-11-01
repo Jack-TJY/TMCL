@@ -39,6 +39,7 @@ import { useAccountsStore } from "../../stores/accounts";
 import AccountSkinPanel from "./AccountSkinPanel.vue";
 import EditSkinDialog from "./EditSkinDialog.vue";
 import SkinLibraryGrid from "./SkinLibraryGrid.vue";
+import SkinLibraryLocation from "./SkinLibraryLocation.vue";
 import { fileStem, firstPng } from "./skins";
 
 /** 正在预览的皮肤来自哪里。 */
@@ -353,6 +354,7 @@ onBeforeUnmount(() => {
             <h2 class="section-title">{{ t("skin.library.title") }}</h2>
             <span class="hint">{{ t("skin.drop.tip") }}</span>
             <div class="spacer" />
+            <SkinLibraryLocation @changed="loadLibrary" />
             <NButton size="small" :loading="importing" @click="pickAndImport">
               <template #icon
                 ><NIcon><Add20Regular /></NIcon

@@ -35,7 +35,7 @@
 ├─ ui/
 │  ├─ layout.json            # 主页组件布局
 │  └─ backgrounds/           # 用户背景图
-├─ skins/                    # 本地皮肤库：<sha256>.png 与 index.json（M2-07）
+├─ skins/                    # 默认的本地皮肤库：<sha256>.png 与 <sha256>.json（M2-07）
 ├─ p2p/easytier/<版本>/      # 运行时下载的 EasyTier 程序（M2-12）
 ├─ cache/                    # 可随时清空
 └─ logs/                     # 启动器日志，已脱敏
@@ -45,7 +45,7 @@
 
 代码中一律通过 `DataPaths` 的方法取路径（`config_file()`、`instance_game_dir(id)` 等），不手写拼接。`DataPaths::ensure_dirs()` 创建上述固定目录，可重复调用。
 
-`skins/`（`DataPaths::skins_dir()`，首次导入皮肤时创建）：每张皮肤存为 `<sha256>.png`（文件内容的 SHA-256，小写十六进制，同一图片只存一份），`index.json` 为 `{ "schema": 1, "skins": [{ "id", "name", "variant": "classic"|"slim", "height": 64|32, "added_at": <unix 毫秒> }] }`；图片已丢失的条目读取时忽略。
+`skins/`（`DataPaths::skins_dir()`，首次导入皮肤时创建）：默认的皮肤库位置，可由 `config.json` 的 `skins.library_dir` 改到任意文件夹（例如网盘同步文件夹），供多台电脑、多个安装目录共用。每张皮肤是一对文件：`<sha256>.png`（文件内容的 SHA-256，小写十六进制，同一图片只存一份）与描述文件 `<sha256>.json` = `{ "schema": 2, "name", "variant": "classic"|"slim", "height": 64|32, "added_at": <unix 毫秒> }`。没有共享的索引文件，每次增删改只写这张皮肤自己的文件（原子写入），因此多处同时修改不会互相覆盖。读取时以图片为准：描述文件缺失或损坏时仍列出（名称取 ID 前 8 位、模型 `classic`、加入时间取图片修改时间）；文件名不是 `<64 位小写十六进制>.png` 的文件（如同步盘的冲突副本）忽略。旧版（schema 1）的 `index.json` = `{ "schema": 1, "skins": [{ "id", "name", "variant", "height", "added_at" }] }` 在首次读取时拆成描述文件（已有描述文件的不覆盖），原文件改名为 `index.json.bak`。
 
 `p2p/`（`DataPaths::p2p_dir()`，首次联机时创建）：`easytier/<版本>/` 下是从 EasyTier 官方 GitHub Releases 下载、按内置 SHA-256 校验后解压的 `easytier-core`、`easytier-cli`（Windows 另有 `Packet.dll`），解压完成后写入 `.complete`；没有 `.complete` 的目录视为未安装，下次重新下载。
 
@@ -85,6 +85,9 @@
   "p2p": {
     "use_default_nodes": true,
     "custom_nodes": []
+  },
+  "skins": {
+    "library_dir": null
   }
 }
 ```
@@ -112,6 +115,7 @@
 | `download.source` | `"auto"` \| `"official"` \| 镜像名（如 `"bmclapi"`） | `"auto"` | 下载源。`auto`：Forge、NeoForge、Fabric 先走 BMCLAPI（`bmclapi-loaders`），其余文件走官方源，失败都回退官方源。`bmclapi`：所有文件先走 BMCLAPI 再回退官方源。`mcim`：Modrinth 与 CurseForge 的文件（`cdn.modrinth.com`、`edge.forgecdn.net`）先走 MCIM 再回退官方源（MCIM 暂不提供文件，设置界面不提供此项）。未知名称按 `auto` 处理 |
 | `p2p.use_default_nodes` | 布尔 | `true` | P2P 联机是否使用内置的默认 EasyTier 公共节点（`tmcl_p2p::DEFAULT_PUBLIC_NODES`） |
 | `p2p.custom_nodes` | 字符串数组 | `[]` | 用户添加的 EasyTier 节点，形如 `tcp://主机:端口`（协议 tcp/udp/ws/wss/quic/wg/http/https/txt/srv），最多 16 个，排在默认节点之前使用；保存时逐项校验，无效时返回 `P2P_NODE_INVALID` |
+| `skins.library_dir` | 字符串 \| `null` | `null` | 皮肤库文件夹的绝对路径；`null` 或不是绝对路径时使用 `skins/`。经 `skin_library_set_location` 修改 |
 
 读写规则：
 

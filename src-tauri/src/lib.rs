@@ -113,8 +113,11 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::skin::skin_library_add_texture,
         commands::skin::skin_library_import,
         commands::skin::skin_library_list,
+        commands::skin::skin_library_location,
+        commands::skin::skin_library_open_dir,
         commands::skin::skin_library_read,
         commands::skin::skin_library_remove,
+        commands::skin::skin_library_set_location,
         commands::skin::skin_library_update,
         commands::skin::skin_open_site,
         commands::skin::skin_profile,
@@ -1902,6 +1905,69 @@ fov:0.0
         let body = json!({ "args": { "id": "../x", "name": "a", "variant": "slim" } });
         let err = invoke(&webview, "skin_library_update", body);
         assert_eq!(error_code(err), ErrorCode::SkinNotFound);
+    }
+
+    #[test]
+    fn skin_library_location_over_ipc() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = DataPaths::at(dir.path().join("data"));
+        let (_app, webview) = mock_app_with(AppState::with_data(Ok(paths.clone())));
+        let default = json!({ "dir": paths.skins_dir().display().to_string(), "custom": false });
+        assert_eq!(
+            invoke(&webview, "skin_library_location", json!({})).unwrap(),
+            default
+        );
+
+        let source = dir.path().join("a.png");
+        std::fs::write(&source, skin_png(64, 64)).unwrap();
+        let body = json!({ "args": { "path": source.display().to_string(), "variant": "slim" } });
+        let entry = invoke(&webview, "skin_library_import", body).unwrap();
+
+        // 换到“网盘”文件夹并复制现有皮肤；设置命令写入的其他字段保持不变。
+        let shared = dir.path().join("cloud").join("TMCL skins");
+        let body =
+            json!({ "args": { "dir": shared.display().to_string(), "copy_existing": true } });
+        let moved = invoke(&webview, "skin_library_set_location", body).unwrap();
+        assert_eq!(
+            moved,
+            json!({ "dir": shared.display().to_string(), "custom": true })
+        );
+        let list = invoke(&webview, "skin_library_list", json!({})).unwrap();
+        assert_eq!(list["skins"], json!([entry]));
+        assert!(
+            paths
+                .skins_dir()
+                .join(format!("{}.png", entry["id"].as_str().unwrap()))
+                .is_file()
+        );
+        let config = tmcl_common::Config::load(&paths.config_file())
+            .unwrap()
+            .config;
+        assert_eq!(
+            config.skins.library_dir.as_deref(),
+            Some(shared.display().to_string().as_str())
+        );
+
+        // 不复制：新位置是空的。
+        let empty = dir.path().join("empty");
+        let body =
+            json!({ "args": { "dir": empty.display().to_string(), "copy_existing": false } });
+        invoke(&webview, "skin_library_set_location", body).unwrap();
+        let list = invoke(&webview, "skin_library_list", json!({})).unwrap();
+        assert_eq!(list, json!({ "skins": [] }));
+
+        let body = json!({ "args": { "dir": "relative/skins", "copy_existing": false } });
+        let err = invoke(&webview, "skin_library_set_location", body);
+        assert_eq!(error_code(err), ErrorCode::CommonInternal);
+
+        // 恢复默认。
+        let body = json!({ "args": { "copy_existing": false } });
+        assert_eq!(
+            invoke(&webview, "skin_library_set_location", body).unwrap(),
+            default
+        );
+        let list = invoke(&webview, "skin_library_list", json!({})).unwrap();
+        assert_eq!(list["skins"], json!([entry]));
     }
 
     #[test]

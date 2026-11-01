@@ -64,5 +64,19 @@
     "authlib": "Skins for this account are managed on its skin site.",
     "openSite": "Open skin site",
     "offline": "Offline accounts have no online skin. You can still preview skins locally."
+  },
+  "location": {
+    "title": "Skin library location",
+    "default": "Default location (launcher data folder)",
+    "custom": "Custom location",
+    "open": "Open folder",
+    "change": "Change location…",
+    "reset": "Restore default location",
+    "tip": "Put the skin library in a cloud-synced folder, or point it at another TMCL's library, to share skins across computers and TMCL installs.",
+    "copyTitle": "Copy your current skins to the new location?",
+    "copyContent": "New location: {dir}\nFiles in the old location are kept, and skins already in the new location are not overwritten.",
+    "copy": "Copy them",
+    "noCopy": "Just switch",
+    "changed": "Skin library location changed"
   }
 }

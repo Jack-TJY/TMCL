@@ -6,15 +6,17 @@ import type { SkinFileArgs } from "../bindings/SkinFileArgs";
 import type { SkinIdArgs } from "../bindings/SkinIdArgs";
 import type { SkinImportArgs } from "../bindings/SkinImportArgs";
 import type { SkinLibraryList } from "../bindings/SkinLibraryList";
+import type { SkinLibraryLocation } from "../bindings/SkinLibraryLocation";
 import type { SkinProfile } from "../bindings/SkinProfile";
 import type { SkinSetCapeArgs } from "../bindings/SkinSetCapeArgs";
+import type { SkinSetLocationArgs } from "../bindings/SkinSetLocationArgs";
 import type { SkinSite } from "../bindings/SkinSite";
 import type { SkinTextureArgs } from "../bindings/SkinTextureArgs";
 import type { SkinUpdateArgs } from "../bindings/SkinUpdateArgs";
 import type { SkinUploadArgs } from "../bindings/SkinUploadArgs";
 import { invoke } from "./invoke";
 
-export type { SkinEntry, SkinProfile };
+export type { SkinEntry, SkinLibraryLocation, SkinProfile };
 export type { ProfileCape } from "../bindings/ProfileCape";
 export type { ProfileSkin } from "../bindings/ProfileSkin";
 export type { SkinVariant } from "../bindings/SkinVariant";
@@ -47,6 +49,21 @@ export function skinLibraryUpdate(args: SkinUpdateArgs): Promise<SkinEntry> {
 /** 从皮肤库删除。 */
 export function skinLibraryRemove(args: SkinIdArgs): Promise<void> {
   return invoke<void>("skin_library_remove", { args });
+}
+
+/** 皮肤库的当前位置。 */
+export function skinLibraryLocation(): Promise<SkinLibraryLocation> {
+  return invoke<SkinLibraryLocation>("skin_library_location");
+}
+
+/** 更改皮肤库位置（`dir` 省略时恢复默认），可选把现有皮肤复制过去。 */
+export function skinLibrarySetLocation(args: SkinSetLocationArgs): Promise<SkinLibraryLocation> {
+  return invoke<SkinLibraryLocation>("skin_library_set_location", { args });
+}
+
+/** 在系统文件管理器中打开皮肤库文件夹。 */
+export function skinLibraryOpenDir(): Promise<void> {
+  return invoke<void>("skin_library_open_dir");
 }
 
 /** 读取拖入的 PNG 供预览，不加入皮肤库。 */
