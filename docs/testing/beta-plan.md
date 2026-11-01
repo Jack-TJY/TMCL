@@ -193,7 +193,7 @@ GitHub 上 `P0` / `P1` / `P2` 标签目前表示“属于哪个里程碑”（�
 
 1. 确认 §1 的发布条件。版本号已在 `Cargo.toml`（`[workspace.package]`）、`Cargo.lock`、`package.json`、`ui/package.json`、`src-tauri/tauri.conf.json` 中改好，且 [CHANGELOG.md](../../CHANGELOG.md) 中该版本的“草稿”标记已去掉、日期已填。
 2. 在 `main` 上打 tag 并推送：`git tag v0.2.0-beta.N && git push origin v0.2.0-beta.N`，`build.yml` 会构建三平台安装包。
-3. 构建完成后下载产物，用 `gh release create v0.2.0-beta.N --prerelease --title "v0.2.0-beta.N" --notes-file <从 CHANGELOG 摘出的本版内容> <安装包…>` 发布。
+3. 按 [docs/releases/README.md](../releases/README.md) 的模板写好 `docs/releases/v0.2.0-beta.N.md`（随发布前的文档 PR 一起合并）。构建完成后下载产物，生成 `SHA256SUMS.txt`，用 `gh release create v0.2.0-beta.N --prerelease --title "TMCL v0.2.0-beta.N" --notes-file docs/releases/v0.2.0-beta.N.md <安装包…> SHA256SUMS.txt` 发布。
 4. 发布后在 W10 上用 Releases 页面的安装包快速跑 A1，并确认首页“更新日志”能看到新版本。
 5. 下一个 beta 开发开始时，把版本号改为 `0.2.0-beta.N+1`，在 CHANGELOG 中新开一节草稿。
 
