@@ -25,7 +25,7 @@ pub const TERRACOTTA_FALLBACK_NODE: &str =
 /// 读取陶瓦联机节点列表的超时。
 const TERRACOTTA_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// 默认公共节点。第三项在开房 / 加入时替换为 [`TERRACOTTA_NODE_LIST_URL`] 的最新列表。
+/// 默认公共节点。开房 / 加入时在第三项之后插入 [`TERRACOTTA_NODE_LIST_URL`] 的最新列表。
 pub const DEFAULT_PUBLIC_NODES: [&str; 5] = [
     "tcp://sh.vomiku.com:7910",
     "tcp://us01.225284.xyz:11010",
@@ -104,7 +104,10 @@ pub async fn fetch_terracotta_nodes(http: &HttpClient, ctx: &TaskCtx) -> Vec<Str
     }
 }
 
-/// 用读到的陶瓦联机节点替换列表中的 [`TERRACOTTA_FALLBACK_NODE`]（没有时不变），并去重。
+/// 在列表中的 [`TERRACOTTA_FALLBACK_NODE`] 之后插入读到的陶瓦联机节点（没有该节点时不变），并去重。
+///
+/// 备用节点本身保留：HMCL 开房时总会带上它，而 `/nodes` 接口返回的列表里不一定有它
+/// （2026-11-01 只返回 zkitefly 两个节点），替换掉会让 TMCL 加入 HMCL 的房间时找不到共同节点。
 pub fn with_terracotta_nodes(nodes: Vec<String>, fetched: &[String]) -> Vec<String> {
     if fetched.is_empty() {
         return nodes;
@@ -112,7 +115,9 @@ pub fn with_terracotta_nodes(nodes: Vec<String>, fetched: &[String]) -> Vec<Stri
     let mut out: Vec<String> = Vec::new();
     for node in nodes {
         let replacement = if node == TERRACOTTA_FALLBACK_NODE {
-            fetched.to_vec()
+            std::iter::once(node)
+                .chain(fetched.iter().cloned())
+                .collect()
         } else {
             vec![node]
         };
@@ -174,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn terracotta_nodes_replace_fallback_in_place() {
+    fn terracotta_nodes_follow_fallback_in_place() {
         let nodes = effective_nodes(true, &[]);
         let fetched = vec![
             "https://terracotta.glavo.site/new".to_owned(),
@@ -185,6 +190,7 @@ mod tests {
             [
                 "tcp://sh.vomiku.com:7910",
                 "tcp://us01.225284.xyz:11010",
+                TERRACOTTA_FALLBACK_NODE,
                 "https://terracotta.glavo.site/new",
                 "https://etnode.zkitefly.eu.org/node1",
                 "https://etnode.zkitefly.eu.org/node2",
