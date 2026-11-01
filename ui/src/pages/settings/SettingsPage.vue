@@ -21,7 +21,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { DownloadSource } from "../../api/__mocks__/settings";
 import { appInfo } from "../../api/app";
-import { pickSavePath } from "../../api/dialog";
+import { inUserDir, pickSavePath } from "../../api/dialog";
 import { diagnosticsExport } from "../../api/diagnostics";
 import { toAppError } from "../../api/invoke";
 import { javaList } from "../../api/java";
@@ -127,17 +127,18 @@ function openDataDir() {
 
 const exporting = ref(false);
 
-/** 默认文件名，例如 `tmcl-diagnostics-20261030-1903.zip`。 */
+/** 默认文件名，例如 `tmcl-diagnostics-20261030-190312.zip`。 */
 function diagnosticsFileName(now = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
-  return `tmcl-diagnostics-${date}-${pad(now.getHours())}${pad(now.getMinutes())}.zip`;
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return `tmcl-diagnostics-${date}-${time}.zip`;
 }
 
 async function exportDiagnostics() {
   const dest = await pickSavePath(
     [{ name: t("settings.diagnostics.filter"), extensions: ["zip"] }],
-    diagnosticsFileName(),
+    await inUserDir(diagnosticsFileName()),
   ).catch((err: unknown) => {
     showError(err);
     return null;
