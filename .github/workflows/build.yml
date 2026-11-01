@@ -1,5 +1,8 @@
 # 手动触发或推送 v* tag 时在三平台出安装包，产物上传为 workflow artifact。
 # 发布到 GitHub Releases 与更新签名在 M1-16 中接入。
+# Windows 代码签名走 SignPath（docs/CODE_SIGNING.md）：只在推送 v* tag 且配置了
+# SIGNPATH_API_TOKEN Secret 与 SIGNPATH_ORGANIZATION_ID 变量时提交签名请求，
+# 每次都要维护者在 SignPath 上手动批准；没配置时照旧出未签名的安装包。
 # 本文件是受保护文件（AGENTS.md §5.1），修改需维护者同意。
 name: Build
 
@@ -18,6 +21,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
+  # Secret 不能直接写在步骤的 if 里，先在这里算出是否启用 SignPath。
+  SIGNPATH_ENABLED: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
 
 jobs:
   bundle:
@@ -74,8 +79,43 @@ jobs:
         with:
           tauriScript: pnpm tauri
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload bundles
+        if: runner.os != 'Windows' || env.SIGNPATH_ENABLED != 'true'
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.bundles }}
+          if-no-files-found: error
+
+      # ---- Windows 代码签名（SignPath）----
+      # 上传的 zip 里只放 NSIS 安装包，结构要和 .signpath/artifact-configuration.xml 一致。
+      - name: Upload unsigned installer for signing
+        id: upload-unsigned
+        if: runner.os == 'Windows' && env.SIGNPATH_ENABLED == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-unsigned
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+      # 等待维护者在 SignPath 上批准，最多等 1 小时；超时则本步骤失败，未签名包仍保留在上一步的 artifact 里。
+      - name: Submit signing request to SignPath
+        if: runner.os == 'Windows' && env.SIGNPATH_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'TMCL' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed
+
+      - name: Upload signed installer
+        if: runner.os == 'Windows' && env.SIGNPATH_ENABLED == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: signed/*.exe
           if-no-files-found: error

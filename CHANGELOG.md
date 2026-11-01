@@ -2,6 +2,12 @@
 
 本文件记录每个发布版本的主要变化。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 新增
+
+- Windows 安装包接入 [SignPath](https://signpath.org) 免费代码签名流程，申请通过后生效；新增 [代码签名政策与隐私政策](docs/CODE_SIGNING.md)，README 补充 SmartScreen 拦截时的处理方法。
+
 ## [0.2.0-beta.1] - 2026-11-01
 
 第一个公测版本。在 Alpha 的下载、启动、账号基础上，加入资源与整合包、CurseForge、皮肤、设置同步和联机。

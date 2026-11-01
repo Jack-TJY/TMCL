@@ -44,6 +44,10 @@ TMCL 是一个开源、跨平台的我的世界（Java 版）启动器。下载�
 
 卸载时默认保留 `tmcl-data`；Windows 卸载界面勾选“删除应用数据”才会一并删除。
 
+**Windows 提示“已保护你的电脑”**：签名生效前的安装包没有代码签名，Microsoft Defender SmartScreen 会拦截。确认文件是从本仓库的 GitHub Releases 下载的之后，点“更多信息”，再点“仍要运行”即可。如果浏览器提示“不常下载”，在下载列表里选“保留”。
+
+**代码签名**：Windows 版的免费代码签名由 [SignPath.io](https://signpath.io) 提供，证书由 [SignPath Foundation](https://signpath.org) 颁发（申请中，尚未生效）。签名范围、团队角色和隐私政策见 [代码签名政策](docs/CODE_SIGNING.md)。
+
 **macOS 未签名版本的打开方法**：Alpha 版没有经过 Apple 签名与公证，第一次双击会提示“无法验证开发者”或“已损坏”。可以任选一种方法打开：
 
 1. 在 Finder 中按住 Control 点按 `TMCL.app`，选择“打开”，再在弹窗中点“打开”。macOS 15 及以后需要先双击一次，再到“系统设置 → 隐私与安全性”底部点“仍要打开”。
@@ -110,6 +114,10 @@ Download the package for your platform from [GitHub Releases](https://github.com
 - **Linux:** the `.AppImage` (recommended) keeps data in `tmcl-data/` next to the `.AppImage` file; the `.deb` uses `~/.local/share/tmcl-data/`. Run `chmod +x TMCL_*.AppImage` first; some distributions need `libfuse2`.
 
 Uninstalling keeps `tmcl-data` unless you tick "Delete the application data" in the Windows uninstaller.
+
+**Windows says "Windows protected your PC":** installers released before code signing is active are unsigned, so Microsoft Defender SmartScreen blocks them. After checking that the file came from this repository's GitHub Releases, click "More info", then "Run anyway". If the browser says the file is not commonly downloaded, choose "Keep" in the download list.
+
+**Code signing:** free code signing for the Windows build is provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org) (application pending, not active yet). See the [code signing policy](docs/CODE_SIGNING.md) for what is signed, team roles and the privacy policy.
 
 **Opening the unsigned macOS build:** alpha builds are not signed or notarized by Apple, so the first launch says the developer cannot be verified or the app is damaged. Either Control-click `TMCL.app` in Finder, choose Open and confirm (on macOS 15 and later, double-click once, then click "Open Anyway" at the bottom of System Settings → Privacy & Security), or run `xattr -dr com.apple.quarantine /Applications/TMCL.app` with the actual path.
 

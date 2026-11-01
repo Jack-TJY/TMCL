@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath 签名配置的源码副本（docs/CODE_SIGNING.md）。实际生效的是 SignPath 项目里
+  同名的 artifact configuration，改动这里后要同步到 SignPath 网页上。
+
+  build.yml 用 actions/upload-artifact 上传 NSIS 安装包，默认打成 zip，所以根节点是
+  zip-file，里面只有一个 TMCL_<版本>_x64-setup.exe。
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="TMCL_*_x64-setup.exe" product-name="TMCL" min-matches="1" max-matches="1">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
