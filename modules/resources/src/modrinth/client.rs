@@ -370,6 +370,8 @@ pub struct VersionFilter {
     pub game_versions: Vec<String>,
     /// 只要精选（`true`）或只要非精选（`false`）的版本。
     pub featured: Option<bool>,
+    /// 不返回更新日志（`include_changelog=false`），列出项目全部版本时可大幅减小响应。
+    pub without_changelog: bool,
 }
 
 impl VersionFilter {
@@ -379,6 +381,7 @@ impl VersionFilter {
             loaders: vec![loader.to_owned()],
             game_versions: vec![game_version.to_owned()],
             featured: None,
+            without_changelog: false,
         }
     }
 
@@ -392,6 +395,9 @@ impl VersionFilter {
         }
         if let Some(featured) = self.featured {
             params.push(("featured", featured.to_string()));
+        }
+        if self.without_changelog {
+            params.push(("include_changelog", "false".to_owned()));
         }
         params
     }

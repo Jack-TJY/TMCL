@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 新建实例并下载游戏文件：填写实例名、选择加载器（默认原版）后一键创建，下载任务进入任务中心。
-// 选了加载器时以 loader_install 任务补全原版并安装加载器，成功后实例才会带上加载器。
+// 选了加载器时以 loader_install 任务补全原版并安装加载器（Fabric 默认附带 Fabric API），
+// 成功后实例才会带上加载器。
 import { NButton, NForm, NFormItem, NInput, NModal, useMessage } from "naive-ui";
 import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -11,6 +12,7 @@ import { loaderInstall, LOADER_INSTALL_KIND } from "../../api/loader";
 import type { GameVersion } from "../../bindings/GameVersion";
 import type { LoaderSpec } from "../../bindings/LoaderSpec";
 import LoaderPicker from "../../components/loader-picker/LoaderPicker.vue";
+import { loaderInstallArgs } from "../../components/loader-picker/loaders";
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
 import { defaultInstanceName } from "./versions";
@@ -24,6 +26,7 @@ const tasks = useTasksStore();
 
 const name = ref("");
 const loader = ref<LoaderSpec | null>(null);
+const fabricApi = ref(true);
 const busy = ref(false);
 
 watch(
@@ -32,6 +35,7 @@ watch(
     if (!version) return;
     name.value = version.id;
     loader.value = null;
+    fabricApi.value = true;
     const existing = await instanceList()
       .then(({ instances }) => instances.map((i) => i.name))
       .catch(() => []);
@@ -56,7 +60,7 @@ async function confirm() {
         ? {
             kind: LOADER_INSTALL_KIND,
             label: instanceName,
-            start: () => loaderInstall({ instance_id: instance.id, ...spec }),
+            start: () => loaderInstall(loaderInstallArgs(instance.id, spec, fabricApi.value)),
             instanceId: instance.id,
           }
         : {
@@ -97,7 +101,12 @@ async function confirm() {
         />
       </NFormItem>
       <NFormItem :label="t('download.install.loader')">
-        <LoaderPicker v-model="loader" :game-version="version?.id ?? null" :disabled="busy" />
+        <LoaderPicker
+          v-model="loader"
+          v-model:fabric-api="fabricApi"
+          :game-version="version?.id ?? null"
+          :disabled="busy"
+        />
       </NFormItem>
     </NForm>
     <template #footer>

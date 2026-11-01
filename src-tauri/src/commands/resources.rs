@@ -19,7 +19,7 @@ use tmcl_resources::{
     InstallPlan, InstallRequest, InstalledList, InstanceTarget, ModpackExport, ModpackFormat,
     ModpackInfo, ModpackInstaller, ModpackSource, PackKind, ResourceImportResult,
     ResourceInstaller, ResourceKind, ResourceManager, ResourcePage, ResourcePlatform, ResourceSort,
-    ResourceUpdate, ResourceVersion,
+    ResourceTarget, ResourceUpdate, ResourceVersion,
 };
 use ts_rs::TS;
 
@@ -113,6 +113,24 @@ pub struct ResourcesVersionsArgs {
 pub struct ResourceVersionList {
     /// 适用于该实例的版本，新版本在前。
     pub versions: Vec<ResourceVersion>,
+}
+
+/// `resources_targets` 的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct ResourcesTargetsArgs {
+    /// 项目 ID（CurseForge 为十进制数字）。
+    pub project_id: String,
+    /// 项目所在平台，默认 Modrinth。
+    #[serde(default)]
+    #[ts(optional)]
+    pub platform: Option<ResourcePlatform>,
+}
+
+/// `resources_targets` 的返回值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ResourceTargetList {
+    /// 有文件的游戏版本及其加载器；项目不存在时为空。
+    pub targets: Vec<ResourceTarget>,
 }
 
 /// `resources_install_plan` 与 `resources_install` 的参数。
@@ -426,6 +444,24 @@ pub async fn resources_versions(
         }
     };
     Ok(ResourceVersionList { versions })
+}
+
+/// 列出项目（不限实例）在哪些游戏版本、哪些加载器上有文件，供为资源新建实例时按加载器
+/// 筛选游戏版本。
+#[tauri::command]
+pub async fn resources_targets(
+    state: State<'_, AppState>,
+    args: ResourcesTargetsArgs,
+) -> Result<ResourceTargetList, AppError> {
+    let ctx = TaskCtx::noop("resources_targets");
+    let id = &args.project_id;
+    let targets = match args.platform.unwrap_or_default() {
+        ResourcePlatform::Modrinth => browse::targets(state.modrinth()?, id, &ctx).await?,
+        ResourcePlatform::Curseforge => {
+            merged::targets_curseforge(state.curseforge()?, id, &ctx).await?
+        }
+    };
+    Ok(ResourceTargetList { targets })
 }
 
 /// 生成安装计划：要下载的文件（含递归的必需前置）、不兼容的项目与缺失的前置。不写文件。

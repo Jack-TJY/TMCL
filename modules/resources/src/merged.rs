@@ -12,7 +12,8 @@ use tmcl_common::{AppResult, TaskCtx};
 
 use crate::browse::{
     self, BrowseQuery, DEFAULT_LIMIT, InstanceTarget, ResourceHit, ResourceKind, ResourcePage,
-    ResourcePlatform, ResourceRef, ResourceSort, ResourceVersion, is_not_found,
+    ResourcePlatform, ResourceRef, ResourceSort, ResourceTarget, ResourceVersion, collect_targets,
+    is_not_found,
 };
 use crate::curseforge::{self, ClassId, CurseForgeClient, FileFilter, ModLoaderType};
 use crate::modpack::source::{hit_from_mod, sort_field, version_from_file};
@@ -246,6 +247,30 @@ pub async fn versions_curseforge(
         .filter(|f| f.is_available)
         .map(version_from_file)
         .collect())
+}
+
+/// 由 CurseForge 项目的 `latestFilesIndexes` 得出支持的游戏版本与加载器（每个游戏版本与加载器
+/// 的最新文件，无需翻页）；项目不存在或 ID 不是数字时为空列表。
+pub async fn targets_curseforge(
+    client: &CurseForgeClient,
+    project_id: &str,
+    ctx: &TaskCtx,
+) -> AppResult<Vec<ResourceTarget>> {
+    let Ok(id) = project_id.parse::<u32>() else {
+        return Ok(Vec::new());
+    };
+    let Some(project) = client.project(id, ctx).await? else {
+        return Ok(Vec::new());
+    };
+    Ok(collect_targets(
+        project.latest_files_indexes.into_iter().map(|index| {
+            let loader = index.mod_loader.and_then(ModLoaderType::as_loader_str);
+            (
+                index.game_version,
+                loader.map(ToOwned::to_owned).into_iter().collect(),
+            )
+        }),
+    ))
 }
 
 #[cfg(test)]

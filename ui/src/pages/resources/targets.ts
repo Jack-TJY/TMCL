@@ -1,5 +1,5 @@
 // 资源下载页（不绑定实例）的纯函数：目标实例与资源是否兼容、支持的游戏版本与加载器标签。
-import type { ResourceHit, ResourceKind } from "../../api/resources";
+import type { ResourceHit, ResourceKind, ResourceTarget } from "../../api/resources";
 import type { LoaderKind } from "../../bindings/LoaderKind";
 import type { LoaderSpec } from "../../bindings/LoaderSpec";
 
@@ -52,6 +52,25 @@ export function releaseVersions(versions: readonly string[]): string[] {
   return [...new Set(versions.filter((v) => RELEASE.test(v)))].sort((a, b) =>
     compareVersions(b, a),
   );
+}
+
+/**
+ * 为资源新建实例时可选的游戏版本（正式版，新版本在前）：Mod 只取在该加载器上有文件的版本
+ * （Quilt 同时接受 Fabric，未标注加载器的文件不限）；原版或其他种类不按加载器筛选。
+ */
+export function targetVersions(
+  targets: readonly ResourceTarget[],
+  kind: ResourceKind,
+  loader: LoaderKind | null,
+): string[] {
+  const accepted: string[] = loader === "quilt" ? ["quilt", "fabric"] : loader ? [loader] : [];
+  const usable =
+    kind !== "mod" || !loader
+      ? targets
+      : targets.filter(
+          (t) => t.loaders.length === 0 || t.loaders.some((l) => accepted.includes(l)),
+        );
+  return releaseVersions(usable.map((t) => t.game_version));
 }
 
 /** 支持的游戏版本摘要：最新的几个正式版与正式版总数；没有正式版时取前几个原始版本号。 */

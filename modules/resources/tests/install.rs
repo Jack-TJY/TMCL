@@ -14,6 +14,7 @@ use support::{MockServer, Request, Response};
 use tmcl_common::{ErrorCode, TaskCtx};
 use tmcl_net::{DownloadOptions, Downloader, HttpClient, RetryPolicy};
 use tmcl_resources::browse::{self, BrowseQuery, ResourceSort};
+use tmcl_resources::fabric_api::{FABRIC_API_PROJECT_ID, FabricApiOutcome, install_fabric_api};
 use tmcl_resources::modrinth::ModrinthClient;
 use tmcl_resources::{
     InstallRequest, InstanceTarget, ResourceImportSkipReason, ResourceInstaller, ResourceKind,
@@ -666,4 +667,132 @@ fn worlds_are_save_directories() {
     std::fs::create_dir_all(tmp.path().join("saves/A")).unwrap();
     std::fs::write(tmp.path().join("saves/file"), b"x").unwrap();
     assert_eq!(update::worlds(tmp.path()).unwrap(), ["A", "B"]);
+}
+
+fn downloader() -> Downloader {
+    Downloader::new(HttpClient::new().unwrap(), DownloadOptions::default())
+}
+
+#[tokio::test]
+async fn fabric_api_prefers_release_and_skips_when_installed() {
+    let (cdn, files) = cdn().await;
+    let mut c = Catalog::default();
+    // 新版本在前：最新的是测试版，应选较旧的正式版。
+    c.version(&cdn, "FB", FABRIC_API_PROJECT_ID, "beta", &[])
+        .await;
+    c.version(&cdn, "FR", FABRIC_API_PROJECT_ID, "release", &[])
+        .await;
+    let api = api(c, &files).await;
+    let client = client(&api);
+    let tmp = tempfile::tempdir().unwrap();
+    let game = tmp.path();
+
+    let out = install_fabric_api(&client, &downloader(), game, "1.20.1", &ctx())
+        .await
+        .unwrap();
+    assert_eq!(out, FabricApiOutcome::Installed("fr.jar".into()));
+    assert!(game.join("mods/fr.jar").is_file());
+    let q = api.requests()[0].query();
+    assert!(q.contains(&("loaders".into(), r#"["fabric"]"#.into())));
+    assert!(q.contains(&("game_versions".into(), r#"["1.20.1"]"#.into())));
+    assert!(q.contains(&("include_changelog".into(), "false".into())));
+
+    // 文件名看不出来时按 SHA1 反查出已安装，不再下载。
+    let out = install_fabric_api(&client, &downloader(), game, "1.20.1", &ctx())
+        .await
+        .unwrap();
+    assert_eq!(out, FabricApiOutcome::AlreadyInstalled);
+    assert!(
+        api.requests()
+            .iter()
+            .any(|r| r.path() == "/v2/version_files")
+    );
+    assert_eq!(std::fs::read_dir(game.join("mods")).unwrap().count(), 1);
+}
+
+#[tokio::test]
+async fn fabric_api_recognized_by_name_or_skipped_when_unavailable() {
+    let (cdn, files) = cdn().await;
+    let mut c = Catalog::default();
+    c.version(&cdn, "FR", FABRIC_API_PROJECT_ID, "release", &[])
+        .await;
+    let api = api(c, &files).await;
+    let modrinth = client(&api);
+
+    let tmp = tempfile::tempdir().unwrap();
+    let mods = tmp.path().join("mods");
+    std::fs::create_dir_all(&mods).unwrap();
+    std::fs::write(mods.join("fabric-api-0.92.2+1.20.1.jar.disabled"), b"x").unwrap();
+    let out = install_fabric_api(&modrinth, &downloader(), tmp.path(), "1.20.1", &ctx())
+        .await
+        .unwrap();
+    assert_eq!(out, FabricApiOutcome::AlreadyInstalled);
+    assert!(
+        !api.requests()
+            .iter()
+            .any(|r| r.path() == "/v2/version_files")
+    );
+
+    // 该游戏版本没有 Fabric API（这里项目不存在，返回 404）：跳过，不建 mods/。
+    let empty = MockServer::start(|_, _| Response::status(404)).await;
+    let tmp = tempfile::tempdir().unwrap();
+    let out = install_fabric_api(&client(&empty), &downloader(), tmp.path(), "26.3", &ctx())
+        .await
+        .unwrap();
+    assert_eq!(out, FabricApiOutcome::Unavailable);
+    assert!(!tmp.path().join("mods").exists());
+
+    let none = MockServer::start(|_, _| Response::json(b"[]")).await;
+    let out = install_fabric_api(&client(&none), &downloader(), tmp.path(), "26.3", &ctx())
+        .await
+        .unwrap();
+    assert_eq!(out, FabricApiOutcome::Unavailable);
+}
+
+#[tokio::test]
+async fn targets_list_game_versions_per_loader() {
+    let file = json!([{ "hashes": { "sha1": "0" }, "url": "http://x/a.jar", "filename": "a.jar",
+        "primary": true, "size": 1 }]);
+    let version = |id: &str, games: &[&str], loaders: &[&str], files: &Value| {
+        json!({ "id": id, "project_id": "J", "name": id, "version_number": id,
+            "version_type": "release", "game_versions": games, "loaders": loaders,
+            "files": files })
+    };
+    let body = json!([
+        version("a", &["26.3"], &["neoforge"], &file),
+        version("b", &["1.21.1", "1.20.1"], &["forge", "neoforge"], &file),
+        version("c", &["1.20.1"], &["fabric"], &file),
+        version("d", &["1.19.2"], &["fabric"], &json!([])),
+    ])
+    .to_string();
+    let api = MockServer::start(move |req, _| match req.path() {
+        "/v2/project/J/version" => Response::json(body.as_bytes()),
+        _ => Response::status(404),
+    })
+    .await;
+    let client = client(&api);
+    let targets = browse::targets(&client, "J", &ctx()).await.unwrap();
+    let pairs: Vec<(&str, Vec<&str>)> = targets
+        .iter()
+        .map(|t| {
+            let loaders = t.loaders.iter().map(String::as_str).collect();
+            (t.game_version.as_str(), loaders)
+        })
+        .collect();
+    assert_eq!(
+        pairs,
+        [
+            ("26.3", vec!["neoforge"]),
+            ("1.21.1", vec!["forge", "neoforge"]),
+            ("1.20.1", vec!["forge", "neoforge", "fabric"]),
+        ]
+    );
+    let q = api.requests()[0].query();
+    assert_eq!(q, [("include_changelog".into(), "false".into())]);
+    assert!(
+        browse::targets(&client, "gone", &ctx())
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }

@@ -73,6 +73,7 @@ impl InstanceTarget {
             loaders: self.loaders(kind),
             game_versions: vec![self.game_version.clone()],
             featured: None,
+            without_changelog: false,
         }
     }
 }
@@ -278,6 +279,41 @@ impl ResourceVersion {
     }
 }
 
+/// 资源在某个游戏版本上有文件的加载器，供为资源新建实例时按加载器筛选游戏版本。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct ResourceTarget {
+    /// 游戏版本。
+    pub game_version: String,
+    /// 有文件的加载器（小写，如 `fabric`；资源包为 `minecraft`）；为空表示文件未标注加载器。
+    pub loaders: Vec<String>,
+}
+
+/// 把“游戏版本 → 加载器”对按游戏版本合并，保持首次出现的顺序，加载器去重。
+pub(crate) fn collect_targets(
+    pairs: impl IntoIterator<Item = (String, Vec<String>)>,
+) -> Vec<ResourceTarget> {
+    let mut targets: Vec<ResourceTarget> = Vec::new();
+    for (game_version, loaders) in pairs {
+        let index = match targets.iter().position(|t| t.game_version == game_version) {
+            Some(index) => index,
+            None => {
+                targets.push(ResourceTarget {
+                    game_version,
+                    loaders: Vec::new(),
+                });
+                targets.len() - 1
+            }
+        };
+        let target = &mut targets[index];
+        for loader in loaders {
+            if !target.loaders.contains(&loader) {
+                target.loaders.push(loader);
+            }
+        }
+    }
+    targets
+}
+
 /// 默认每页条数。
 pub(crate) const DEFAULT_LIMIT: u32 = 20;
 
@@ -369,6 +405,34 @@ pub async fn versions(
         .collect())
 }
 
+/// 列出项目全部可安装版本支持的游戏版本与加载器（不按实例过滤）；项目不存在时为空列表。
+pub async fn targets(
+    client: &ModrinthClient,
+    project_id: &str,
+    ctx: &TaskCtx,
+) -> AppResult<Vec<ResourceTarget>> {
+    let filter = VersionFilter {
+        without_changelog: true,
+        ..VersionFilter::default()
+    };
+    let versions = match client.project_versions(project_id, &filter, ctx).await {
+        Ok(versions) => versions,
+        Err(err) if is_not_found(&err) => Vec::new(),
+        Err(err) => return Err(err),
+    };
+    Ok(collect_targets(
+        versions
+            .into_iter()
+            .filter(|v| v.primary_file().is_some())
+            .flat_map(|v| {
+                let loaders = v.loaders;
+                v.game_versions
+                    .into_iter()
+                    .map(move |g| (g, loaders.clone()))
+            }),
+    ))
+}
+
 /// Modrinth 客户端把列表接口的 404 报告为 `NET_HTTP_STATUS`（`status` = 404）。
 pub(crate) fn is_not_found(err: &tmcl_common::AppError) -> bool {
     err.code == tmcl_common::ErrorCode::NetHttpStatus
@@ -411,6 +475,21 @@ mod tests {
         let filter = target(Some("neoforge")).version_filter(ResourceKind::Mod);
         assert_eq!(filter.game_versions, ["1.20.1"]);
         assert_eq!(filter.loaders, ["neoforge"]);
+    }
+
+    #[test]
+    fn targets_merge_by_game_version() {
+        let pair = |g: &str, l: &[&str]| (g.to_owned(), l.iter().map(|s| s.to_string()).collect());
+        let targets = collect_targets([
+            pair("1.21.1", &["neoforge"]),
+            pair("1.20.1", &["forge"]),
+            pair("1.21.1", &["fabric", "neoforge"]),
+            pair("1.20.1", &[]),
+        ]);
+        assert_eq!(targets.len(), 2);
+        assert_eq!(targets[0].game_version, "1.21.1");
+        assert_eq!(targets[0].loaders, ["neoforge", "fabric"]);
+        assert_eq!(targets[1].loaders, ["forge"]);
     }
 
     #[test]

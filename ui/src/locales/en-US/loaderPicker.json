@@ -10,6 +10,13 @@
   "recommended": "Recommended",
   "unstable": "Beta",
   "showUnstable": "Show beta versions",
+  "fabricApi": "Also install Fabric API (required by most Fabric mods)",
+  "fabricApiFailed": {
+    "title": "Fabric API was not installed",
+    "content": "The mod loader for \"{name}\" is installed, but Fabric API failed to install: {error}. Most Fabric mods need it, so search for \"Fabric API\" on the instance's resource page to install it again.",
+    "open": "Open resources",
+    "later": "Later"
+  },
   "bmclapi": "{name} versions and files are mirrored by BMCLAPI (bangbang93, bmclapidoc.bangbang93.com), falling back to the official source on failure.",
   "change": {
     "title": "Change mod loader of \"{name}\"",

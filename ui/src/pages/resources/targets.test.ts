@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { ResourceHit } from "../../api/resources";
+import type { ResourceHit, ResourceTarget } from "../../api/resources";
 import {
   hitLoaders,
   incompatibility,
   releaseVersions,
   suggestedLoader,
+  targetVersions,
   versionSummary,
 } from "./targets";
 
@@ -97,5 +98,39 @@ describe("incompatibility", () => {
     const vanilla = { game_version: "1.20.1", loader: null };
     expect(incompatibility(hit([], ["1.20.1"]), "resourcepack", vanilla)).toBeNull();
     expect(incompatibility(hit(["iris"], []), "shader", vanilla)).toBeNull();
+  });
+});
+
+describe("targetVersions", () => {
+  // 类似 JEI：最新的 26.3 只有 NeoForge 版本。
+  const targets: ResourceTarget[] = [
+    { game_version: "26.3", loaders: ["neoforge"] },
+    { game_version: "1.21.1", loaders: ["neoforge", "fabric"] },
+    { game_version: "1.20.1", loaders: ["forge", "fabric"] },
+    { game_version: "1.19.2", loaders: ["quilt"] },
+    { game_version: "1.12.2", loaders: [] },
+    { game_version: "24w14a", loaders: ["fabric"] },
+  ];
+
+  it("keeps only game versions with a file for the loader", () => {
+    expect(targetVersions(targets, "mod", "forge")).toEqual(["1.20.1", "1.12.2"]);
+    expect(targetVersions(targets, "mod", "neoforge")).toEqual(["26.3", "1.21.1", "1.12.2"]);
+    expect(targetVersions(targets, "mod", "fabric")).toEqual(["1.21.1", "1.20.1", "1.12.2"]);
+  });
+
+  it("lets quilt use fabric files", () => {
+    expect(targetVersions(targets, "mod", "quilt")).toEqual([
+      "1.21.1",
+      "1.20.1",
+      "1.19.2",
+      "1.12.2",
+    ]);
+  });
+
+  it("does not filter vanilla or non-mod kinds", () => {
+    const all = ["26.3", "1.21.1", "1.20.1", "1.19.2", "1.12.2"];
+    expect(targetVersions(targets, "mod", null)).toEqual(all);
+    expect(targetVersions(targets, "shader", "fabric")).toEqual(all);
+    expect(targetVersions([], "mod", "forge")).toEqual([]);
   });
 });

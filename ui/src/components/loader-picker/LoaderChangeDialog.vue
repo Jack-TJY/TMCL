@@ -12,6 +12,7 @@ import type { LoaderSpec } from "../../bindings/LoaderSpec";
 import type { TaskId } from "../../bindings/TaskId";
 import { formatError } from "../../i18n";
 import { useTasksStore } from "../../stores/tasks";
+import { loaderInstallArgs } from "./loaders";
 import LoaderPicker from "./LoaderPicker.vue";
 
 const props = defineProps<{ instance: InstanceConfig | null }>();
@@ -28,12 +29,14 @@ const message = useMessage();
 const tasks = useTasksStore();
 
 const loader = ref<LoaderSpec | null>(null);
+const fabricApi = ref(true);
 const busy = ref(false);
 
 watch(
   () => props.instance,
   (instance) => {
     loader.value = instance?.loader ? { ...instance.loader } : null;
+    fabricApi.value = true;
   },
   { immediate: true },
 );
@@ -59,7 +62,7 @@ async function confirm() {
       const taskId = await tasks.start({
         kind: LOADER_INSTALL_KIND,
         label: instance.name,
-        start: () => loaderInstall({ instance_id: instance.id, ...next }),
+        start: () => loaderInstall(loaderInstallArgs(instance.id, next, fabricApi.value)),
         instanceId: instance.id,
       });
       emit("started", taskId);
@@ -87,6 +90,7 @@ async function confirm() {
     <div class="body">
       <LoaderPicker
         v-model="loader"
+        v-model:fabric-api="fabricApi"
         :game-version="instance?.game_version ?? null"
         :disabled="busy"
       />

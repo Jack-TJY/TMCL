@@ -27,6 +27,9 @@ import type { ResourcesUpdateArgs } from "../bindings/ResourcesUpdateArgs";
 import type { ResourcesVersionsArgs } from "../bindings/ResourcesVersionsArgs";
 import type { ResourcesWorldsArgs } from "../bindings/ResourcesWorldsArgs";
 import type { ResourceSources } from "../bindings/ResourceSources";
+import type { ResourcesTargetsArgs } from "../bindings/ResourcesTargetsArgs";
+import type { ResourceTarget } from "../bindings/ResourceTarget";
+import type { ResourceTargetList } from "../bindings/ResourceTargetList";
 import type { ResourceVersion } from "../bindings/ResourceVersion";
 import type { ResourceVersionList } from "../bindings/ResourceVersionList";
 import type { ResourceWorldList } from "../bindings/ResourceWorldList";
@@ -59,6 +62,7 @@ export type { ResourceImportSkipReason } from "../bindings/ResourceImportSkipRea
 export type { ResourceKind } from "../bindings/ResourceKind";
 export type { ResourcePlatform } from "../bindings/ResourcePlatform";
 export type { ResourceSort } from "../bindings/ResourceSort";
+export type { ResourceTarget };
 export type { UnavailableDependency } from "../bindings/UnavailableDependency";
 
 /** 资源安装任务的种类名，与后端 `RESOURCES_INSTALL_KIND` 一致。 */
@@ -81,6 +85,11 @@ export function resourcesSearchAny(args: ResourcesSearchAnyArgs): Promise<Resour
 /** 项目适用于该实例的版本，新版本在前。 */
 export async function resourcesVersions(args: ResourcesVersionsArgs): Promise<ResourceVersion[]> {
   return (await invoke<ResourceVersionList>("resources_versions", { args })).versions;
+}
+
+/** 项目（不限实例）在哪些游戏版本、哪些加载器上有文件。 */
+export async function resourcesTargets(args: ResourcesTargetsArgs): Promise<ResourceTarget[]> {
+  return (await invoke<ResourceTargetList>("resources_targets", { args })).targets;
 }
 
 /** 生成安装计划：要下载的文件（含前置）、冲突与找不到的前置。 */

@@ -10,7 +10,7 @@ use std::sync::Arc;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tmcl_common::{
-    AppResult, ProgressSink, TaskCtx, TaskFinished, TaskId, TaskProgress, ThrottledSink,
+    AppError, AppResult, ProgressSink, TaskCtx, TaskFinished, TaskId, TaskProgress, ThrottledSink,
 };
 use ts_rs::TS;
 
@@ -27,6 +27,8 @@ pub const GAME_LOG: &str = "game:log";
 pub const GAME_EXITED: &str = "game:exited";
 /// 微软登录拿到设备码，负载 [`DeviceCode`]，每次 `auth_ms_begin` 一次。
 pub const AUTH_DEVICE_CODE: &str = "auth:device-code";
+/// 加载器已装好但 Fabric API 安装失败，负载 [`FabricApiFailed`]，每个这样的任务一次。
+pub const LOADER_FABRIC_API_FAILED: &str = "loader:fabric-api-failed";
 
 /// `auth:device-code` 的负载：界面显示代码并引导用户打开验证页。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -40,6 +42,20 @@ pub struct DeviceCode {
     /// 有效期，单位秒。
     #[ts(type = "number")]
     pub expires_in: u64,
+}
+
+/// `loader:fabric-api-failed` 的负载：`loader_install` 任务照常成功，界面提示用户到实例的
+/// 资源页重新安装 Fabric API。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct FabricApiFailed {
+    /// 对应的 `loader_install` 任务。
+    pub task_id: TaskId,
+    /// 实例 ID。
+    pub instance_id: String,
+    /// 实例名称。
+    pub instance_name: String,
+    /// 失败原因。
+    pub error: AppError,
 }
 
 /// 游戏输出的来源。
