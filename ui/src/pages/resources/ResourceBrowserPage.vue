@@ -3,7 +3,7 @@
 // 选了实例时只显示适用于它的资源，不能安装时说明原因；不选实例时显示全部资源并标出
 // 支持的游戏版本与加载器，安装前再选择实例。
 import { NButton, NEmpty, NSelect, NTab, NTabs, useMessage } from "naive-ui";
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { instanceGet, instanceList } from "../../api/instance";
@@ -20,6 +20,7 @@ import CreateInstanceDialog from "./CreateInstanceDialog.vue";
 import InstallDialog from "./InstallDialog.vue";
 import PickInstanceDialog from "./PickInstanceDialog.vue";
 import { BROWSER_KINDS, loaderName } from "./targets";
+import { autoInstall } from "./autoInstall";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -107,32 +108,47 @@ function picked(instance: InstanceSummary) {
   if (hit) installing.value = { hit, instance };
 }
 
-/** 为资源一键新建实例；实例的下载任务成功后继续打开安装对话框。 */
+/**
+ * 为资源一键新建实例；实例的下载任务成功后自动安装该资源（默认版本）。
+ * 后续动作登记在任务中心，离开本页也会执行；需要用户选择时（冲突、缺少前置、
+ * 没有适用版本）本页还在就打开安装对话框，否则提示到资源页手动安装。
+ */
 const creating = ref<ResourceHit | null>(null);
-const pendingCreate = ref<{ taskId: TaskId; hit: ResourceHit; instanceId: string } | null>(null);
+let mounted = true;
+onBeforeUnmount(() => (mounted = false));
+
+function created(taskId: TaskId, instance: InstanceConfig) {
+  const hit = creating.value;
+  const resourceKind = kind.value;
+  void loadInstances();
+  if (!hit) return;
+  tasks.afterSuccess(taskId, () => {
+    void (async () => {
+      const result = await autoInstall(
+        { hit, kind: resourceKind, instanceId: instance.id, instanceName: instance.name },
+        tasks.start,
+      );
+      if (result.state === "started") {
+        message.info(t("resources.create.ready", { name: instance.name, title: hit.title }));
+        if (mounted) watched.value.push(result.taskId);
+        return;
+      }
+      if (result.state === "failed") message.error(formatError(result.error));
+      if (mounted) {
+        await loadInstances();
+        const summary = instances.value.find((i) => i.id === instance.id);
+        if (summary) installing.value = { hit, instance: summary };
+      } else {
+        message.warning(t("resources.create.manual", { name: instance.name, title: hit.title }));
+      }
+    })();
+  });
+}
 
 function startCreate() {
   creating.value = picking.value;
   picking.value = null;
 }
-
-watch(
-  () => {
-    const pending = pendingCreate.value;
-    return pending ? tasks.entries.find((e) => e.task_id === pending.taskId)?.status : undefined;
-  },
-  async (status) => {
-    const pending = pendingCreate.value;
-    if (!pending || !status || status === "running") return;
-    pendingCreate.value = null;
-    if (status !== "succeeded") return;
-    await loadInstances();
-    const instance = instances.value.find((i) => i.id === pending.instanceId);
-    if (!instance) return;
-    message.info(t("resources.create.ready", { name: instance.name, title: pending.hit.title }));
-    installing.value = { hit: pending.hit, instance };
-  },
-);
 
 /** 后装加载器：成功后重新读取实例列表。 */
 const loaderTarget = ref<InstanceConfig | null>(null);
@@ -145,10 +161,16 @@ async function openLoaderDialog() {
   }
 }
 
+/**
+ * 本页发起的安装、加载器任务；成功后重新读取实例与已安装列表。
+ * 只在有任务结束时才改写 `watched`：getter 每次返回新数组，回调里无条件赋值会让
+ * 侦听器反复触发自己，界面卡死（beta.1 冒烟 R2）。
+ */
 const watched = ref<TaskId[]>([]);
 watch(
   () => watched.value.map((id) => tasks.entries.find((e) => e.task_id === id)?.status ?? "running"),
   (statuses) => {
+    if (statuses.every((s) => s === "running")) return;
     if (statuses.some((s) => s === "succeeded")) {
       void loadInstances().then(loadInstalled);
     }
@@ -238,12 +260,7 @@ watch(
       :hit="creating"
       :kind="kind"
       @close="creating = null"
-      @started="
-        (taskId: TaskId, instance: InstanceConfig) => {
-          if (creating) pendingCreate = { taskId, hit: creating, instanceId: instance.id };
-          void loadInstances();
-        }
-      "
+      @started="created"
     />
     <InstallDialog
       :hit="installing?.hit ?? null"
