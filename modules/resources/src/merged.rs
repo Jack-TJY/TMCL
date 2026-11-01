@@ -151,7 +151,7 @@ fn interleave(a: Vec<ResourceHit>, b: Vec<ResourceHit>) -> Vec<ResourceHit> {
 }
 
 /// 只比较字母与数字，不分大小写；空名不算相同。
-fn same_name(a: &str, b: &str) -> bool {
+pub(crate) fn same_name(a: &str, b: &str) -> bool {
     let norm = |s: &str| -> String {
         s.chars()
             .filter(|c| c.is_alphanumeric())

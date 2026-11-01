@@ -13,6 +13,7 @@
 
 pub mod browse;
 mod cf_install;
+mod cross;
 pub mod curseforge;
 pub mod deps;
 pub mod install;

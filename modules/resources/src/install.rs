@@ -22,7 +22,7 @@ use ts_rs::TS;
 
 use crate::browse::{InstanceTarget, ResourceKind, ResourcePlatform};
 use crate::curseforge::CurseForgeClient;
-use crate::deps::{self, Conflict, InstalledVersion, UnavailableDependency};
+use crate::deps::{self, Conflict, InstalledVersion, Resolved, UnavailableDependency};
 use crate::modrinth::{HashAlgorithm, ModrinthClient};
 
 /// 下载阶段名。
@@ -66,10 +66,12 @@ pub struct PlannedFile {
     pub required_by: Option<String>,
     /// 安装后要删除的同一项目旧文件名（同一目录中）。
     pub replaces: Option<String>,
+    /// 文件来自哪个平台；必需前置在原平台上没有可用版本时会改从另一个平台安装。
+    pub platform: ResourcePlatform,
 }
 
 /// 安装计划。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct InstallPlan {
     /// 要下载的文件：第一个是用户选择的版本，其余为前置。
     pub files: Vec<PlannedFile>,
@@ -204,10 +206,33 @@ pub struct ResourceInstaller {
 }
 
 /// 计划及其对应的下载项与要删除的旧文件。
+#[derive(Default)]
 pub(crate) struct Prepared {
     pub(crate) plan: InstallPlan,
     pub(crate) downloads: Vec<DownloadItem>,
     pub(crate) replaced: Vec<PathBuf>,
+}
+
+impl Prepared {
+    /// 只含缺失前置的计划。
+    pub(crate) fn unavailable(unavailable: Vec<UnavailableDependency>) -> Self {
+        Self {
+            plan: InstallPlan {
+                unavailable,
+                ..InstallPlan::default()
+            },
+            ..Self::default()
+        }
+    }
+
+    /// 把 `other` 追加到本计划之后。
+    pub(crate) fn extend(&mut self, other: Prepared) {
+        self.plan.files.extend(other.plan.files);
+        self.plan.conflicts.extend(other.plan.conflicts);
+        self.plan.unavailable.extend(other.plan.unavailable);
+        self.downloads.extend(other.downloads);
+        self.replaced.extend(other.replaced);
+    }
 }
 
 impl ResourceInstaller {
@@ -306,50 +331,89 @@ impl ResourceInstaller {
         )
         .await?;
 
-        let mut prepared = Prepared {
-            plan: InstallPlan {
-                files: Vec::new(),
-                conflicts: resolution.conflicts,
-                unavailable: resolution.unavailable,
-            },
-            downloads: Vec::new(),
-            replaced: Vec::new(),
-        };
-        for resolved in resolution.resolved {
-            let version = &resolved.version;
-            let Some(file) = version.primary_file() else {
-                prepared.plan.unavailable.push(UnavailableDependency {
-                    project_id: Some(version.project_id.clone()),
-                    title: Some(resolved.title),
-                    required_by: resolved.required_by.unwrap_or_default(),
-                });
-                continue;
-            };
-            let dir = kind_dir(&self.game_dir, resolved.kind, world)?;
-            let item = file.download_item(&dir);
-            let old = installed.iter().find(|i| {
-                i.version.project_id == version.project_id
-                    && i.path.parent() == Some(dir.as_path())
-                    && i.path != item.path
-            });
-            if let Some(old) = old {
-                prepared.replaced.push(old.path.clone());
+        let mut prepared = Prepared::default();
+        prepared.plan.conflicts = resolution.conflicts;
+        push_modrinth(
+            &self.game_dir,
+            world,
+            &installed,
+            resolution.resolved,
+            &mut prepared,
+        )?;
+        // 在 Modrinth 上没有可用版本的前置改从 CurseForge 找。
+        let extra = match &self.curseforge {
+            Some(cf) => {
+                let names: Vec<String> = prepared
+                    .plan
+                    .files
+                    .iter()
+                    .map(|f| f.title.clone())
+                    .collect();
+                let inst = crate::cross::Instance {
+                    target: &self.target,
+                    game_dir: &self.game_dir,
+                    world,
+                };
+                crate::cross::from_curseforge(
+                    cf,
+                    &self.client,
+                    &inst,
+                    resolution.unavailable,
+                    &names,
+                    ctx,
+                )
+                .await?
             }
-            prepared.plan.files.push(PlannedFile {
-                project_id: version.project_id.clone(),
-                version_id: version.id.clone(),
-                title: resolved.title,
-                version_number: version.version_number.clone(),
-                kind: resolved.kind,
-                file_name: file_name(&item.path),
-                size: file.size,
-                required_by: resolved.required_by,
-                replaces: old.map(|o| file_name(&o.path)),
-            });
-            prepared.downloads.push(item);
-        }
+            None => Prepared::unavailable(resolution.unavailable),
+        };
+        prepared.extend(extra);
         Ok(prepared)
     }
+}
+
+/// 把解析出的 Modrinth 版本加入计划；同一目录中已装有同一项目的其他文件时记为替换。
+pub(crate) fn push_modrinth(
+    game_dir: &Path,
+    world: Option<&str>,
+    installed: &[InstalledVersion],
+    resolved: Vec<Resolved>,
+    prepared: &mut Prepared,
+) -> AppResult<()> {
+    for resolved in resolved {
+        let version = &resolved.version;
+        let Some(file) = version.primary_file() else {
+            prepared.plan.unavailable.push(UnavailableDependency {
+                project_id: Some(version.project_id.clone()),
+                title: Some(resolved.title),
+                required_by: resolved.required_by.unwrap_or_default(),
+            });
+            continue;
+        };
+        let dir = kind_dir(game_dir, resolved.kind, world)?;
+        let item = file.download_item(&dir);
+        let old = installed.iter().find(|i| {
+            i.version.project_id == version.project_id
+                && i.path.parent() == Some(dir.as_path())
+                && i.path != item.path
+        });
+        if let Some(old) = old {
+            prepared.replaced.push(old.path.clone());
+        }
+        prepared.plan.files.push(PlannedFile {
+            project_id: version.project_id.clone(),
+            version_id: version.id.clone(),
+            title: resolved.title,
+            version_number: version.version_number.clone(),
+            kind: resolved.kind,
+            file_name: file_name(&item.path),
+            size: file.size,
+            required_by: resolved.required_by,
+            replaces: old.map(|o| file_name(&o.path)),
+            platform: ResourcePlatform::Modrinth,
+        });
+        prepared.downloads.push(item);
+    }
+    Ok(())
 }
 
 pub(crate) fn file_name(path: &Path) -> String {
@@ -417,13 +481,12 @@ mod tests {
     #[test]
     fn check_reports_conflicts_before_missing_dependencies() {
         let mut plan = InstallPlan {
-            files: Vec::new(),
-            conflicts: Vec::new(),
             unavailable: vec![UnavailableDependency {
                 project_id: Some("P".into()),
                 title: None,
                 required_by: "A".into(),
             }],
+            ..InstallPlan::default()
         };
         let err = plan.check().unwrap_err();
         assert_eq!(err.code, ErrorCode::ResourcesDependencyUnavailable);

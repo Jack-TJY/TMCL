@@ -84,7 +84,8 @@
     "cancel": "取消",
     "confirm": "安装",
     "started": "正在安装“{name}”，可在任务中心查看进度",
-    "source": "来源"
+    "source": "来源",
+    "fromPlatform": "来自 {platform}"
   },
   "channel": {
     "release": "正式版",
