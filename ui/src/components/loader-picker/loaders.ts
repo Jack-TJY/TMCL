@@ -64,11 +64,24 @@ export function loaderInstallArgs(
   };
 }
 
-/** Fabric API 安装失败时引导用户前往的页面：该实例资源页的 Mod 标签。 */
+/** 缩短失败提示中的下载地址，保留诊断所需的原始错误。 */
+export function fabricApiDisplayError(error: AppError): AppError {
+  const url = error.params.url;
+  if (!url) return error;
+  try {
+    const { hostname } = new URL(url);
+    if (hostname) return { ...error, params: { ...error.params, url: hostname } };
+  } catch {
+    // 其他错误参数保持原样。
+  }
+  return error;
+}
+
+/** 转到该实例的 Mod 浏览面板并搜索 Fabric API。 */
 export function fabricApiRetryRoute(instanceId: string) {
   return {
     name: "instance-resources",
     params: { id: instanceId },
-    query: { kind: "mod" },
+    query: { kind: "mod", view: "browse", search: "Fabric API" },
   } as const;
 }

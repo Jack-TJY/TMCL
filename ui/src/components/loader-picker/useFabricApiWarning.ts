@@ -6,7 +6,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { onFabricApiFailed } from "../../api/events";
 import { formatError } from "../../i18n";
-import { fabricApiRetryRoute } from "./loaders";
+import { fabricApiDisplayError, fabricApiRetryRoute } from "./loaders";
 
 /** 订阅事件并在组件卸载时取消；没有后端时什么也不做。 */
 export function useFabricApiWarning() {
@@ -21,7 +21,7 @@ export function useFabricApiWarning() {
       title: t("loaderPicker.fabricApiFailed.title"),
       content: t("loaderPicker.fabricApiFailed.content", {
         name: instance_name,
-        error: formatError(error),
+        error: formatError(fabricApiDisplayError(error)),
       }),
       positiveText: t("loaderPicker.fabricApiFailed.open"),
       negativeText: t("loaderPicker.fabricApiFailed.later"),
