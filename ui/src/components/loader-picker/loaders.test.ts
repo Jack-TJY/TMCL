@@ -3,6 +3,7 @@ import type { AppError } from "../../bindings/AppError";
 import type { LoaderVersion } from "../../bindings/LoaderVersion";
 import {
   defaultVersion,
+  fabricApiDisplayError,
   fabricApiRetryRoute,
   loaderInstallArgs,
   toState,
@@ -77,12 +78,20 @@ describe("loaderInstallArgs", () => {
   });
 });
 
+it("shortens the displayed URL without changing the original error", () => {
+  const url = "https://api.modrinth.com/v2/project/fabric-api/version?loaders=%5B%22fabric%22%5D";
+  const source = { ...error("NET_HTTP_STATUS"), params: { url, status: "503" } };
+  expect(fabricApiDisplayError(source).params).toEqual({ url: "api.modrinth.com", status: "503" });
+  expect(source.params.url).toBe(url);
+  expect(fabricApiDisplayError(error("NET_TIMEOUT"))).toEqual(error("NET_TIMEOUT"));
+});
+
 describe("fabricApiRetryRoute", () => {
   it("opens the mod tab of the instance's resource page", () => {
     expect(fabricApiRetryRoute("abc")).toEqual({
       name: "instance-resources",
       params: { id: "abc" },
-      query: { kind: "mod" },
+      query: { kind: "mod", view: "browse", search: "Fabric API" },
     });
   });
 });
