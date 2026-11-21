@@ -26,7 +26,12 @@ export function useFabricApiWarning() {
       positiveText: t("loaderPicker.fabricApiFailed.open"),
       negativeText: t("loaderPicker.fabricApiFailed.later"),
       onPositiveClick: () => {
-        void router.push(fabricApiRetryRoute(instance_id));
+        const target = fabricApiRetryRoute(instance_id);
+        if (router.resolve(target).fullPath === router.currentRoute.value.fullPath) {
+          void router.replace({ ...target, force: true });
+        } else {
+          void router.push(target);
+        }
       },
     });
   })

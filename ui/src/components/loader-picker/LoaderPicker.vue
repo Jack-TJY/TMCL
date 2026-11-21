@@ -69,6 +69,8 @@ watch(
       select(current.kind);
     }
   },
+  // 父组件可同时设置游戏版本和推荐加载器；等新版本的列表状态更新后再校正选择。
+  { flush: "post" },
 );
 
 const versionOptions = computed<SelectOption[]>(() => {

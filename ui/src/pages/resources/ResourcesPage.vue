@@ -59,6 +59,7 @@ const loadError = ref<AppError | null>(null);
 
 const kind = ref<ResourceKind>("mod");
 const view = ref<View>(route.query.view === "browse" ? "browse" : "installed");
+const browseRequest = ref(0);
 const searchText = computed(() =>
   route.query.view === "browse" && typeof route.query.search === "string" ? route.query.search : "",
 );
@@ -74,15 +75,13 @@ const kinds = computed(() => kindsFor(instance.value?.loader ?? null));
 const needsWorld = computed(() => kind.value === "datapack");
 const ready = computed(() => !needsWorld.value || world.value !== null);
 
-watch(
-  () => [instanceId.value, route.query.kind, route.query.view, route.query.search],
-  () => {
-    view.value = route.query.view === "browse" ? "browse" : "installed";
-    const requested = route.query.kind;
-    const selected = kinds.value.find((item) => item === requested);
-    if (selected) kind.value = selected;
-  },
-);
+watch(router.currentRoute, () => {
+  view.value = route.query.view === "browse" ? "browse" : "installed";
+  if (view.value === "browse" && searchText.value) browseRequest.value++;
+  const requested = route.query.kind;
+  const selected = kinds.value.find((item) => item === requested);
+  if (selected) kind.value = selected;
+});
 
 watch(
   instanceId,
@@ -301,6 +300,7 @@ const title = computed(() =>
           class="panel"
           :instance-id="instanceId"
           :kind="kind"
+          :key="browseRequest"
           :initial-query="searchText"
           :installed-keys="installedProjects"
           @install="(hit: ResourceHit) => (installing = hit)"
