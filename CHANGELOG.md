@@ -2,6 +2,28 @@
 
 本文件记录每个发布版本的主要变化。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0-beta.3] - 草稿
+
+### 新增
+
+- 从资源页为 Mod 一键新建实例时，TMCL 会根据资源的正式版文件预选加载器，并列出兼容的游戏版本。[#206](https://github.com/Jack-TJY/TMCL/pull/206)
+
+### 修复
+
+- Fabric API 下载失败时，错误提示显示主机名和可用的 HTTP 状态码，省略冗长的编码路径和查询参数。
+- 点击“打开资源页”会进入原实例的 Mod“浏览与安装”，自动搜索 Fabric API。即使中途切回“已安装”或改搜其他 Mod，再次点击也会重新搜索。[#206](https://github.com/Jack-TJY/TMCL/pull/206)
+- 更新 SQLite 相关依赖及异步任务执行器，修复依赖审查报告的问题。[#208](https://github.com/Jack-TJY/TMCL/pull/208)
+
+### 已知问题
+
+- 直连联机首次连接可能需要十几秒，如首次失败可重试，持续失败时可改用樱花穿透。
+- Forge 1.7.10 无模组时可能在主菜单崩溃。旧版启动器（beta.1 及更早）读取已迁移的皮肤库时会显示为空，共用皮肤库的安装应统一升级到 beta.2 或更新版本。
+- macOS 安装、启动与卸载的实机验证仍待补测。暂不支持自动更新，新版本需要手动下载。[此前已知问题](https://github.com/Jack-TJY/TMCL/blob/main/docs/releases/v0.2.0-beta.2.md#已知问题)
+
+### 致谢
+
+游戏下载加速由 BMCLAPI 提供，资源数据来自 Modrinth 和 CurseForge，资源镜像使用 MCIM。直连联机使用 EasyTier（LGPL-3.0），内网穿透由 SakuraFrp 提供。[BMCLAPI](https://bmclapidoc.bangbang93.com/) · [Modrinth](https://modrinth.com/) · [CurseForge](https://www.curseforge.com/) · [MCIM](https://github.com/mcmod-info-mirror) · [EasyTier](https://github.com/EasyTier/EasyTier) · [SakuraFrp](https://www.natfrp.com/)
+
 ## [0.2.0-beta.2] - 2026-11-01
 
 第二个公测版本。修复 beta.1 测试中发现的问题，安装 Fabric 时默认附带 Fabric API，缺失的前置可以从另一平台补全，皮肤库位置可自定义。
