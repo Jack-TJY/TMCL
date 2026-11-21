@@ -120,7 +120,16 @@ export function incompatibility(
 }
 
 /** 为资源新建实例时推荐的加载器：Mod 取它支持的第一个，Iris 光影用 Fabric，其余为原版。 */
-export function suggestedLoader(hit: ResourceHit, kind: ResourceKind): LoaderKind | null {
+export function suggestedLoader(
+  hit: ResourceHit,
+  kind: ResourceKind,
+  targets: readonly ResourceTarget[] = [],
+): LoaderKind | null {
+  if (kind === "mod") {
+    const files = targets.filter((target) => RELEASE.test(target.game_version));
+    const match = MOD_LOADERS.find((loader) => files.some((file) => file.loaders.includes(loader)));
+    if (match) return match;
+  }
   if (kind === "mod") return MOD_LOADERS.find((l) => hit.categories.includes(l)) ?? null;
   if (kind === "shader" && hit.categories.includes("iris")) return "fabric";
   return null;

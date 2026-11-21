@@ -57,6 +57,15 @@ describe("loaders", () => {
     expect(hitLoaders(h, "resourcepack")).toEqual([]);
   });
 
+  it("uses actual release files even when search categories omit or misidentify the loader", () => {
+    const files = [
+      { game_version: "26w01a", loaders: ["fabric"] },
+      { game_version: "1.20.1", loaders: ["forge"] },
+    ];
+    expect(suggestedLoader(hit([], []), "mod", files)).toBe("forge");
+    expect(suggestedLoader(hit(["fabric"], []), "mod", files)).toBe("forge");
+  });
+
   it("suggests a loader for a new instance", () => {
     expect(suggestedLoader(hit(["forge", "fabric"], []), "mod")).toBe("fabric");
     expect(suggestedLoader(hit(["forge"], []), "mod")).toBe("forge");

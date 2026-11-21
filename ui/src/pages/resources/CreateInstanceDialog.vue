@@ -76,7 +76,7 @@ watch(
     targets.value = found.length > 0 ? found : null;
     fallback.value = base;
     // 版本号留空，加载器列表读到后 LoaderPicker 会换成推荐版本，不支持时退回原版。
-    const kind = suggestedLoader(hit, props.kind);
+    const kind = suggestedLoader(hit, props.kind, found);
     loader.value = kind ? { kind, version: "" } : null;
     gameVersion.value = versions.value[0] ?? null;
   },

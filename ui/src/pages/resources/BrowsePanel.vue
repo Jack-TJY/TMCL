@@ -37,6 +37,7 @@ import { hitLoaders, loaderName, versionSummary } from "./targets";
 const props = defineProps<{
   /** 按该实例过滤；`null` 表示不限实例。 */
   instanceId: string | null;
+  initialQuery?: string;
   kind: ResourceKind;
   /** 已安装的项目，见 `installedKeys`；已安装的条目不再显示“安装”。 */
   installedKeys: ReadonlySet<string>;
@@ -45,7 +46,11 @@ const emit = defineEmits<{ install: [hit: ResourceHit] }>();
 
 const { t, locale } = useI18n();
 
-const query = ref("");
+const query = ref(props.initialQuery ?? "");
+watch(
+  () => props.initialQuery,
+  (value) => (query.value = value ?? ""),
+);
 const sort = ref<ResourceSort>("relevance");
 const page = ref(1);
 /** 平台过滤：`all` 为合并显示；在本次运行中保留（B4）。 */
