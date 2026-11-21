@@ -184,7 +184,7 @@ C2b 是第 1 轮 C2 之后发现的问题：资源页一键新建实例时，默
 
 ## 第 3 轮 · v0.2.0-beta.3 发布准备
 
-本轮补测 S1，复查 X1 的真实样本，并核对 beta.2 留下的三项资源页改进。文档基线为 `main` @ `f0c5742`，包含 [#206](https://github.com/Jack-TJY/TMCL/pull/206) 和 [#208](https://github.com/Jack-TJY/TMCL/pull/208)。桌面验证使用 PR 开发构建，Beta.3 候选安装包仍待实测。
+本轮补测 S1，复查 X1 的真实样本，并核对 beta.2 留下的三项资源页改进。文档基线为 `main` @ `f0c5742`，包含 [#206](https://github.com/Jack-TJY/TMCL/pull/206) 和 [#208](https://github.com/Jack-TJY/TMCL/pull/208)。桌面验证使用 PR 开发构建，候选安装包的独立验收见下文。
 
 ### 实测与回归
 
@@ -200,6 +200,12 @@ C2b 是第 1 轮 C2 之后发现的问题：资源页一键新建实例时，默
 
 ### 候选包与公测反馈
 
-- ⏳ 候选包生成后，记录构建提交、安装包、平台和日期。复核一键新建后的安装启动、真实 Fabric API 下载失败后的提示与重试，并按[公测计划](beta-plan.md)补记回归结果。
+候选包由提交 `6ebb74a` 构建。[三平台构建记录](https://github.com/Jack-TJY/TMCL/actions/runs/44900595243) · [验收记录](https://github.com/Jack-TJY/TMCL/pull/212#issuecomment-7062255061)
+
+- ✅ Windows 10 使用 NSIS 从 Beta.2 原位升级，退出码为 0。启动后首页可见两个原有实例，设置和两个实例配置文件的 SHA-256 与升级前一致。
+- ✅ Ubuntu 24.04.5 amd64 安装 deb 后版本为 0.2.0-beta.3。deb 与 AppImage 均在 X11 显示 1100×700 窗口，在 Wayland 创建窗口并提交绘制缓冲区。
+- ⏳ macOS DMG 中应用的两处版本号与 arm64 架构正确。实机安装、启动与卸载待测。
+- ⏳ 发布后从 Releases 下载 Windows 包执行 A1，并核对首页更新日志。
+- ⏳ 复核一键新建后的安装启动、真实 Fabric API 下载失败后的提示与重试，并按[公测计划](beta-plan.md)补记回归结果。
 - ⏸ X1 继续寻找仅另一平台提供适用版本的必需前置，记录资源、游戏版本、加载器与两个平台的文件，再安装并在游戏内验证。
 - **G3 待判定。** 维护者在公测反馈收齐后核对连续两个 Beta 版本的新增 P0/P1，以及 P1 模块完成或明确延期的情况。[退出条件](../PLAN.md#门槛-g3公测问题收敛)
