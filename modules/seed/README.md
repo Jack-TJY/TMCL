@@ -39,3 +39,31 @@ Windows x64 使用 Zig 0.14.1 的 C 编译器，按上游构建清单编译 10 �
 | 26.3 | 原版客户端新建默认单人世界，从内建服务器查询群系、执行 locate 并检查有效结构起点 | 原点为海洋，(608,64,−736) 为斑驳森林。废弃营地定位为 (624,−448)，区块 (39,−28) 有有效的 abandoned_camp_taiga。引擎村庄区块 (−9,−52) 与原版从原点定位选出的 (10,55) 均有有效的 village_plains。 |
 
 **选型结论**：固定引擎通过以上单种子原版样本验证，适合作为离线后端候选。地图可以标注已验证的结构起始区块；若界面提供“最近结构”，须说明距离及位置口径，不能据此承诺复现游戏定位命令的结果。扩大种子、结构和平台覆盖，以及澄清生成参数表的分发依据，分别属于后续验证与引入工作。
+
+### 扩大原版样本与精简构建验证（2026-11-25）
+
+沿用上述默认主世界、(0,64,0) 参考点和版本。表内结构位置均为 **区块坐标**。1.12.2 用原版村庄布局生成器检查候选；1.18 从原版结构生成器得到有效起点；26.3 在新建的原版单人世界中读取有效结构起点及指定点的群系。
+
+| 版本 | 种子 | 原点群系 | 村庄区块 | 废弃营地区块 | 斑驳森林样点 (X,Y,Z) |
+| --- | ---: | --- | --- | --- | --- |
+| 1.12.2 | 0 | forest | (−25,21) | — | — |
+| 1.12.2 | −1 | deep_ocean | (10,−56) | — | — |
+| 1.18 | 0 | river | (38,45) | — | — |
+| 1.18 | −1 | deep_ocean | (58,−48) | — | — |
+| 26.3 | 0 | river | (38,45) | (11,−11) | (2784,64,−1280) |
+| 26.3 | −1 | deep_ocean | (58,−48) | (53,0) | (672,64,1984) |
+
+[回归探针](validation/vanilla_samples.c) 固定了三个种子的 12 个群系样点和 12 个有效结构起点。它检查已知位置，不对最近搜索排序、其他结构、维度或自定义世界作保证。可在仓库根目录用 PowerShell 复跑（将路径改为固定版本的引擎源码目录，使用 Zig 0.14.1）：
+
+~~~powershell
+$engine = '外部 Seed Atlas 源码目录/seedatlas-engine'
+$units = 'finders','generator','layers','biomenoise','biomes','noise','util','quadbase','strongholds','eyesearch' |
+    ForEach-Object { Join-Path $engine "$_.c" }
+$exe = Join-Path $env:TEMP 'tmcl-seed-samples.exe'
+zig cc -O2 -fwrapv -ffp-contract=off -I $engine modules/seed/validation/vanilla_samples.c @units -o $exe
+if ($LASTEXITCODE -eq 0) { & $exe }
+~~~
+
+**参数表核查。** 固定引擎用到的五张 `btree*.h` 与 [cubiomes 固定提交的 MIT 版本](https://github.com/Cubitect/cubiomes/tree/e61f90580cbdd883214a8054670dacae655e59c0/tables) 逐文件字节一致。应保留 Cubitect 的 MIT 版权声明，并区分 Seed Atlas 根项目的 GPLv3 条款与原有 MIT 文件。`terrain_splines.h` 明确标注来自原版数据，目前未取得单独的再分发依据。
+
+**精简试验。** 临时源码树只包含 C 源码、头文件和上述五张群系表，剔除 `terrain_splines.h` 及其解释器。实验中将 `getTerrainFactor` 和 `getTerrainJaggedness` 替换为立即报错退出的哨兵，主动调用验证了退出码 86。完整与精简构建各通过全部 24 项回归。默认主世界、固定高度和上述结构的样本没有触发被裁剪的路径。建议原型先限定在这个范围内；在接入启动器前，应在调用边界拒绝不支持的世界类型和高度查询，避免测试哨兵进入发布包。大型生物群系、放大化世界、任意种子及其他结构的可用性仍需各自验证。
