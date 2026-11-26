@@ -67,3 +67,16 @@ if ($LASTEXITCODE -eq 0) { & $exe }
 **参数表核查。** 固定引擎用到的五张 `btree*.h` 与 [cubiomes 固定提交的 MIT 版本](https://github.com/Cubitect/cubiomes/tree/e61f90580cbdd883214a8054670dacae655e59c0/tables) 逐文件字节一致。应保留 Cubitect 的 MIT 版权声明，并区分 Seed Atlas 根项目的 GPLv3 条款与原有 MIT 文件。`terrain_splines.h` 明确标注来自原版数据，目前未取得单独的再分发依据。
 
 **精简试验。** 临时源码树只包含 C 源码、头文件和上述五张群系表，剔除 `terrain_splines.h` 及其解释器。实验中将 `getTerrainFactor` 和 `getTerrainJaggedness` 替换为立即报错退出的哨兵，主动调用验证了退出码 86。完整与精简构建各通过全部 24 项回归。默认主世界、固定高度和上述结构的样本没有触发被裁剪的路径。建议原型先限定在这个范围内；在接入启动器前，应在调用边界拒绝不支持的世界类型和高度查询，避免测试哨兵进入发布包。大型生物群系、放大化世界、任意种子及其他结构的可用性仍需各自验证。
+
+### 旧版结构取样（M3-01c1）
+
+以种子 0 和 −1 的默认主世界为基准，调用本地原版 1.12.2 和 1.18 的结构生成器，核实要塞、沙漠神殿、丛林神庙和海底遗迹。每个世界核验近、远两个要塞及其余三类各一个起点（共 20 个）；要求起点有效、拼块非空且起始区块吻合。1.12.2 的两类神殿共享放置规则，按实际拼块区分。各世界另记录 128 个要塞的**放置**坐标，不能将其当作 512 次完整建筑生成验证。
+
+在仓库根目录运行以下命令；使用 Python 3、JDK 17/18 和开发者自行提供的对应官方服务端 JAR。脚本只读取本地 JAR、核对指纹、在临时目录编译和运行探针，不启动服务器或下载文件。坐标单位为区块，不是方块。
+
+~~~sh
+python modules/seed/validation/legacy/check.py 1.12.2 <server-1.12.2.jar> <JDK目录>
+python modules/seed/validation/legacy/check.py 1.18 <server-1.18.jar> <JDK目录>
+~~~
+
+[验证器](validation/legacy/check.py) 输出实际起点及拼块数，并将两组完整要塞环逐项与[坐标基准](validation/legacy/rings.json)比较。这个步骤只提供独立原版基准，不代表启动器已经接入地图后端。
