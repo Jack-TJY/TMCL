@@ -70,6 +70,8 @@
   "RESOURCES_MODPACK_UNSUPPORTED": "This modpack is not supported: {name}",
   "RESOURCES_VERSION_NOT_FOUND": "Resource version {version} was not found",
   "RESOURCES_WORLD_NOT_FOUND": "World {world} was not found",
+  "SEED_INVALID_INPUT": "Check the seed map input range",
+  "SEED_UNSUPPORTED_VERSION": "The seed map does not support this game version yet",
   "SKIN_INVALID_IMAGE": "A skin must be a 64×64 or 64×32 PNG image",
   "SKIN_NOT_FOUND": "This skin is not in the library, please refresh the list",
   "SYNC_MASTER_INVALID": "The settings sync master profile is invalid. Capture or edit it again",

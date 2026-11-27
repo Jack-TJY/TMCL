@@ -183,6 +183,10 @@ pub enum ErrorCode {
     SakuraNodeUnavailable,
     /// SakuraFrp 账号未完成实名认证。
     SakuraRealnameRequired,
+    /// 种子地图参数超出支持范围。
+    SeedInvalidInput,
+    /// 种子地图暂不支持该游戏版本。
+    SeedUnsupportedVersion,
     /// 皮肤文件不是 PNG，或尺寸不是 64×64 / 64×32（正版上传时服务器拒收也用此码）。
     SkinInvalidImage,
     /// 本地皮肤库中没有该皮肤（已被删除或 ID 无效）。
@@ -282,6 +286,8 @@ impl ErrorCode {
             Self::SakuraNodeNotPublic => "SAKURA_NODE_NOT_PUBLIC",
             Self::SakuraNodeUnavailable => "SAKURA_NODE_UNAVAILABLE",
             Self::SakuraRealnameRequired => "SAKURA_REALNAME_REQUIRED",
+            Self::SeedInvalidInput => "SEED_INVALID_INPUT",
+            Self::SeedUnsupportedVersion => "SEED_UNSUPPORTED_VERSION",
             Self::SkinInvalidImage => "SKIN_INVALID_IMAGE",
             Self::SkinNotFound => "SKIN_NOT_FOUND",
             Self::SyncMasterInvalid => "SYNC_MASTER_INVALID",
@@ -453,6 +459,8 @@ mod tests {
             ErrorCode::SakuraNodeNotPublic,
             ErrorCode::SakuraNodeUnavailable,
             ErrorCode::SakuraRealnameRequired,
+            ErrorCode::SeedInvalidInput,
+            ErrorCode::SeedUnsupportedVersion,
             ErrorCode::SkinInvalidImage,
             ErrorCode::SkinNotFound,
             ErrorCode::SyncMasterInvalid,
