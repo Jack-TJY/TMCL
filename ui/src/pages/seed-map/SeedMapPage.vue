@@ -17,7 +17,7 @@ const available = computed(() =>
   layerKinds.filter((k) => k !== "abandoned_camp" || world.value.version === "26.3"),
 );
 const visible = computed(() => tilesInView(v.value));
-const { urls, markers, bounds, busy, error, retry } = useMapData(world, visible, layers);
+const { urls, markers, partial, busy, error, retry } = useMapData(world, visible, layers, v);
 const step = computed(() => 2 ** v.value.zoom);
 const pos = (x: number, z: number) => ({
   left: (x - v.value.x) / step.value + v.value.w / 2 + "px",
@@ -169,17 +169,37 @@ onBeforeUnmount(() => observer?.disconnect());
             class="tile"
             :style="pos(tile.x * SIZE * step, tile.z * SIZE * step)"
         /></template>
-        <span
-          v-for="m in markers"
-          :key="[m.kind, m.chunk_x, m.chunk_z].join('/')"
-          class="pin"
-          :data-kind="m.kind"
-          :style="pos(m.chunk_x * 16, m.chunk_z * 16)"
-          :title="
-            t('seedMap.marker', { kind: t(`seedMap.layer.${m.kind}`), x: m.chunk_x, z: m.chunk_z })
-          "
-          >{{ symbols[m.kind] }}</span
-        ><span class="cross" aria-hidden="true">+</span>
+        <template v-for="m in markers" :key="m.key">
+          <button
+            v-if="m.count > 1"
+            type="button"
+            class="pin cluster"
+            :data-kind="m.kind"
+            :style="pos(m.chunk_x * 16, m.chunk_z * 16)"
+            :title="t('seedMap.cluster', { kind: t(`seedMap.layer.${m.kind}`), n: m.count })"
+            :aria-label="t('seedMap.cluster', { kind: t(`seedMap.layer.${m.kind}`), n: m.count })"
+            @pointerdown.stop
+            @keydown.stop
+            @click="v = { ...v, x: m.chunk_x * 16, z: m.chunk_z * 16, zoom: v.zoom - 1 }"
+          >
+            {{ symbols[m.kind] }} ×{{ m.count }}
+          </button>
+          <span
+            v-else
+            class="pin"
+            :data-kind="m.kind"
+            :style="pos(m.chunk_x * 16, m.chunk_z * 16)"
+            :title="
+              t('seedMap.marker', {
+                kind: t(`seedMap.layer.${m.kind}`),
+                x: m.chunk_x,
+                z: m.chunk_z,
+              })
+            "
+            >{{ symbols[m.kind] }}</span
+          >
+        </template>
+        <span class="cross" aria-hidden="true">+</span>
       </div>
       <div class="zoom">
         <button
@@ -223,7 +243,7 @@ onBeforeUnmount(() => observer?.disconnect());
       >
     </fieldset>
     <p v-if="v.w && !visible.length">{{ t("seedMap.edge") }}</p>
-    <p v-else-if="layers.length && !bounds && v.w">{{ t("seedMap.closer") }}</p>
+    <p v-if="partial" class="tip">{{ t("seedMap.partial") }}</p>
     <p class="tip">{{ t("seedMap.hint") }}</p>
     <p v-if="invalid" role="alert">{{ t(invalid) }}</p>
     <p v-if="error" role="alert">
@@ -338,6 +358,12 @@ button:disabled {
   text-align: center;
   min-width: 16px;
   box-shadow: 0 1px 4px #000a;
+}
+.pin.cluster {
+  min-height: 20px;
+  padding: 0 4px;
+  cursor: zoom-in;
+  border-radius: 5px;
 }
 .cross {
   position: absolute;

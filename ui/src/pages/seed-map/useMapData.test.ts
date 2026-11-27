@@ -24,7 +24,14 @@ it("batches only missing tiles and releases obsolete image URLs on pan, seed cha
     const tiles = computed(() =>
       Array.from({ length: 17 }, (_, i) => ({ x: i + x.value, z: 0, zoom: 0 })),
     );
-    const data = scope.run(() => useMapData(world, tiles, ref<SeedStructureKind[]>([])))!;
+    const data = scope.run(() =>
+      useMapData(
+        world,
+        tiles,
+        ref<SeedStructureKind[]>([]),
+        ref({ x: 0, z: 0, w: 800, h: 420, zoom: 0 }),
+      ),
+    )!;
     await vi.runAllTimersAsync();
     expect(data.urls.size).toBe(17);
     expect(run.mock.calls.map((c) => c[0].query.tiles.length)).toEqual([16, 1]);

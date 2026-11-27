@@ -18,7 +18,8 @@
   "predicted": "Seed prediction only. Player builds and terrain edits are not shown.",
   "badSeed": "Enter a seed (at most 1,024 UTF-8 bytes).",
   "badPoint": "X and Z must be integers within ±30,000,000.",
-  "closer": "Zoom in to see structure layers.",
+  "partial": "Only surveyed areas are shown at this scale. Zoom in or pan to see more.",
+  "cluster": "{kind} × {n} confirmed; zoom in",
   "edge": "No complete tiles here. Pan inward or zoom in.",
   "marker": "{kind} · start chunk ({x}, {z})",
   "layer": {

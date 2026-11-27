@@ -1,5 +1,4 @@
 import type { SeedTile } from "../../bindings/SeedTile";
-import type { SeedChunkBounds } from "../../bindings/SeedChunkBounds";
 export const LIMIT = 30_000_000;
 export const SIZE = 256;
 export interface View {
@@ -49,20 +48,6 @@ export function tilesInView(v: View): SeedTile[] {
     )
       tiles.push({ x: x || 0, z: z || 0, zoom: v.zoom });
   return tiles;
-}
-/** At distant scales do not flood the backend with hundreds of structure queries. */
-export function structureBounds(tiles: SeedTile[]): SeedChunkBounds | null {
-  if (!tiles.length) return null;
-  const a = tiles[0],
-    b = tiles[tiles.length - 1],
-    span = 16 * 2 ** a.zoom;
-  const bounds = {
-    min_x: a.x * span,
-    min_z: a.z * span,
-    max_x: (b.x + 1) * span - 1,
-    max_z: (b.z + 1) * span - 1,
-  };
-  return bounds.max_x - bounds.min_x < 256 && bounds.max_z - bounds.min_z < 256 ? bounds : null;
 }
 /** Accept only signed decimal block coordinates inside the Java world. */
 export function jumpPoint(xs: string, zs: string) {
