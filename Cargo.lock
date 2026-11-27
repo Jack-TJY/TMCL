@@ -4730,6 +4730,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmcl-seed"
+version = "0.2.0-beta.3"
+dependencies = [
+ "cc",
+ "png",
+ "serde_json",
+ "tempfile",
+ "tmcl-common",
+]
+
+[[package]]
 name = "tmcl-skin"
 version = "0.2.0-beta.3"
 dependencies = [

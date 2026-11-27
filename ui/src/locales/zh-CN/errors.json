@@ -70,6 +70,8 @@
   "RESOURCES_MODPACK_UNSUPPORTED": "不支持此整合包：{name}",
   "RESOURCES_VERSION_NOT_FOUND": "找不到资源版本 {version}",
   "RESOURCES_WORLD_NOT_FOUND": "找不到存档 {world}",
+  "SEED_INVALID_INPUT": "请检查种子地图的输入范围",
+  "SEED_UNSUPPORTED_VERSION": "种子地图暂不支持此游戏版本",
   "SKIN_INVALID_IMAGE": "皮肤必须是 64×64 或 64×32 像素的 PNG 图片",
   "SKIN_NOT_FOUND": "皮肤库中没有这个皮肤，请刷新列表",
   "SYNC_MASTER_INVALID": "设置同步的主配置无效，请重新采集或编辑",
