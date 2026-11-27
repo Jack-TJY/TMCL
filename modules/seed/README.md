@@ -2,6 +2,8 @@
 
 M3-01 为 Java 版原版世界生成生物群系瓦片和结构位置。选型顺序与验收版本见[开发计划](../../docs/PLAN.md#m3-01-种子地图后端)。
 
+三版默认世界的定位命令、结构变体、维度归属和现有验证缺口见[原版可定位结构基准](validation/catalog/README.md)。目录是后续验收分母，不代表这些结构已经可以在页面中查询。
+
 ## Chunkbase 集成核查
 
 2026-11-24 核查时，Seed Map 提供可分享的地图链接，适合用系统浏览器打开。地图服务返回 `X-Frame-Options: deny`。在官方公开说明中未找到适用于启动器的离线 SDK、公开查询 API 或引擎再分发许可。使用条款第 2–3 节限制复制、修改、反编译和镜像。TMCL 的离线后端不采用 Chunkbase；用户可自行通过网站交叉核对结果。[Seed Map](https://www.chunkbase.com/apps/seed-map) · [使用条款](https://www.chunkbase.com/terms-of-use)

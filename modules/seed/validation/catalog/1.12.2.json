@@ -1,0 +1,40 @@
+{
+  "dimensions": {
+    "minecraft:overworld": {
+      "Mansion": [
+        "mansion"
+      ],
+      "Mineshaft": [
+        "mineshaft",
+        "mineshaft_mesa"
+      ],
+      "Monument": [
+        "monument"
+      ],
+      "Stronghold": [
+        "stronghold"
+      ],
+      "Temple": [
+        "desert_pyramid",
+        "igloo",
+        "jungle_pyramid",
+        "swamp_hut"
+      ],
+      "Village": [
+        "village"
+      ]
+    },
+    "minecraft:the_end": {
+      "EndCity": [
+        "end_city"
+      ]
+    },
+    "minecraft:the_nether": {
+      "Fortress": [
+        "fortress"
+      ]
+    }
+  },
+  "tags": {},
+  "version": "1.12.2"
+}
