@@ -105,6 +105,8 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::sakura::sakura_terms,
         commands::sakura::sakura_tunnels,
         commands::sakura::sakura_user,
+        // seed
+        commands::seed::seed_map_query,
         // settings
         commands::settings::settings_get,
         commands::settings::settings_get_language,
@@ -252,6 +254,73 @@ mod tests {
                 invoke_key: INVOKE_KEY.to_owned(),
             },
         )
+    }
+
+    #[test]
+    fn seed_map_query_over_ipc_delivers_to_requesting_channel_and_finishes() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = AppState::with_data(Ok(DataPaths::at(dir.path())));
+        let (tx, rx) = mpsc::channel();
+        let app = setup(
+            mock_builder().channel_interceptor(move |_, cb, index, body| {
+                if let InvokeResponseBody::Json(json) = body {
+                    tx.send((cb.0, index, serde_json::from_str::<Value>(json).unwrap()))
+                        .unwrap();
+                }
+                true
+            }),
+            state,
+        )
+        .build(mock_context(noop_assets()))
+        .unwrap();
+        let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .unwrap();
+        let (end_tx, end_rx) = mpsc::channel();
+        app.listen(TASK_FINISHED, move |event| {
+            end_tx
+                .send(serde_json::from_str::<TaskFinished>(event.payload()).unwrap())
+                .unwrap();
+        });
+        let request = json!({
+            "results": "__CHANNEL__:42",
+            "args": {"version":"26.3", "seed":"0", "query": {
+                "type":"structures", "kind":"abandoned_camp",
+                "bounds":{"min_x":11,"min_z":-11,"max_x":11,"max_z":-11}
+            }}
+        });
+        let started = invoke(&webview, "seed_map_query", request).unwrap();
+        let (cb, index, msg) = rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!((cb, index), (42, 0));
+        assert_eq!(msg["starts"], json!([{"chunk_x":11,"chunk_z":-11}]));
+        let done = end_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(started["task_id"], json!(done.task_id));
+        assert_eq!(done.state, TaskState::Succeeded);
+
+        let tile = json!({"x":-1,"z":0,"zoom":0});
+        let started = invoke(
+            &webview,
+            "seed_map_query",
+            json!({
+                "results":"__CHANNEL__:43", "args":{
+                    "version":"1.12.2", "seed":"0", "query":{"type":"tiles","tiles":[tile]}
+                }
+            }),
+        )
+        .unwrap();
+        let (cb, index, msg) = rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!((cb, index), (43, 0));
+        assert_eq!(msg["type"], "tile");
+        assert_eq!(msg["tile"], tile);
+        let png: Vec<u8> = serde_json::from_value(msg["png"].clone()).unwrap();
+        assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"));
+        let persisted = dir
+            .path()
+            .join("cache/seed-map/overworld-y64-v1/1.12.2/0/0/-1_0.png");
+        assert_eq!(png, std::fs::read(persisted).unwrap());
+        let done = end_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(started["task_id"], json!(done.task_id));
+        assert_eq!(done.state, TaskState::Succeeded);
     }
 
     #[test]

@@ -4515,6 +4515,7 @@ dependencies = [
  "tmcl-p2p",
  "tmcl-resources",
  "tmcl-sakura",
+ "tmcl-seed",
  "tmcl-skin",
  "tmcl-sync",
  "tokio",

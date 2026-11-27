@@ -8,6 +8,7 @@
   "close": "关闭",
   "source": {
     "cargo": "Rust",
+    "native": "原生组件",
     "npm": "前端"
   },
   "thirdParty": {

@@ -34,6 +34,16 @@ describe("third-party-licenses.json", () => {
     expect(names.has("npm:vue")).toBe(true);
   });
 
+  it("ships the static engine notices with the application", () => {
+    const engine = licenses.packages.find(
+      (p) => p.source === "native" && p.name === "Seed Atlas / cubiomes",
+    );
+    expect(engine?.texts.length).toBe(3);
+    expect(
+      engine?.texts.some((i) => licenses.texts[i].includes("Copyright (c) 2020 Cubitect")),
+    ).toBe(true);
+  });
+
   it("only references existing license texts", () => {
     for (const p of licenses.packages) {
       for (const i of p.texts) expect(licenses.texts[i]).toBeTypeOf("string");

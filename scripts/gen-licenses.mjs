@@ -1,13 +1,14 @@
 // 生成“关于”页的第三方许可证列表 ui/src/pages/about/third-party-licenses.json（生成物，禁止手改）。
 //
 // - Rust：cargo-about（配置 scripts/about.toml），只含 tmcl-app 在三平台上随安装包分发的依赖。
+// - 原生：随桌面程序静态分发的 Seed Atlas/cubiomes，包含原始许可与声明。
 // - 前端：`pnpm licenses list --prod`，许可证原文取自各包目录下的 LICENSE / COPYING 文件。
 //
 // 依赖（Cargo.lock、pnpm-lock.yaml）变化后运行 `pnpm gen:licenses` 并提交结果。
 // 需要先安装 cargo-about：`cargo install cargo-about --locked --features cli`。
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -26,8 +27,7 @@ function run(args, cwd = root) {
     shell: true,
   });
   if (result.status !== 0) {
-    console.error(`${command} 失败：\n${result.stderr || result.error}`);
-    process.exit(1);
+    throw new Error(`${command} 失败：\n${result.stderr || result.error}`);
   }
   return result.stdout;
 }
@@ -47,22 +47,18 @@ function textId(text) {
 }
 
 function rustPackages() {
-  const about = JSON.parse(
-    run([
-      "cargo",
-      "about",
-      "generate",
-      "--format",
-      "json",
-      "--locked",
-      "--offline",
-      "--fail",
-      "-c",
-      "scripts/about.toml",
-      "-m",
-      "src-tauri/Cargo.toml",
-    ]),
-  );
+  // cargo-about on Windows requires an output file rather than a stdout pipe.
+  // Keep the CLI argument relative so a workspace path with spaces is safe.
+  mkdirSync(join(root, "target"), { recursive: true });
+  const dir = mkdtempSync(join(root, "target", "about-"));
+  let about;
+  try {
+    const file = `target/${basename(dir)}/licenses.json`;
+    run(["cargo", "about", "generate", "--format", "json", "--locked", "--offline", "--fail", "-c", "scripts/about.toml", "-m", "src-tauri/Cargo.toml", "-o", file]);
+    about = JSON.parse(readFileSync(join(root, file), "utf8"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
   const textsByCrate = new Map();
   for (const license of about.licenses) {
     const id = textId(license.text);
@@ -120,7 +116,22 @@ function npmPackages() {
   return packages;
 }
 
-const packages = [...rustPackages(), ...npmPackages()].sort(
+// cargo-about cannot see the C sources linked into tmcl-seed. Include their
+// original copyright notices together with the upstream license texts.
+function seedEngine() {
+  const commit = "43e46eb90244a7cac4654b4fdb8d4f27b3fb6346";
+  const dir = join(root, "modules/seed/vendor/seedatlas");
+  return {
+    name: "Seed Atlas / cubiomes",
+    version: commit,
+    source: "native",
+    license: "GPL-3.0-only AND MIT",
+    url: `https://github.com/DUzzL/Seed-Atlas/tree/${commit}/seedatlas-engine`,
+    texts: ["LICENSE", "LICENSE-GPLv3", "LEGAL_NOTICE.md"].map((file) => textId(readFileSync(join(dir, file), "utf8"))),
+  };
+}
+
+const packages = [...rustPackages(), ...npmPackages(), seedEngine()].sort(
   (a, b) =>
     a.source.localeCompare(b.source) ||
     a.name.localeCompare(b.name) ||

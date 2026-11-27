@@ -15,6 +15,7 @@
     "resources_install": "Install resources",
     "resources_modpack_install": "Install modpack",
     "resources_update": "Update resources",
+    "seed_map": "Query seed map",
     "sakura_start": "SakuraFrp room",
     "p2p_host": "Host direct room",
     "p2p_join": "Join direct room"
@@ -40,6 +41,8 @@
     "modpack_fetch": "Fetching modpack",
     "modpack_files": "Modpack files",
     "modpack_overrides": "Extracting modpack",
+    "seed_tile": "Rendering biome tile",
+    "seed_structures": "Finding structure starts",
     "sakura_frpc": "Downloading tunnel client",
     "p2p_easytier": "Preparing networking component",
     "p2p_start": "Opening room",

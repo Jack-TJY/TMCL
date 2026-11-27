@@ -5,8 +5,8 @@ export interface ThirdPartyPackage {
   name: string;
   /** 版本号；同名包有多个版本时用 `, ` 连接。 */
   version: string;
-  /** `cargo`：Rust crate；`npm`：前端依赖。 */
-  source: "cargo" | "npm";
+  /** `cargo`：Rust crate；`npm`：前端依赖；`native`：原生组件。 */
+  source: "cargo" | "npm" | "native";
   /** SPDX 许可证表达式。 */
   license: string;
   /** 仓库或主页地址。 */
