@@ -1,0 +1,81 @@
+{
+  "dimensions": {
+    "minecraft:overworld": {
+      "buried_treasure": [
+        "minecraft:buried_treasure"
+      ],
+      "desert_pyramid": [
+        "minecraft:desert_pyramid"
+      ],
+      "igloo": [
+        "minecraft:igloo"
+      ],
+      "jungle_pyramid": [
+        "minecraft:jungle_pyramid"
+      ],
+      "mansion": [
+        "minecraft:mansion"
+      ],
+      "mineshaft": [
+        "minecraft:mineshaft",
+        "minecraft:mineshaft_mesa"
+      ],
+      "monument": [
+        "minecraft:monument"
+      ],
+      "ocean_ruin": [
+        "minecraft:ocean_ruin_cold",
+        "minecraft:ocean_ruin_warm"
+      ],
+      "pillager_outpost": [
+        "minecraft:pillager_outpost"
+      ],
+      "ruined_portal": [
+        "minecraft:ruined_portal",
+        "minecraft:ruined_portal_desert",
+        "minecraft:ruined_portal_jungle",
+        "minecraft:ruined_portal_mountain",
+        "minecraft:ruined_portal_ocean",
+        "minecraft:ruined_portal_swamp"
+      ],
+      "shipwreck": [
+        "minecraft:shipwreck",
+        "minecraft:shipwreck_beached"
+      ],
+      "stronghold": [
+        "minecraft:stronghold"
+      ],
+      "swamp_hut": [
+        "minecraft:swamp_hut"
+      ],
+      "village": [
+        "minecraft:village_desert",
+        "minecraft:village_plains",
+        "minecraft:village_savanna",
+        "minecraft:village_snowy",
+        "minecraft:village_taiga"
+      ]
+    },
+    "minecraft:the_end": {
+      "endcity": [
+        "minecraft:end_city"
+      ]
+    },
+    "minecraft:the_nether": {
+      "bastion_remnant": [
+        "minecraft:bastion_remnant"
+      ],
+      "fortress": [
+        "minecraft:fortress"
+      ],
+      "nether_fossil": [
+        "minecraft:nether_fossil"
+      ],
+      "ruined_portal": [
+        "minecraft:ruined_portal_nether"
+      ]
+    }
+  },
+  "tags": {},
+  "version": "1.18"
+}
