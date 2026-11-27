@@ -11,9 +11,9 @@ import { toAppError } from "../../api/invoke";
 import type { AppError } from "../../bindings/AppError";
 import type { SeedStructureKind } from "../../bindings/SeedStructureKind";
 import type { SeedTile } from "../../bindings/SeedTile";
-import type { SeedStructureStart } from "../../bindings/SeedStructureStart";
+import { useStructures } from "./useStructures";
 import { runQuery } from "./request";
-import { tileKey, structureBounds } from "./viewport";
+import { tileKey, type View } from "./viewport";
 export const layerKinds: SeedStructureKind[] = [
   "village",
   "stronghold",
@@ -23,21 +23,18 @@ export const layerKinds: SeedStructureKind[] = [
   "abandoned_camp",
 ];
 export type World = { version: string; seed: string };
-export type Marker = SeedStructureStart & { kind: SeedStructureKind };
 /** Keep decoded image URLs only for visible tiles. Revisits use the backend disk cache. */
 export function useMapData(
   world: Ref<World>,
   tiles: ComputedRef<SeedTile[]>,
   layers: Ref<SeedStructureKind[]>,
+  view: Ref<View>,
 ) {
-  const urls = shallowReactive(new Map<string, string>()),
-    markers = ref<Marker[]>([]);
+  const urls = shallowReactive(new Map<string, string>());
   const tileError = ref<AppError | null>(null),
-    layerError = ref<AppError | null>(null),
-    retry = ref(0);
-  const loadingTiles = ref(false),
-    loadingLayers = ref(false);
-  const bounds = computed(() => structureBounds(tiles.value));
+    retry = ref(0),
+    loadingTiles = ref(false);
+  const structure = useStructures(world, view, layers, retry);
   const tileSet = computed(() => tiles.value.map(tileKey).join(";"));
   const clear = (keep = new Set<string>()) => {
     for (const [key, url] of urls)
@@ -89,52 +86,13 @@ export function useMapData(
     },
     { immediate: true, flush: "sync" },
   );
-  watch(
-    [world, () => JSON.stringify(bounds.value), () => layers.value.join(","), retry],
-    ([w], _, cleanup) => {
-      markers.value = [];
-      layerError.value = null;
-      const box = bounds.value;
-      const selected = [...layers.value];
-      loadingLayers.value = !!box && selected.length > 0;
-      if (!box || !selected.length) return;
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => {
-        void (async () => {
-          for (const kind of selected) {
-            if (ctrl.signal.aborted) break;
-            await runQuery(
-              { ...w, query: { type: "structures", kind, bounds: box } },
-              ctrl.signal,
-              (msg) => {
-                if (msg.type !== "structures" || msg.kind !== kind)
-                  throw new Error("Unexpected structure response");
-                markers.value.push(...msg.starts.map((s) => ({ ...s, kind })));
-              },
-            );
-          }
-        })()
-          .catch((e) => {
-            if (!ctrl.signal.aborted) layerError.value = toAppError(e);
-          })
-          .finally(() => {
-            if (!ctrl.signal.aborted) loadingLayers.value = false;
-          });
-      }, 120);
-      cleanup(() => {
-        clearTimeout(timer);
-        ctrl.abort();
-      });
-    },
-    { immediate: true, flush: "sync" },
-  );
   onScopeDispose(() => clear());
   return {
     urls,
-    markers,
-    bounds,
-    error: computed(() => tileError.value ?? layerError.value),
-    busy: computed(() => loadingTiles.value || loadingLayers.value),
+    markers: structure.pins,
+    partial: structure.partial,
+    error: computed(() => tileError.value ?? structure.error.value),
+    busy: computed(() => loadingTiles.value || structure.loading.value),
     retry: () => retry.value++,
   };
 }
