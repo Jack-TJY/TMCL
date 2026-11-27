@@ -74,6 +74,29 @@ describe("tasks store", () => {
     expect(store.overallProgress).toBeNull();
   });
 
+  it("does not retain viewport tasks or their restart callbacks, even on early cancellation", async () => {
+    tauriInvoke.mockResolvedValueOnce({ tasks: [] });
+    const store = useTasksStore();
+    await store.start({
+      kind: "seed_map",
+      label: null,
+      transient: true,
+      start: async () => ({ task_id: "map1" }),
+    });
+    expect(store.running[0].restart).toBeNull();
+    emit("task:finished", { task_id: "map1", state: "succeeded" });
+    await store.start({
+      kind: "seed_map",
+      label: null,
+      transient: true,
+      start: async () => {
+        emit("task:finished", { task_id: "map2", state: "cancelled" });
+        return { task_id: "map2" };
+      },
+    });
+    expect(store.entries).toEqual([]);
+  });
+
   it("runs a follow-up only after its task succeeds", async () => {
     tauriInvoke.mockResolvedValueOnce({ tasks: [] });
     const store = useTasksStore();

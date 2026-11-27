@@ -71,6 +71,12 @@ const routes: RouteRecordRaw[] = [
     meta: { titleKey: "shell.nav.resources" },
   },
   {
+    path: "/seed-map",
+    name: "seed-map",
+    component: () => import("./pages/seed-map/SeedMapPage.vue"),
+    meta: { titleKey: "seedMap.title" },
+  },
+  {
     path: "/settings",
     name: "settings",
     component: SettingsPage,

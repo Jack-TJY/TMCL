@@ -25,6 +25,8 @@ export interface TaskEntry extends TaskInfo {
 
 /** 由界面发起的任务。 */
 export interface TaskRequest {
+  /** 视口等短时任务：只在运行中展示，不保留页面回调或已结束记录。 */
+  transient?: boolean;
   kind: string;
   label: string | null;
   /** 调用对应命令并返回任务 ID；重试时会再次调用。 */
@@ -69,6 +71,7 @@ export const useTasksStore = defineStore("tasks", () => {
   const entries = ref<TaskEntry[]>([]);
   /** 事件先于 `start` 返回到达时，暂存的结束事件。 */
   const early = new Map<TaskId, TaskFinished>();
+  const transient = new Set<TaskId>();
   /** 任务成功后要执行的后续动作（例如新建实例后继续安装资源），与页面是否还在无关。 */
   const followUps = new Map<TaskId, () => void>();
   let initialized: Promise<void> | null = null;
@@ -129,6 +132,7 @@ export const useTasksStore = defineStore("tasks", () => {
     const next = followUps.get(finished.task_id);
     followUps.delete(finished.task_id);
     if (next && finished.state === "succeeded") next();
+    if (transient.delete(finished.task_id)) dismiss(finished.task_id);
   }
 
   /**
@@ -177,13 +181,15 @@ export const useTasksStore = defineStore("tasks", () => {
       entry = entries.value[0];
     }
     entry.label = request.label;
-    entry.restart = request.start;
+    entry.restart = request.transient ? null : request.start;
+    if (request.transient && entry.status === "running") transient.add(task_id);
     entry.instanceId = request.instanceId ?? null;
     const finished = early.get(task_id);
     if (finished) {
       early.delete(task_id);
       applyFinished(finished);
     }
+    if (request.transient && entry.status !== "running") dismiss(task_id);
     return task_id;
   }
 

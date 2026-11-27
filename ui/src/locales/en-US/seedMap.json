@@ -1,0 +1,32 @@
+{
+  "title": "Seed map",
+  "subtitle": "Java Edition · Default Overworld · Y = 64",
+  "seed": "World seed",
+  "version": "Game version",
+  "apply": "View map",
+  "jump": "Go to coordinates",
+  "origin": "Back to origin",
+  "layers": "Structure layers",
+  "zoomIn": "Zoom in",
+  "zoomOut": "Zoom out",
+  "hint": "Drag to pan · Scroll to zoom · Arrow keys to move",
+  "center": "Center",
+  "pointer": "Pointer",
+  "scale": "{n} blocks per pixel",
+  "working": "Drawing…",
+  "retry": "Retry",
+  "predicted": "Seed prediction only. Player builds and terrain edits are not shown.",
+  "badSeed": "Enter a seed (at most 1,024 UTF-8 bytes).",
+  "badPoint": "X and Z must be integers within ±30,000,000.",
+  "closer": "Zoom in to see structure layers.",
+  "edge": "No complete tiles here. Pan inward or zoom in.",
+  "marker": "{kind} · start chunk ({x}, {z})",
+  "layer": {
+    "village": "Village",
+    "stronghold": "Stronghold",
+    "desert_pyramid": "Desert pyramid",
+    "jungle_pyramid": "Jungle temple",
+    "ocean_monument": "Ocean monument",
+    "abandoned_camp": "Abandoned camp"
+  }
+}

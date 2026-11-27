@@ -1,0 +1,32 @@
+{
+  "title": "种子地图",
+  "subtitle": "Java 版 · 默认主世界 · Y = 64",
+  "seed": "世界种子",
+  "version": "游戏版本",
+  "apply": "查看地图",
+  "jump": "跳转",
+  "origin": "回到原点",
+  "layers": "结构图层",
+  "zoomIn": "放大",
+  "zoomOut": "缩小",
+  "hint": "拖动平移 · 滚轮缩放 · 方向键移动",
+  "center": "中心",
+  "pointer": "指针",
+  "scale": "每像素 {n} 方块",
+  "working": "正在绘制…",
+  "retry": "重试",
+  "predicted": "种子预测，不显示玩家建造或修改的地形。",
+  "badSeed": "请输入种子（最多 1024 个 UTF-8 字节）。",
+  "badPoint": "X、Z 必须是 ±30,000,000 以内的整数。",
+  "closer": "请放大以查看结构图层。",
+  "edge": "世界边缘没有完整瓦片，请向内平移或放大。",
+  "marker": "{kind} · 起始区块 ({x}, {z})",
+  "layer": {
+    "village": "村庄",
+    "stronghold": "要塞",
+    "desert_pyramid": "沙漠神殿",
+    "jungle_pyramid": "丛林神庙",
+    "ocean_monument": "海底遗迹",
+    "abandoned_camp": "废弃营地"
+  }
+}
