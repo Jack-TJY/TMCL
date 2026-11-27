@@ -9,7 +9,7 @@
   "layers": "Structure layers",
   "zoomIn": "Zoom in",
   "zoomOut": "Zoom out",
-  "hint": "Drag to pan · Scroll to zoom · Arrow keys to move",
+  "hint": "Drag to pan · Scroll to zoom · Arrow keys to move · Tab to markers, Left/Right to browse, Esc for map",
   "center": "Center",
   "pointer": "Pointer",
   "scale": "{n} blocks per pixel",
@@ -19,7 +19,7 @@
   "badSeed": "Enter a seed (at most 1,024 UTF-8 bytes).",
   "badPoint": "X and Z must be integers within ±30,000,000.",
   "partial": "Only surveyed areas are shown at this scale. Zoom in or pan to see more.",
-  "cluster": "{kind} × {n} confirmed; zoom in",
+  "cluster": "{kind} × {n} confirmed · representative start chunk ({x}, {z}) · activate to zoom in",
   "edge": "No complete tiles here. Pan inward or zoom in.",
   "marker": "{kind} · start chunk ({x}, {z})",
   "layer": {
