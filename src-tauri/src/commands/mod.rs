@@ -13,6 +13,7 @@ pub mod loader;
 pub mod p2p;
 pub mod resources;
 pub mod sakura;
+pub mod seed;
 pub mod settings;
 pub mod skin;
 pub mod sync;
