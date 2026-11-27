@@ -4,6 +4,8 @@ import { useI18n } from "vue-i18n";
 import { formatError } from "../../i18n";
 import { blockAt, clamp, jumpPoint, SIZE, tileKey, tilesInView, zoomAt } from "./viewport";
 import { layerKinds, useMapData, type World } from "./useMapData";
+import StructureIcon from "./StructureIcon.vue";
+import type { Pin } from "./useStructures";
 import type { SeedStructureKind } from "../../bindings/SeedStructureKind";
 const { t } = useI18n();
 const versions = ["1.12.2", "1.18", "26.3"];
@@ -27,14 +29,46 @@ const cursor = ref<{ x: number; z: number } | null>(null),
   jumpX = ref("0"),
   jumpZ = ref("0"),
   invalid = ref("");
-const symbols: Record<SeedStructureKind, string> = {
-  village: "V",
-  stronghold: "S",
-  desert_pyramid: "D",
-  jungle_pyramid: "J",
-  ocean_monument: "O",
-  abandoned_camp: "C",
-};
+const selectedPinKey = ref(""),
+  inspectingPin = ref(false);
+const selectedPin = computed(() => markers.value.find((pin) => pin.key === selectedPinKey.value));
+const tabPin = computed(() => selectedPin.value?.key ?? markers.value[0]?.key);
+function pinLabel(pin: Pin) {
+  return t(pin.count > 1 ? "seedMap.cluster" : "seedMap.marker", {
+    kind: t(`seedMap.layer.${pin.kind}`),
+    n: pin.count,
+    x: pin.chunk_x,
+    z: pin.chunk_z,
+  });
+}
+function focusPin(pin: Pin) {
+  selectedPinKey.value = pin.key;
+  inspectingPin.value = true;
+}
+// One tab stop for the whole overlay, even in a densely marked viewport.
+function pinKey(e: KeyboardEvent) {
+  if (e.key === "Escape") {
+    map.value?.focus({ preventScroll: true });
+  } else if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+    const pins = Array.from(map.value?.querySelectorAll<HTMLElement>(".pin") ?? []);
+    if (!pins.length) return;
+    const i = pins.indexOf(e.currentTarget as HTMLElement);
+    const next =
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? pins.length - 1
+          : (i + (e.key === "ArrowLeft" ? -1 : 1) + pins.length) % pins.length;
+    pins[next].focus({ preventScroll: true });
+  } else return;
+  e.preventDefault();
+  e.stopPropagation();
+}
+function expandPin(pin: Pin) {
+  if (pin.count <= 1) return;
+  v.value = { ...v.value, x: pin.chunk_x * 16, z: pin.chunk_z * 16, zoom: v.value.zoom - 1 };
+  map.value?.focus({ preventScroll: true });
+}
 function apply() {
   if (!seed.value.trim() || new TextEncoder().encode(seed.value).length > 1024) {
     invalid.value = "seedMap.badSeed";
@@ -169,36 +203,32 @@ onBeforeUnmount(() => observer?.disconnect());
             class="tile"
             :style="pos(tile.x * SIZE * step, tile.z * SIZE * step)"
         /></template>
-        <template v-for="m in markers" :key="m.key">
-          <button
+        <component
+          v-for="m in markers"
+          :key="m.key"
+          :is="m.count > 1 ? 'button' : 'span'"
+          :type="m.count > 1 ? 'button' : undefined"
+          :role="m.count === 1 ? 'img' : undefined"
+          class="pin"
+          :class="{ cluster: m.count > 1 }"
+          :tabindex="m.key === tabPin ? 0 : -1"
+          :data-kind="m.kind"
+          :style="pos(m.chunk_x * 16, m.chunk_z * 16)"
+          :title="pinLabel(m)"
+          :aria-label="pinLabel(m)"
+          @focus="focusPin(m)"
+          @blur="inspectingPin = false"
+          @keydown="pinKey"
+          @pointerdown="m.count > 1 && $event.stopPropagation()"
+          @click="expandPin(m)"
+        >
+          <StructureIcon :kind="m.kind" /><span
             v-if="m.count > 1"
-            type="button"
-            class="pin cluster"
-            :data-kind="m.kind"
-            :style="pos(m.chunk_x * 16, m.chunk_z * 16)"
-            :title="t('seedMap.cluster', { kind: t(`seedMap.layer.${m.kind}`), n: m.count })"
-            :aria-label="t('seedMap.cluster', { kind: t(`seedMap.layer.${m.kind}`), n: m.count })"
-            @pointerdown.stop
-            @keydown.stop
-            @click="v = { ...v, x: m.chunk_x * 16, z: m.chunk_z * 16, zoom: v.zoom - 1 }"
+            class="cluster-count"
+            aria-hidden="true"
+            >×{{ m.count }}</span
           >
-            {{ symbols[m.kind] }} ×{{ m.count }}
-          </button>
-          <span
-            v-else
-            class="pin"
-            :data-kind="m.kind"
-            :style="pos(m.chunk_x * 16, m.chunk_z * 16)"
-            :title="
-              t('seedMap.marker', {
-                kind: t(`seedMap.layer.${m.kind}`),
-                x: m.chunk_x,
-                z: m.chunk_z,
-              })
-            "
-            >{{ symbols[m.kind] }}</span
-          >
-        </template>
+        </component>
         <span class="cross" aria-hidden="true">+</span>
       </div>
       <div class="zoom">
@@ -229,6 +259,7 @@ onBeforeUnmount(() => observer?.disconnect());
         {{ Math.floor(cursor.z) }}</span
       ><span>{{ t("seedMap.scale", { n: step }) }}</span>
     </div>
+    <p v-if="inspectingPin && selectedPin" class="pin-info">{{ pinLabel(selectedPin) }}</p>
     <form class="bar jump" @submit.prevent="jump">
       <label>X<input v-model="jumpX" inputmode="text" aria-label="X" /></label
       ><label>Z<input v-model="jumpZ" inputmode="text" aria-label="Z" /></label
@@ -238,7 +269,7 @@ onBeforeUnmount(() => observer?.disconnect());
     <fieldset>
       <legend>{{ t("seedMap.layers") }}</legend>
       <label v-for="k in available" :key="k"
-        ><input v-model="layers" type="checkbox" :value="k" /><strong>{{ symbols[k] }}</strong>
+        ><input v-model="layers" type="checkbox" :value="k" /><StructureIcon :kind="k" />
         {{ t(`seedMap.layer.${k}`) }}</label
       >
     </fieldset>
@@ -347,23 +378,53 @@ button:disabled {
   pointer-events: none;
   image-rendering: pixelated;
 }
-.pin {
+/* The icon center is the chunk anchor. The badge is out of flow so its
+   digit count never shifts the glyph off that coordinate. */
+.pin,
+.pin.cluster {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
   z-index: 1;
   transform: translate(-50%, -50%);
-  border-radius: 50%;
-  border: 2px solid white;
-  background: #273746;
-  color: white;
-  font: 700 11px/16px sans-serif;
-  text-align: center;
-  min-width: 16px;
-  box-shadow: 0 1px 4px #000a;
+  background: #25333b;
+  border: 1px solid #fff4d8;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px #222d35,
+    0 1px 3px #0009;
 }
 .pin.cluster {
-  min-height: 20px;
-  padding: 0 4px;
   cursor: zoom-in;
-  border-radius: 5px;
+}
+.cluster-count {
+  position: absolute;
+  left: calc(100% - 3px);
+  bottom: -2px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #15212b;
+  border: 1px solid #fff4d8;
+  color: white;
+  font: 700 10px/13px sans-serif;
+  white-space: nowrap;
+}
+.pin:hover,
+.pin:focus-visible {
+  z-index: 2;
+}
+.pin:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px #15212b;
+}
+.pin-info {
+  font-size: 13px;
+  color: var(--tmcl-text);
 }
 .cross {
   position: absolute;
@@ -415,7 +476,12 @@ fieldset label {
   gap: 3px;
   margin: 3px 12px 3px 0;
 }
-fieldset strong {
-  font-size: 11px;
+fieldset .structure-icon {
+  box-sizing: content-box;
+  padding: 1px;
+  border-radius: 3px;
+  background: #25333b;
+  border: 1px solid #fff4d8;
+  box-shadow: 0 0 0 1px #222d35;
 }
 </style>
