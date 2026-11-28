@@ -16,7 +16,11 @@ const v = ref({ x: 0, z: 0, zoom: 1, w: 0, h: 0 });
 const map = ref<HTMLElement | null>(null);
 const layers = ref<SeedStructureKind[]>(["village"]);
 const available = computed(() =>
-  layerKinds.filter((k) => k !== "abandoned_camp" || world.value.version === "26.3"),
+  layerKinds.filter(
+    (k) =>
+      (k !== "abandoned_camp" || world.value.version === "26.3") &&
+      (k !== "mansion" || world.value.version !== "1.12.2"),
+  ),
 );
 const visible = computed(() => tilesInView(v.value));
 const { urls, markers, partial, busy, error, retry } = useMapData(world, visible, layers, v);
@@ -75,7 +79,11 @@ function apply() {
     return;
   }
   invalid.value = "";
-  if (version.value !== "26.3") layers.value = layers.value.filter((k) => k !== "abandoned_camp");
+  layers.value = layers.value.filter(
+    (k) =>
+      (k !== "abandoned_camp" || version.value === "26.3") &&
+      (k !== "mansion" || version.value !== "1.12.2"),
+  );
   world.value = { version: version.value, seed: seed.value };
   cursor.value = null;
 }

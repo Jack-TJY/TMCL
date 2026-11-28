@@ -11,6 +11,8 @@ pub enum StructureKind {
     DesertPyramid = 3,
     JunglePyramid = 4,
     OceanMonument = 5,
+    /// Woodland mansion start chunk; requires the dark forest biome.
+    Mansion = 6,
 }
 
 /// Inclusive chunk bounds. A query covers at most 256 chunks on each axis.
@@ -40,6 +42,10 @@ pub fn structure_starts(
 ) -> AppResult<Vec<StructureStart>> {
     ctx.check_cancelled()?;
     if kind == StructureKind::AbandonedCamp && version != GameVersion::Java26_3 {
+        return Err(invalid("structure"));
+    }
+    // 1.12.2 mansions are not verified yet; keep the version gap explicit.
+    if kind == StructureKind::Mansion && version == GameVersion::Java1_12_2 {
         return Err(invalid("structure"));
     }
     let size = |min: i32, max: i32| -> AppResult<usize> {
