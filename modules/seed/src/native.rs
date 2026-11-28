@@ -4,6 +4,7 @@ use tmcl_common::{AppError, AppResult, ErrorCode};
 unsafe extern "C" {
     fn tmcl_seed_biomes(
         version: i32,
+        dimension: i32,
         seed: i64,
         x: i32,
         z: i32,
@@ -38,6 +39,7 @@ fn check(status: i32) -> AppResult<()> {
 
 pub(super) fn biomes(
     version: GameVersion,
+    dimension: Dimension,
     seed: i64,
     origin: (i32, i32),
     step: i32,
@@ -57,6 +59,7 @@ pub(super) fn biomes(
     check(unsafe {
         tmcl_seed_biomes(
             version as i32,
+            dimension as i32,
             seed,
             origin.0,
             origin.1,

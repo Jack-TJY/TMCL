@@ -317,7 +317,7 @@ mod tests {
         assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"));
         let persisted = dir
             .path()
-            .join("cache/seed-map/overworld-y64-v1/1.12.2/0/0/-1_0.png");
+            .join("cache/seed-map/seedatlas-y64-v2/1.12.2/overworld/0/0/-1_0.png");
         assert_eq!(png, std::fs::read(persisted).unwrap());
         let done = end_rx.recv_timeout(Duration::from_secs(10)).unwrap();
         assert_eq!(started["task_id"], json!(done.task_id));
