@@ -27,6 +27,8 @@ export const layerKinds: SeedStructureKind[] = [
   "shipwreck",
   "ancient_city",
   "trail_ruins",
+  "trial_chambers",
+  "buried_treasure",
   "abandoned_camp",
 ];
 export type World = { version: string; seed: string };

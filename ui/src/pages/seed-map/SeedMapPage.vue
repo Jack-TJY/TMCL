@@ -20,7 +20,9 @@ const available = computed(() =>
     (k) =>
       (k !== "abandoned_camp" || world.value.version === "26.3") &&
       (!["pillager_outpost", "shipwreck"].includes(k) || world.value.version !== "1.12.2") &&
-      (!["ancient_city", "trail_ruins"].includes(k) || world.value.version === "26.3"),
+      (!["ancient_city", "trail_ruins", "trial_chambers"].includes(k) ||
+        world.value.version === "26.3") &&
+      (k !== "buried_treasure" || world.value.version !== "1.12.2"),
   ),
 );
 const visible = computed(() => tilesInView(v.value));
@@ -84,7 +86,9 @@ function apply() {
     (k) =>
       (k !== "abandoned_camp" || version.value === "26.3") &&
       (!["pillager_outpost", "shipwreck"].includes(k) || version.value !== "1.12.2") &&
-      (!["ancient_city", "trail_ruins"].includes(k) || version.value === "26.3"),
+      (!["ancient_city", "trail_ruins", "trial_chambers"].includes(k) ||
+        version.value === "26.3") &&
+      (k !== "buried_treasure" || version.value !== "1.12.2"),
   );
   world.value = { version: version.value, seed: seed.value };
   cursor.value = null;

@@ -13,6 +13,8 @@ import outpost from "./icons/pillager_outpost.svg";
 import shipwreck from "./icons/shipwreck.svg";
 import ancientCity from "./icons/ancient_city.svg";
 import trailRuins from "./icons/trail_ruins.svg";
+import trialChambers from "./icons/trial_chambers.svg";
+import buriedTreasure from "./icons/buried_treasure.svg";
 
 /** One asset per IPC structure ID, shared by map markers and their legend. */
 export const structureIcons = {
@@ -28,5 +30,7 @@ export const structureIcons = {
   shipwreck,
   ancient_city: ancientCity,
   trail_ruins: trailRuins,
+  trial_chambers: trialChambers,
+  buried_treasure: buriedTreasure,
   abandoned_camp: camp,
 } satisfies Record<SeedStructureKind, string>;

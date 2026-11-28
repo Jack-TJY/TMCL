@@ -169,7 +169,15 @@ fn sampled_26_3_structures_match_the_official_server() {
 fn sampled_26_3_deep_structures_match_the_official_server() {
     let ctx = TaskCtx::noop("sample");
     // Official 26.3 server /locate structure, seed -1.
-    for (kind, x, z) in [(AncientCity, 58, 5), (TrailRuins, -62, -88)] {
+    // Trial chambers: the maintainer confirmed the chamber exists at the engine result;
+    // vanilla /locate reports a farther one because its search is approximate.
+    // Buried treasure: chest chunk after the negative-chunk floor fix.
+    for (kind, x, z) in [
+        (AncientCity, 58, 5),
+        (TrailRuins, -62, -88),
+        (TrialChambers, 1, -14),
+        (BuriedTreasure, 31, -9),
+    ] {
         let bounds = ChunkBounds {
             min_x: x,
             max_x: x,
@@ -186,7 +194,7 @@ fn sampled_26_3_deep_structures_match_the_official_server() {
         );
     }
     for version in [Java1_18, Java1_12_2] {
-        for kind in [AncientCity, TrailRuins] {
+        for kind in [AncientCity, TrailRuins, TrialChambers] {
             let bounds = ChunkBounds {
                 min_x: 0,
                 max_x: 0,

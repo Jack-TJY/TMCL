@@ -85,6 +85,8 @@ pub enum SeedStructureKind {
     Shipwreck,
     AncientCity,
     TrailRuins,
+    TrialChambers,
+    BuriedTreasure,
 }
 impl From<SeedStructureKind> for StructureKind {
     fn from(kind: SeedStructureKind) -> Self {
@@ -102,6 +104,8 @@ impl From<SeedStructureKind> for StructureKind {
             SeedStructureKind::Shipwreck => Self::Shipwreck,
             SeedStructureKind::AncientCity => Self::AncientCity,
             SeedStructureKind::TrailRuins => Self::TrailRuins,
+            SeedStructureKind::TrialChambers => Self::TrialChambers,
+            SeedStructureKind::BuriedTreasure => Self::BuriedTreasure,
         }
     }
 }
