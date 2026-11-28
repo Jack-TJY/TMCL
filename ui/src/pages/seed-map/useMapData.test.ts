@@ -5,7 +5,15 @@ import type { SeedMapResult } from "../../bindings/SeedMapResult";
 import type { SeedStructureKind } from "../../bindings/SeedStructureKind";
 const run = vi.hoisted(() => vi.fn());
 vi.mock("./request", () => ({ runQuery: run }));
-import { useMapData } from "./useMapData";
+import { availableLayers, useMapData } from "./useMapData";
+it("offers only verified layers for each dimension", () => {
+  expect(availableLayers("26.3", "overworld")).toContain("village");
+  expect(availableLayers("26.3", "overworld")).not.toContain("fortress");
+  expect(availableLayers("26.3", "the_nether")).toEqual(["fortress", "bastion"]);
+  expect(availableLayers("1.12.2", "the_nether")).toEqual(["fortress"]);
+  expect(availableLayers("26.3", "the_end")).toEqual([]);
+});
+
 it("batches only missing tiles and releases obsolete image URLs on pan, seed change and unmount", async () => {
   vi.useFakeTimers();
   const scope = effectScope();
