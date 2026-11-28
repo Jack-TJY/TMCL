@@ -166,6 +166,70 @@ fn sampled_26_3_structures_match_the_official_server() {
 }
 
 #[test]
+fn sampled_26_3_deep_structures_match_the_official_server() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server /locate structure, seed -1.
+    // Trial chambers: the maintainer confirmed the chamber exists at the engine result;
+    // vanilla /locate reports a farther one because its search is approximate.
+    // Buried treasure: chest chunk after the negative-chunk floor fix.
+    for (kind, x, z) in [
+        (AncientCity, 58, 5),
+        (TrailRuins, -62, -88),
+        (TrialChambers, 1, -14),
+        (BuriedTreasure, 31, -9),
+    ] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, -1, kind, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{kind:?}"
+        );
+    }
+    for version in [Java1_18, Java1_12_2] {
+        for kind in [AncientCity, TrailRuins, TrialChambers] {
+            let bounds = ChunkBounds {
+                min_x: 0,
+                max_x: 0,
+                min_z: 0,
+                max_z: 0,
+            };
+            assert!(
+                structure_starts(version, -1, kind, bounds, &ctx).is_err(),
+                "{version:?}/{kind:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn maintainer_verified_seed_1_buried_treasure() {
+    // 26.3, seed 1: vanilla /locate reports a farther chest (36,11); the engine
+    // returns (-28,-22), where the maintainer confirmed a chest in game.
+    let ctx = TaskCtx::noop("sample");
+    let bounds = ChunkBounds {
+        min_x: -28,
+        max_x: -28,
+        min_z: -22,
+        max_z: -22,
+    };
+    assert_eq!(
+        structure_starts(Java26_3, 1, BuriedTreasure, bounds, &ctx).unwrap(),
+        [StructureStart {
+            chunk_x: -28,
+            chunk_z: -22
+        }]
+    );
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [

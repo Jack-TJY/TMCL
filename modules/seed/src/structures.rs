@@ -17,6 +17,10 @@ pub enum StructureKind {
     SwampHut = 8,
     PillagerOutpost = 9,
     Shipwreck = 10,
+    AncientCity = 11,
+    TrailRuins = 12,
+    TrialChambers = 13,
+    BuriedTreasure = 14,
 }
 
 /// Inclusive chunk bounds. A query covers at most 256 chunks on each axis.
@@ -50,8 +54,15 @@ pub fn structure_starts(
     }
     if matches!(
         kind,
-        StructureKind::PillagerOutpost | StructureKind::Shipwreck
+        StructureKind::PillagerOutpost | StructureKind::Shipwreck | StructureKind::BuriedTreasure
     ) && version == GameVersion::Java1_12_2
+    {
+        return Err(invalid("structure"));
+    }
+    if matches!(
+        kind,
+        StructureKind::AncientCity | StructureKind::TrailRuins | StructureKind::TrialChambers
+    ) && version != GameVersion::Java26_3
     {
         return Err(invalid("structure"));
     }
