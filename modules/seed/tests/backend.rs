@@ -210,6 +210,26 @@ fn sampled_26_3_deep_structures_match_the_official_server() {
 }
 
 #[test]
+fn maintainer_verified_seed_1_buried_treasure() {
+    // 26.3, seed 1: vanilla /locate reports a farther chest (36,11); the engine
+    // returns (-28,-22), where the maintainer confirmed a chest in game.
+    let ctx = TaskCtx::noop("sample");
+    let bounds = ChunkBounds {
+        min_x: -28,
+        max_x: -28,
+        min_z: -22,
+        max_z: -22,
+    };
+    assert_eq!(
+        structure_starts(Java26_3, 1, BuriedTreasure, bounds, &ctx).unwrap(),
+        [StructureStart {
+            chunk_x: -28,
+            chunk_z: -22
+        }]
+    );
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [
