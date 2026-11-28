@@ -1,6 +1,6 @@
 //! Seed-map IPC: keep CPU work off the command thread. Query data goes only to
 //! the initiating webview's channel; normal task events carry lifecycle state.
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State, ipc::Channel};
@@ -16,6 +16,46 @@ use crate::{
 
 const MAX_TILES: usize = 16;
 static WORKERS: Semaphore = Semaphore::const_new(2);
+
+/// One saved world of an instance, with the seed read from its level.dat.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct SeedSavedWorld {
+    pub dir: String,
+    pub name: String,
+    pub seed: String,
+    pub version: Option<String>,
+}
+
+#[derive(Debug, Deserialize, TS)]
+pub struct SeedSavesArgs {
+    pub instance: String,
+}
+
+const MAX_SAVES: usize = 200;
+
+/// Scan every world directory of an instance; unreadable worlds are skipped
+/// instead of failing the whole list.
+fn list_saves(game_dir: &Path) -> Vec<SeedSavedWorld> {
+    let Ok(entries) = std::fs::read_dir(game_dir.join("saves")) else {
+        return Vec::new();
+    };
+    let mut worlds: Vec<SeedSavedWorld> = entries
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+        .filter_map(|entry| {
+            let info = tmcl_seed::read_level_dat(&entry.path().join("level.dat")).ok()?;
+            Some(SeedSavedWorld {
+                dir: entry.file_name().to_string_lossy().into_owned(),
+                name: info.name,
+                seed: info.seed.to_string(),
+                version: info.version,
+            })
+        })
+        .collect();
+    worlds.sort_by(|a, b| a.dir.cmp(&b.dir));
+    worlds.truncate(MAX_SAVES);
+    worlds
+}
 
 #[derive(Debug, Deserialize, TS)]
 pub struct SeedMapArgs {
@@ -216,6 +256,25 @@ impl SeedMapQuery {
         }
         ctx.check_cancelled()
     }
+}
+
+/// List worlds of one instance and their seeds. The frontend passes no paths;
+/// the instance id is validated and resolved through the data layout.
+#[tauri::command]
+pub async fn seed_list_saves(
+    state: State<'_, AppState>,
+    args: SeedSavesArgs,
+) -> AppResult<Vec<SeedSavedWorld>> {
+    let paths = state.data()?.clone();
+    if !tmcl_instance::store::is_valid_id(&args.instance)
+        || !paths.instance_dir(&args.instance).is_dir()
+    {
+        return Err(AppError::new(ErrorCode::InstanceNotFound).with_param("id", args.instance));
+    }
+    let game: PathBuf = paths.instance_game_dir(&args.instance);
+    tokio::task::spawn_blocking(move || list_saves(&game))
+        .await
+        .map_err(|e| AppError::new(ErrorCode::CommonInternal).with_detail(e.to_string()))
 }
 
 /// Start a cancellable map query. The frontend supplies no filesystem paths.

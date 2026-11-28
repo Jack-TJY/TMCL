@@ -106,6 +106,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         commands::sakura::sakura_tunnels,
         commands::sakura::sakura_user,
         // seed
+        commands::seed::seed_list_saves,
         commands::seed::seed_map_query,
         // settings
         commands::settings::settings_get,
