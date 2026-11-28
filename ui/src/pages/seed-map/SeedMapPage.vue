@@ -3,28 +3,36 @@ import { computed, onMounted, onBeforeUnmount, ref, shallowRef } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatError } from "../../i18n";
 import { blockAt, clamp, jumpPoint, SIZE, tileKey, tilesInView, zoomAt } from "./viewport";
-import { layerKinds, useMapData, type World } from "./useMapData";
+import { availableLayers, useMapData, type World } from "./useMapData";
 import StructureIcon from "./StructureIcon.vue";
 import type { Pin } from "./useStructures";
+import type { SeedDimension } from "../../bindings/SeedDimension";
 import type { SeedStructureKind } from "../../bindings/SeedStructureKind";
 const { t } = useI18n();
 const versions = ["1.12.2", "1.18", "26.3"];
 const seed = ref("0"),
   version = ref("26.3"),
-  world = shallowRef<World>({ version: version.value, seed: seed.value });
+  dimension = ref<SeedDimension>("overworld"),
+  world = shallowRef<World>({
+    version: version.value,
+    seed: seed.value,
+    dimension: dimension.value,
+  });
 const v = ref({ x: 0, z: 0, zoom: 1, w: 0, h: 0 });
 const map = ref<HTMLElement | null>(null);
 const layers = ref<SeedStructureKind[]>(["village"]);
-const available = computed(() =>
-  layerKinds.filter(
-    (k) =>
-      (k !== "abandoned_camp" || world.value.version === "26.3") &&
-      (!["pillager_outpost", "shipwreck"].includes(k) || world.value.version !== "1.12.2") &&
-      (!["ancient_city", "trail_ruins", "trial_chambers"].includes(k) ||
-        world.value.version === "26.3") &&
-      (k !== "buried_treasure" || world.value.version !== "1.12.2"),
-  ),
-);
+const available = computed(() => availableLayers(world.value.version, world.value.dimension));
+function switchDimension(next: SeedDimension) {
+  dimension.value = next;
+  // Switch the world identity first so stale query results are discarded.
+  world.value = { version: version.value, seed: seed.value, dimension: next };
+  const offered = availableLayers(version.value, next);
+  layers.value = offered.slice(0, 1);
+  cursor.value = null;
+}
+function onDimensionChange(event: Event) {
+  switchDimension((event.target as HTMLSelectElement).value as SeedDimension);
+}
 const visible = computed(() => tilesInView(v.value));
 const { urls, markers, partial, busy, error, retry } = useMapData(world, visible, layers, v);
 const step = computed(() => 2 ** v.value.zoom);
@@ -82,15 +90,8 @@ function apply() {
     return;
   }
   invalid.value = "";
-  layers.value = layers.value.filter(
-    (k) =>
-      (k !== "abandoned_camp" || version.value === "26.3") &&
-      (!["pillager_outpost", "shipwreck"].includes(k) || version.value !== "1.12.2") &&
-      (!["ancient_city", "trail_ruins", "trial_chambers"].includes(k) ||
-        version.value === "26.3") &&
-      (k !== "buried_treasure" || version.value !== "1.12.2"),
-  );
-  world.value = { version: version.value, seed: seed.value };
+  world.value = { version: version.value, seed: seed.value, dimension: dimension.value };
+  layers.value = layers.value.filter((k) => available.value.includes(k));
   cursor.value = null;
 }
 function jump() {
@@ -190,6 +191,13 @@ onBeforeUnmount(() => observer?.disconnect());
         }}<select v-model="version">
           <option v-for="ver in versions" :key="ver">{{ ver }}</option>
         </select></label
+      ><label
+        >{{ t("seedMap.dimension")
+        }}<select :value="dimension" @change="onDimensionChange">
+          <option value="overworld">{{ t("seedMap.dimensionOverworld") }}</option>
+          <option value="the_nether">{{ t("seedMap.dimensionNether") }}</option>
+          <option value="the_end">{{ t("seedMap.dimensionEnd") }}</option>
+        </select></label
       ><button class="primary" type="submit">{{ t("seedMap.apply") }}</button>
     </form>
     <div class="map-shell">
@@ -280,14 +288,16 @@ onBeforeUnmount(() => observer?.disconnect());
       ><button type="submit">{{ t("seedMap.jump") }}</button
       ><button type="button" @click="origin">{{ t("seedMap.origin") }}</button>
     </form>
-    <fieldset>
+    <fieldset v-if="available.length">
       <legend>{{ t("seedMap.layers") }}</legend>
       <label v-for="k in available" :key="k"
         ><input v-model="layers" type="checkbox" :value="k" /><StructureIcon :kind="k" />
         {{ t(`seedMap.layer.${k}`) }}</label
       >
     </fieldset>
-    <p v-if="v.w && !visible.length">{{ t("seedMap.edge") }}</p>
+    <p v-if="dimension !== 'overworld'" class="tip">{{ t("seedMap.structureOnly") }}</p>
+    <p v-if="dimension === 'the_end'" class="tip">{{ t("seedMap.endEmpty") }}</p>
+    <p v-if="v.w && !visible.length && dimension === 'overworld'">{{ t("seedMap.edge") }}</p>
     <p v-if="partial" class="tip">{{ t("seedMap.partial") }}</p>
     <p class="tip">{{ t("seedMap.hint") }}</p>
     <p v-if="invalid" role="alert">{{ t(invalid) }}</p>

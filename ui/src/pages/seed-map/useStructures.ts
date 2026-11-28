@@ -51,7 +51,9 @@ export function useStructures(
     }
     return [...groups.values()];
   });
-  const identity = computed(() => JSON.stringify([world.value.version, world.value.seed]));
+  const identity = computed(() =>
+    JSON.stringify([world.value.version, world.value.seed, world.value.dimension ?? "overworld"]),
+  );
   watch(
     [identity, () => plan.value.jobs.map((j) => j.key).join(";"), retry],
     ([id], [prev], cleanup) => {
