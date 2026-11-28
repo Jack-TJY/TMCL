@@ -29,6 +29,10 @@
     "jungle_pyramid": "Jungle temple",
     "ocean_monument": "Ocean monument",
     "mansion": "Woodland mansion",
-    "abandoned_camp": "Abandoned camp"
+    "abandoned_camp": "Abandoned camp",
+    "igloo": "Igloo",
+    "swamp_hut": "Swamp hut",
+    "pillager_outpost": "Pillager outpost",
+    "shipwreck": "Shipwreck"
   }
 }
