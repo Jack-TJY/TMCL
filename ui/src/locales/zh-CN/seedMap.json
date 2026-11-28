@@ -7,6 +7,7 @@
   "dimensionNether": "下界",
   "dimensionEnd": "末地",
   "dimensionSlice": "此维度的群系底图按 Y=64 采样预测，与主世界分开缓存。",
+  "versionsFailed": "无法读取版本清单，请重试。",
   "version": "游戏版本",
   "apply": "查看地图",
   "jump": "跳转",

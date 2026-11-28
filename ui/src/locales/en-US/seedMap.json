@@ -7,6 +7,7 @@
   "dimensionNether": "Nether",
   "dimensionEnd": "The End",
   "dimensionSlice": "Biome tiles for this dimension are predicted at Y=64 and cached separately from the overworld.",
+  "versionsFailed": "Could not load the version list; please retry.",
   "version": "Game version",
   "apply": "View map",
   "jump": "Go to coordinates",

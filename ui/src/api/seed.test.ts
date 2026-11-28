@@ -8,9 +8,17 @@ vi.mock("@tauri-apps/api/core", () => ({
     onmessage?: (m: SeedMapResult) => void;
   },
 }));
-import { querySeedMap } from "./seed";
+import { querySeedMap, seedVersions } from "./seed";
 
 describe("seed_map_query", () => {
+  it("returns the backend version capability list", async () => {
+    call.mockResolvedValueOnce([{ version: "26.3", label: "26.3", structures: [] }]);
+    await expect(seedVersions()).resolves.toEqual([
+      { version: "26.3", label: "26.3", structures: [] },
+    ]);
+    expect(call).toHaveBeenCalledWith("seed_versions", undefined);
+  });
+
   beforeEach(() => {
     call.mockReset();
   });
