@@ -1,9 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 import { runQuery } from "./request";
+import type { SeedMapQueryArgs } from "../../api/seed";
 import type { TaskFinished } from "../../bindings/TaskFinished";
 import type { SeedMapResult } from "../../bindings/SeedMapResult";
 const tile = { x: 0, z: 0, zoom: 0 };
-const args = { seed: "0", version: "26.3", query: { type: "tiles" as const, tiles: [tile] } };
+const args: SeedMapQueryArgs = {
+  seed: "0",
+  version: "26.3",
+  query: { type: "tiles" as const, tiles: [tile] },
+};
 const msg: SeedMapResult = { type: "tile", tile, png: [] };
 describe("map request lifecycle", () => {
   it("accepts finished before invoke and channel result after finished", async () => {

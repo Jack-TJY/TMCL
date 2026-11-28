@@ -4,9 +4,9 @@
 
 | 版本 | 主世界 | 下界 | 末地 | 去重定位目标 | 当前有同粒度原版起点回归的目标¹ |
 | --- | ---: | ---: | ---: | ---: | --- |
-| [1.12.2](1.12.2.json) | 6 | 1 | 1 | 8 | 4/8：Village、Stronghold、Monument、Mansion；Temple 仅验证两种子类，不计为完整目标 |
-| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 10/18：在原有五项外新增 mansion、igloo、swamp_hut、pillager_outpost、shipwreck（后四项按抽样策略接入） |
-| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 13/52：在原有五项外新增 igloo、swamp_hut、pillager_outpost、shipwreck、ancient_city、trail_ruins、trial_chambers、buried_treasure；另有两种**标签级**图层 |
+| [1.12.2](1.12.2.json) | 6 | 1 | 1 | 8 | 5/8：Village、Stronghold、Monument、Mansion、Fortress；Temple 仅验证两种子类，不计为完整目标 |
+| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 12/18：在原有五项外新增 mansion、igloo、swamp_hut、pillager_outpost、shipwreck、fortress、bastion（后六项按抽样策略接入） |
+| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 15/52：在原有五项外新增 igloo、swamp_hut、pillager_outpost、shipwreck、ancient_city、trail_ruins、trial_chambers、buried_treasure、fortress、bastion；另有两种**标签级**图层 |
 
 ¹ 这里统计与现有[有效起点回归](../../tests/backend.rs)可对应的命令目标，不保证任意种子或全部配置变体正确。2026-11-28 起按维护者决定改为**抽样验证**：以固定引擎预测为主，每批抽查代表性版本和少量结构。1.12.2 府邸由维护者用种子 −1 实机确认；26.3 的 igloo、swamp_hut、pillager_outpost、shipwreck 与官方服务端 `/locate` 一致；其余新增项为“引擎预测、未抽样”。三版下界、末地的产品查询能力仍为零。1.18 按“目标 × 维度”计是 **10/19** 而非 10/18，因为 ruined_portal 在两维度出现。手工测试不要使用种子 0：1.12.2 等版本的建世界界面会把 0 当作随机种子。
 
@@ -40,6 +40,18 @@ cargo test --locked -p tmcl-seed --test locate_catalog
 - **试炼密室**：引擎没错。维护者实机确认引擎给出的区块 (1,−14) 确有试炼密室；原版 `/locate` 的环状搜索先命中了更远的 (21,5)，属于原版命令的近似行为，不能当作“最近”基准。
 
 教训：**原版 `/locate` 只能证明“该位置存在”，不能证明“更近处不存在”**；比较时必须确认引擎给出的位置是否真实存在，而不是只比哪条输出更近。
+
+### 2026-11-28 维度抽查（下界与末地）
+
+`seed_map_query` 现在接受 `dimension`，下界与末地只返回结构起点，不提供群系瓦片。26.3、种子 −1：
+
+| 维度 | 结构 | 官方结果 | 引擎 | 处理 |
+| --- | --- | --- | --- | --- |
+| 下界 | fortress | 区块 (4,18) | (4,18) | 开放 |
+| 下界 | bastion_remnant | 区块 (−12,20) | (13,−12)；从该处再次 locate 为 0 格 | 开放 |
+| 末地 | end_city | 区块 (26,83) | (−53,−36)；从该处 locate 最近仍在 416 格外 | **不开放**，疑似末地岛判定缺失 |
+
+末地城市仍需修正引擎语义后再接入；末地维度目前只保留参数，没有可用结构图层。
 
 ### 缺口与实施顺序
 

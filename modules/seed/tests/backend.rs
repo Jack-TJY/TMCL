@@ -1,7 +1,7 @@
 use tmcl_common::TaskCtx;
 use tmcl_seed::{
-    ChunkBounds, GameVersion::*, StructureKind::*, StructureStart, Tile, biome_at, cached_tile_png,
-    parse_seed, structure_starts,
+    ChunkBounds, Dimension, GameVersion::*, StructureKind::*, StructureStart, Tile, biome_at,
+    cached_tile_png, parse_seed, structure_starts,
 };
 
 #[test]
@@ -81,7 +81,7 @@ fn vanilla_structure_starts() {
             max_z: z,
         };
         assert_eq!(
-            structure_starts(v, seed, kind, bounds, &ctx).unwrap(),
+            structure_starts(v, Dimension::Overworld, seed, kind, bounds, &ctx).unwrap(),
             [StructureStart {
                 chunk_x: x,
                 chunk_z: z
@@ -91,6 +91,7 @@ fn vanilla_structure_starts() {
         assert!(
             structure_starts(
                 v,
+                Dimension::Overworld,
                 seed,
                 kind,
                 ChunkBounds {
@@ -119,7 +120,7 @@ fn legacy_scattered_features_keep_their_actual_subtype() {
             max_z: z,
         };
         assert!(
-            structure_starts(Java1_12_2, 0, wrong, bounds, &ctx)
+            structure_starts(Java1_12_2, Dimension::Overworld, 0, wrong, bounds, &ctx)
                 .unwrap()
                 .is_empty()
         );
@@ -143,7 +144,7 @@ fn sampled_26_3_structures_match_the_official_server() {
             max_z: z,
         };
         assert_eq!(
-            structure_starts(Java26_3, -1, kind, bounds, &ctx).unwrap(),
+            structure_starts(Java26_3, Dimension::Overworld, -1, kind, bounds, &ctx).unwrap(),
             [StructureStart {
                 chunk_x: x,
                 chunk_z: z
@@ -159,7 +160,7 @@ fn sampled_26_3_structures_match_the_official_server() {
             max_z: 0,
         };
         assert!(
-            structure_starts(Java1_12_2, -1, kind, bounds, &ctx).is_err(),
+            structure_starts(Java1_12_2, Dimension::Overworld, -1, kind, bounds, &ctx).is_err(),
             "{kind:?}"
         );
     }
@@ -185,7 +186,7 @@ fn sampled_26_3_deep_structures_match_the_official_server() {
             max_z: z,
         };
         assert_eq!(
-            structure_starts(Java26_3, -1, kind, bounds, &ctx).unwrap(),
+            structure_starts(Java26_3, Dimension::Overworld, -1, kind, bounds, &ctx).unwrap(),
             [StructureStart {
                 chunk_x: x,
                 chunk_z: z
@@ -202,7 +203,7 @@ fn sampled_26_3_deep_structures_match_the_official_server() {
                 max_z: 0,
             };
             assert!(
-                structure_starts(version, -1, kind, bounds, &ctx).is_err(),
+                structure_starts(version, Dimension::Overworld, -1, kind, bounds, &ctx).is_err(),
                 "{version:?}/{kind:?}"
             );
         }
@@ -221,12 +222,51 @@ fn maintainer_verified_seed_1_buried_treasure() {
         max_z: -22,
     };
     assert_eq!(
-        structure_starts(Java26_3, 1, BuriedTreasure, bounds, &ctx).unwrap(),
+        structure_starts(
+            Java26_3,
+            Dimension::Overworld,
+            1,
+            BuriedTreasure,
+            bounds,
+            &ctx
+        )
+        .unwrap(),
         [StructureStart {
             chunk_x: -28,
             chunk_z: -22
         }]
     );
+}
+
+#[test]
+fn sampled_26_3_nether_structures_are_verified_by_official_server() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server, seed -1: nether fortress matches; the bastion start is
+    // confirmed to exist by locating from that position (0 blocks away).
+    for (kind, x, z) in [(Fortress, 4, 18), (Bastion, 13, -12)] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, Dimension::Nether, -1, kind, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{kind:?}"
+        );
+    }
+    let bounds = ChunkBounds {
+        min_x: 0,
+        max_x: 0,
+        min_z: 0,
+        max_z: 0,
+    };
+    assert!(structure_starts(Java26_3, Dimension::Overworld, -1, Fortress, bounds, &ctx).is_err());
+    assert!(structure_starts(Java26_3, Dimension::End, -1, Fortress, bounds, &ctx).is_err());
 }
 
 #[test]
@@ -245,7 +285,7 @@ fn vanilla_mansion_starts_reject_their_failed_candidates() {
             max_z: z,
         };
         assert_eq!(
-            structure_starts(version, seed, Mansion, bounds, &ctx).unwrap(),
+            structure_starts(version, Dimension::Overworld, seed, Mansion, bounds, &ctx).unwrap(),
             [StructureStart {
                 chunk_x: x,
                 chunk_z: z
@@ -259,9 +299,16 @@ fn vanilla_mansion_starts_reject_their_failed_candidates() {
             max_z: rejected.1,
         };
         assert!(
-            structure_starts(version, seed, Mansion, rejected_bounds, &ctx)
-                .unwrap()
-                .is_empty()
+            structure_starts(
+                version,
+                Dimension::Overworld,
+                seed,
+                Mansion,
+                rejected_bounds,
+                &ctx
+            )
+            .unwrap()
+            .is_empty()
         );
     }
     // Maintainer-verified in game on 1.12.2 with seed -1 (seed 0 creates a random world there).
@@ -272,7 +319,7 @@ fn vanilla_mansion_starts_reject_their_failed_candidates() {
         max_z: 608,
     };
     assert_eq!(
-        structure_starts(Java1_12_2, -1, Mansion, bounds, &ctx).unwrap(),
+        structure_starts(Java1_12_2, Dimension::Overworld, -1, Mansion, bounds, &ctx).unwrap(),
         [StructureStart {
             chunk_x: 287,
             chunk_z: 608
@@ -295,6 +342,7 @@ fn outer_stronghold_on_strip_boundary_is_reported_once() {
     assert_eq!(
         structure_starts(
             Java26_3,
+            Dimension::Overworld,
             0,
             Stronghold,
             bounds,
@@ -355,8 +403,18 @@ fn rejects_out_of_profile_and_honors_cancellation() {
         max_z: 0,
     };
     for version in [Java1_12_2, Java1_18] {
-        assert!(structure_starts(version, 0, AbandonedCamp, bounds, &ctx).is_err());
+        assert!(
+            structure_starts(
+                version,
+                Dimension::Overworld,
+                0,
+                AbandonedCamp,
+                bounds,
+                &ctx
+            )
+            .is_err()
+        );
     }
     ctx.cancel.cancel();
-    assert!(structure_starts(Java26_3, 0, Village, bounds, &ctx).is_err());
+    assert!(structure_starts(Java26_3, Dimension::Overworld, 0, Village, bounds, &ctx).is_err());
 }

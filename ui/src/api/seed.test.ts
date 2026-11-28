@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SeedMapArgs } from "../bindings/SeedMapArgs";
+import type { SeedMapQueryArgs } from "./seed";
 import type { SeedMapResult } from "../bindings/SeedMapResult";
 const call = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({
@@ -16,7 +16,7 @@ describe("seed_map_query", () => {
   });
   it("keeps precise seed text and routes early replies only to their request", async () => {
     const tile = { x: -1, z: 0, zoom: 0 };
-    const a: SeedMapArgs = {
+    const a: SeedMapQueryArgs = {
       version: "26.3",
       seed: "9223372036854775807",
       query: { type: "tiles", tiles: [tile] },
@@ -30,7 +30,9 @@ describe("seed_map_query", () => {
     const second = vi.fn();
     await expect(querySeedMap(a, first)).resolves.toEqual({ task_id: "t" });
     await querySeedMap(a, second);
-    expect(call).toHaveBeenCalledWith("seed_map_query", { args: a, results: expect.anything() });
+    const [, payload] = call.mock.calls[1];
+    expect(payload.args).toEqual({ dimension: "overworld", ...a });
+    expect(payload.results).toBeTypeOf("object");
     expect(call.mock.calls[0][1].results).not.toBe(call.mock.calls[1][1].results);
     expect(first).toHaveBeenCalledExactlyOnceWith(result);
     expect(second).toHaveBeenCalledExactlyOnceWith(result);

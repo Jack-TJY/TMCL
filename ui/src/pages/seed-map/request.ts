@@ -1,14 +1,13 @@
 import { onTaskFinished } from "../../api/events";
-import { querySeedMap } from "../../api/seed";
+import { querySeedMap, type SeedMapQueryArgs } from "../../api/seed";
 import { taskCancel } from "../../api/task";
-import type { SeedMapArgs } from "../../bindings/SeedMapArgs";
 import type { SeedMapResult } from "../../bindings/SeedMapResult";
 import type { TaskFinished } from "../../bindings/TaskFinished";
 import { useTasksStore } from "../../stores/tasks";
 const backend = {
   listen: onTaskFinished,
   cancel: taskCancel,
-  start: async (args: SeedMapArgs, apply: (m: SeedMapResult) => void) => ({
+  start: async (args: SeedMapQueryArgs, apply: (m: SeedMapResult) => void) => ({
     task_id: await useTasksStore().start({
       kind: "seed_map",
       label: null,
@@ -20,7 +19,7 @@ const backend = {
 /** A query completes only after both the requested messages and its success event.
  * The invoke reply, channel and task events are independent transports. */
 export function runQuery(
-  args: SeedMapArgs,
+  args: SeedMapQueryArgs,
   signal: AbortSignal,
   apply: (m: SeedMapResult) => void,
   api = backend,
