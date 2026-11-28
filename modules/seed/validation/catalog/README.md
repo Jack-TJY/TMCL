@@ -5,8 +5,8 @@
 | 版本 | 主世界 | 下界 | 末地 | 去重定位目标 | 当前有同粒度原版起点回归的目标¹ |
 | --- | ---: | ---: | ---: | ---: | --- |
 | [1.12.2](1.12.2.json) | 6 | 1 | 1 | 8 | 5/8：Village、Stronghold、Monument、Mansion、Fortress；Temple 仅验证两种子类，不计为完整目标 |
-| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 12/18：在原有五项外新增 mansion、igloo、swamp_hut、pillager_outpost、shipwreck、fortress、bastion（后六项按抽样策略接入） |
-| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 15/52：在原有五项外新增 igloo、swamp_hut、pillager_outpost、shipwreck、ancient_city、trail_ruins、trial_chambers、buried_treasure、fortress、bastion；另有两种**标签级**图层 |
+| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 14/18：在原有五项外新增 mansion、igloo、swamp_hut、pillager_outpost、shipwreck、fortress、bastion、ocean_ruin、ruined_portal（后八项按抽样策略接入） |
+| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 24/52：在原有五项外新增 igloo、swamp_hut、pillager_outpost、shipwreck、ancient_city、trail_ruins、trial_chambers、buried_treasure、fortress、bastion，以及按**变体家族**覆盖的 ocean_ruin（2 个 ID）与 ruined_portal（7 个 ID）；另有两种**标签级**图层 |
 
 ¹ 这里统计与现有[有效起点回归](../../tests/backend.rs)可对应的命令目标，不保证任意种子或全部配置变体正确。2026-11-28 起按维护者决定改为**抽样验证**：以固定引擎预测为主，每批抽查代表性版本和少量结构。1.12.2 府邸由维护者用种子 −1 实机确认；26.3 的 igloo、swamp_hut、pillager_outpost、shipwreck 与官方服务端 `/locate` 一致；其余新增项为“引擎预测、未抽样”。三版下界、末地的产品查询能力仍为零。1.18 按“目标 × 维度”计是 **10/19** 而非 10/18，因为 ruined_portal 在两维度出现。手工测试不要使用种子 0：1.12.2 等版本的建世界界面会把 0 当作随机种子。
 
@@ -52,6 +52,20 @@ cargo test --locked -p tmcl-seed --test locate_catalog
 | 末地 | end_city | 区块 (26,83) | (−53,−36)；从该处 locate 最近仍在 416 格外 | **不开放**，疑似末地岛判定缺失 |
 
 末地城市仍需修正引擎语义后再接入；末地维度目前只保留参数，没有可用结构图层。
+
+### 2026-11-28 变体家族抽查（海底废墟与废弃传送门）
+
+这三类在 26.3 里有多个变体 ID（ocean_ruin_cold/warm、ruined_portal 六种主世界变体 + ruined_portal_nether），引擎按家族返回候选、由群系决定变体。抽查方式是：先取官方 `/locate` 报出的真实位置，再要求引擎在同一区块报出结果（存在性验证，不比“谁更近”）。26.3、种子 −1：
+
+| 结构 | 官方方块（区块） | 引擎 |
+| --- | --- | --- |
+| ocean_ruin_cold | (336,336) → (21,21) | 命中 |
+| ocean_ruin_warm | (−288,−144) → (−18,−9) | 命中 |
+| ruined_portal | (32,1024) → (2,64) | 命中 |
+| ruined_portal_desert | (−1856,−1072) → (−116,−67) | 命中 |
+| ruined_portal_nether（下界） | (320,304) → (20,19) | 命中 |
+
+因此界面按“家族”开放这三类：adventure 层包含该家族的全部变体；1.12.2 不支持，18 与 26.3 主世界/下界可用。**注意**：由于是家族层，界面不会分别列出 cold/warm 或各群系变体，文档与图例按家族说明。
 
 ### 缺口与实施顺序
 

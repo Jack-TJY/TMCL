@@ -270,6 +270,77 @@ fn sampled_26_3_nether_structures_are_verified_by_official_server() {
 }
 
 #[test]
+fn sampled_26_3_family_structures_match_official_positions() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server /locate, seed -1: one position per variant family.
+    for (kind, x, z) in [
+        (OceanRuin, 21, 21),
+        (OceanRuin, -18, -9),
+        (RuinedPortal, 2, 64),
+        (RuinedPortal, -116, -67),
+    ] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, Dimension::Overworld, -1, kind, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{kind:?}"
+        );
+    }
+    let bounds = ChunkBounds {
+        min_x: 20,
+        max_x: 20,
+        min_z: 19,
+        max_z: 19,
+    };
+    assert_eq!(
+        structure_starts(
+            Java26_3,
+            Dimension::Nether,
+            -1,
+            RuinedPortalNether,
+            bounds,
+            &ctx
+        )
+        .unwrap(),
+        [StructureStart {
+            chunk_x: 20,
+            chunk_z: 19
+        }]
+    );
+    let bounds = ChunkBounds {
+        min_x: 0,
+        max_x: 0,
+        min_z: 0,
+        max_z: 0,
+    };
+    for kind in [OceanRuin, RuinedPortal] {
+        assert!(
+            structure_starts(Java1_12_2, Dimension::Overworld, -1, kind, bounds, &ctx).is_err()
+        );
+        assert!(structure_starts(Java1_18, Dimension::Overworld, -1, kind, bounds, &ctx).is_ok());
+    }
+    assert!(
+        structure_starts(
+            Java26_3,
+            Dimension::Overworld,
+            -1,
+            RuinedPortalNether,
+            bounds,
+            &ctx
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [

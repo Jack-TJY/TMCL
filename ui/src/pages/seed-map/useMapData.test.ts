@@ -9,7 +9,11 @@ import { availableLayers, useMapData } from "./useMapData";
 it("offers only verified layers for each dimension", () => {
   expect(availableLayers("26.3", "overworld")).toContain("village");
   expect(availableLayers("26.3", "overworld")).not.toContain("fortress");
-  expect(availableLayers("26.3", "the_nether")).toEqual(["fortress", "bastion"]);
+  expect(availableLayers("26.3", "the_nether")).toEqual([
+    "fortress",
+    "bastion",
+    "ruined_portal_nether",
+  ]);
   expect(availableLayers("1.12.2", "the_nether")).toEqual(["fortress"]);
   expect(availableLayers("26.3", "the_end")).toEqual([]);
 });

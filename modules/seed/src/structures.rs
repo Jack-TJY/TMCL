@@ -23,6 +23,9 @@ pub enum StructureKind {
     BuriedTreasure = 14,
     Fortress = 15,
     Bastion = 16,
+    OceanRuin = 18,
+    RuinedPortal = 19,
+    RuinedPortalNether = 20,
 }
 
 /// Inclusive chunk bounds. A query covers at most 256 chunks on each axis.
@@ -53,13 +56,22 @@ pub fn structure_starts(
 ) -> AppResult<Vec<StructureStart>> {
     ctx.check_cancelled()?;
     let expected = match kind {
-        StructureKind::Fortress | StructureKind::Bastion => Dimension::Nether,
+        StructureKind::Fortress | StructureKind::Bastion | StructureKind::RuinedPortalNether => {
+            Dimension::Nether
+        }
         _ => Dimension::Overworld,
     };
     if dimension != expected {
         return Err(invalid("dimension"));
     }
-    if kind == StructureKind::Bastion && version == GameVersion::Java1_12_2 {
+    if matches!(
+        kind,
+        StructureKind::Bastion
+            | StructureKind::OceanRuin
+            | StructureKind::RuinedPortal
+            | StructureKind::RuinedPortalNether
+    ) && version == GameVersion::Java1_12_2
+    {
         return Err(invalid("structure"));
     }
     if kind == StructureKind::AbandonedCamp && version != GameVersion::Java26_3 {
