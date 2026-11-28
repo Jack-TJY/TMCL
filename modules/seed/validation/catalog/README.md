@@ -4,9 +4,9 @@
 
 | 版本 | 主世界 | 下界 | 末地 | 去重定位目标 | 当前有同粒度原版起点回归的目标¹ |
 | --- | ---: | ---: | ---: | ---: | --- |
-| [1.12.2](1.12.2.json) | 6 | 1 | 1 | 8 | 5/8：Village、Stronghold、Monument、Mansion、Fortress；Temple 仅验证两种子类，不计为完整目标 |
-| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 12/18：在原有五项外新增 mansion、igloo、swamp_hut、pillager_outpost、shipwreck、fortress、bastion（后六项按抽样策略接入） |
-| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 15/52：在原有五项外新增 igloo、swamp_hut、pillager_outpost、shipwreck、ancient_city、trail_ruins、trial_chambers、buried_treasure、fortress、bastion；另有两种**标签级**图层 |
+| [1.12.2](1.12.2.json) | 6 | 1 | 1 | 8 | 7/8：Village、Stronghold、Monument、Mansion、Fortress、Mineshaft、EndCity；Temple 仅验证两种子类，不计为完整目标 |
+| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 17/18：在原有五项外新增 mansion、igloo、swamp_hut、pillager_outpost、shipwreck、fortress、bastion、ocean_ruin、ruined_portal、mineshaft（覆盖 2 个变体 ID）、end_city（后十项按抽样策略接入） |
+| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 27/52：在原有五项外新增 igloo、swamp_hut、pillager_outpost、shipwreck、ancient_city、trail_ruins、trial_chambers、buried_treasure、fortress、bastion，以及按**变体家族**覆盖的 ocean_ruin（2 个 ID）、ruined_portal（7 个 ID）、mineshaft（2 个 ID）与 end_city；另有两种**标签级**图层 |
 
 ¹ 这里统计与现有[有效起点回归](../../tests/backend.rs)可对应的命令目标，不保证任意种子或全部配置变体正确。2026-11-28 起按维护者决定改为**抽样验证**：以固定引擎预测为主，每批抽查代表性版本和少量结构。1.12.2 府邸由维护者用种子 −1 实机确认；26.3 的 igloo、swamp_hut、pillager_outpost、shipwreck 与官方服务端 `/locate` 一致；其余新增项为“引擎预测、未抽样”。三版下界、末地的产品查询能力仍为零。1.18 按“目标 × 维度”计是 **10/19** 而非 10/18，因为 ruined_portal 在两维度出现。手工测试不要使用种子 0：1.12.2 等版本的建世界界面会把 0 当作随机种子。
 
@@ -49,9 +49,26 @@ cargo test --locked -p tmcl-seed --test locate_catalog
 | --- | --- | --- | --- | --- |
 | 下界 | fortress | 区块 (4,18) | (4,18) | 开放 |
 | 下界 | bastion_remnant | 区块 (−12,20) | (13,−12)；从该处再次 locate 为 0 格 | 开放 |
-| 末地 | end_city | 区块 (26,83) | (−53,−36)；从该处 locate 最近仍在 416 格外 | **不开放**，疑似末地岛判定缺失 |
+| 末地 | end_city | 区块 (26,83) | 修正后只报 (26,83)，误报 (−53,−36) 被拒绝 | 开放 |
 
-末地城市仍需修正引擎语义后再接入；末地维度目前只保留参数，没有可用结构图层。
+末地城市此前误报的原因已查明（2026-11-29 修正）：上游 Seed Atlas 的版本一致性测试 `seedatlas-engine/tests_versions.c` 显示，末地城在群系检查之外还必须调用 `isViableEndCityTerrain()` 做旋转 5×5 最小高度检查；我们的桥接层只调用了 `isViableStructurePos` 与通用地形检查，漏了这一条，才把 (−53,−36) 当成有效起点。补上后 26.3 种子 −1 的官方起点 (26,83) 命中、误报被拒绝，末地城已开放。教训：引擎提供专用判定函数时，必须按上游测试的调用方式组合。
+
+### 2026-11-28 变体家族抽查（海底废墟与废弃传送门）
+
+这三类在 26.3 里有多个变体 ID（ocean_ruin_cold/warm、ruined_portal 六种主世界变体 + ruined_portal_nether），引擎按家族返回候选、由群系决定变体。抽查方式是：先取官方 `/locate` 报出的真实位置，再要求引擎在同一区块报出结果（存在性验证，不比“谁更近”）。26.3、种子 −1：
+
+| 结构 | 官方方块（区块） | 引擎 |
+| --- | --- | --- |
+| ocean_ruin_cold | (336,336) → (21,21) | 命中 |
+| ocean_ruin_warm | (−288,−144) → (−18,−9) | 命中 |
+| ruined_portal | (32,1024) → (2,64) | 命中 |
+| ruined_portal_desert | (−1856,−1072) → (−116,−67) | 命中 |
+| ruined_portal_nether（下界） | (320,304) → (20,19) | 命中 |
+| mineshaft / mineshaft_mesa（家族） | 26.3：(25,25) 与 (−58,−23) | 两处均命中 |
+
+矿井同样按家族开放：桥接层改用引擎的 `getMineshafts` 逐区块 RNG，并保留 `isViableStructurePos`/地形检查；26.3 的基础变体与恶地变体官方位置都已命中。
+
+因此界面按“家族”开放这四类：adventure 层包含该家族的全部变体；1.12.2 不支持，18 与 26.3 主世界/下界可用。**注意**：由于是家族层，界面不会分别列出 cold/warm 或各群系变体，文档与图例按家族说明。
 
 ### 缺口与实施顺序
 

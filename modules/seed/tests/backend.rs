@@ -270,6 +270,164 @@ fn sampled_26_3_nether_structures_are_verified_by_official_server() {
 }
 
 #[test]
+fn sampled_26_3_family_structures_match_official_positions() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server /locate, seed -1: one position per variant family.
+    for (kind, x, z) in [
+        (OceanRuin, 21, 21),
+        (OceanRuin, -18, -9),
+        (RuinedPortal, 2, 64),
+        (RuinedPortal, -116, -67),
+    ] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, Dimension::Overworld, -1, kind, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{kind:?}"
+        );
+    }
+    let bounds = ChunkBounds {
+        min_x: 20,
+        max_x: 20,
+        min_z: 19,
+        max_z: 19,
+    };
+    assert_eq!(
+        structure_starts(
+            Java26_3,
+            Dimension::Nether,
+            -1,
+            RuinedPortalNether,
+            bounds,
+            &ctx
+        )
+        .unwrap(),
+        [StructureStart {
+            chunk_x: 20,
+            chunk_z: 19
+        }]
+    );
+    let bounds = ChunkBounds {
+        min_x: 0,
+        max_x: 0,
+        min_z: 0,
+        max_z: 0,
+    };
+    for kind in [OceanRuin, RuinedPortal] {
+        assert!(
+            structure_starts(Java1_12_2, Dimension::Overworld, -1, kind, bounds, &ctx).is_err()
+        );
+        assert!(structure_starts(Java1_18, Dimension::Overworld, -1, kind, bounds, &ctx).is_ok());
+    }
+    assert!(
+        structure_starts(
+            Java26_3,
+            Dimension::Overworld,
+            -1,
+            RuinedPortalNether,
+            bounds,
+            &ctx
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn sampled_26_3_mineshaft_family_matches_official_positions() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server /locate, seed -1: base and mesa variants both resolve.
+    for (x, z) in [(25, 25), (-58, -23)] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, Dimension::Overworld, -1, Mineshaft, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{x}/{z}"
+        );
+    }
+    let bounds = ChunkBounds {
+        min_x: 0,
+        max_x: 0,
+        min_z: 0,
+        max_z: 0,
+    };
+    assert!(
+        structure_starts(
+            Java1_12_2,
+            Dimension::Overworld,
+            -1,
+            Mineshaft,
+            bounds,
+            &ctx
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn sampled_26_3_end_city_requires_the_terrain_rule() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 /locate, seed -1: the city at chunk (26,83) is valid, while
+    // the nearby triangular-spread candidate (-53,-36) fails the rotated 5x5
+    // minimum-height rule and must not be reported.
+    let bounds = ChunkBounds {
+        min_x: 26,
+        max_x: 26,
+        min_z: 83,
+        max_z: 83,
+    };
+    assert_eq!(
+        structure_starts(Java26_3, Dimension::End, -1, EndCity, bounds, &ctx).unwrap(),
+        [StructureStart {
+            chunk_x: 26,
+            chunk_z: 83
+        }]
+    );
+    let bounds = ChunkBounds {
+        min_x: -53,
+        max_x: -53,
+        min_z: -36,
+        max_z: -36,
+    };
+    assert!(
+        structure_starts(Java26_3, Dimension::End, -1, EndCity, bounds, &ctx)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        structure_starts(
+            Java26_3,
+            Dimension::Overworld,
+            -1,
+            EndCity,
+            ChunkBounds {
+                min_x: 0,
+                max_x: 0,
+                min_z: 0,
+                max_z: 0
+            },
+            &ctx
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [

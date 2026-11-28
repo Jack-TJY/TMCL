@@ -161,13 +161,13 @@ int tmcl_seed_structures(int32_t v, int32_t dim, int64_t seed, int32_t kind, int
                          int32_t z0, int32_t x1, int32_t z1, Start *out,
                          size_t capacity, size_t *written) {
   int mc = version_id(v);
-  if (mc < 0 || (kind < 0 || kind > 16 || (kind == 1 && mc != MC_26_3)) ||
+  if (mc < 0 || (kind < 0 || kind > 21 || (kind == 1 && mc != MC_26_3)) ||
       !out || !written || x0 < -1875000 || z0 < -1875000 || x1 > 1875000 ||
       z1 > 1875000 || x0 > x1 || z0 > z1 || (int64_t)x1 - x0 >= 256 ||
       (int64_t)z1 - z0 >= 256)
     return 1;
-  const int expected_dim =
-      (kind == 15 || kind == 16) ? DIM_NETHER : DIM_OVERWORLD;
+  const int expected_dim = (kind == 15 || kind == 16 || kind == 20) ? DIM_NETHER
+                           : kind == 21 ? DIM_END : DIM_OVERWORLD;
   if ((dim != DIM_OVERWORLD && dim != DIM_NETHER && dim != DIM_END) ||
       dim != expected_dim)
     return 1;
@@ -179,12 +179,80 @@ int tmcl_seed_structures(int32_t v, int32_t dim, int64_t seed, int32_t kind, int
     free(g);
     return rc;
   }
+  if (kind == 21) {
+    // End cities need the rotated 5x5 minimum-height rule in addition to the
+    // biome check; isViableStructureTerrain() does not cover this case.
+    SurfaceNoise surface;
+    initSurfaceNoise(&surface, DIM_END, (uint64_t)seed);
+    StructureConfig cfg;
+    if (!getStructureConfig(End_City, mc, &cfg) || cfg.regionSize <= 0) {
+      free(g);
+      return 2;
+    }
+    size_t n = 0;
+    int rc = 0;
+    for (int rz = region(z0, cfg.regionSize);
+         !rc && rz <= region(z1, cfg.regionSize); ++rz) {
+      for (int rx = region(x0, cfg.regionSize); rx <= region(x1, cfg.regionSize);
+           ++rx) {
+        Pos p;
+        if (!getStructurePos(End_City, mc, (uint64_t)seed, rx, rz, &p))
+          continue;
+        int cx = region(p.x, 16), cz = region(p.z, 16);
+        if (cx < x0 || cx > x1 || cz < z0 || cz > z1)
+          continue;
+        if (!isViableStructurePos(End_City, g, p.x, p.z, 0) ||
+            isViableEndCityTerrain(g, &surface, p.x, p.z) <= 0)
+          continue;
+        if (n >= capacity) {
+          rc = 2;
+          break;
+        }
+        out[n++] = (Start){cx, cz};
+      }
+    }
+    free(g);
+    if (rc || missing_spline)
+      return 2;
+    *written = n;
+    return 0;
+  }
+  if (kind == 17) {
+    // Mineshafts use a per-chunk RNG instead of a region grid.
+    size_t area = (size_t)(x1 - x0 + 1) * (size_t)(z1 - z0 + 1);
+    Pos *candidates = malloc(sizeof(Pos) * area);
+    size_t m = 0;
+    int rc = candidates ? 0 : 2;
+    int found = 0;
+    if (candidates)
+      found = getMineshafts(mc, (uint64_t)seed, x0, z0, x1, z1, candidates,
+                            (int)area);
+    for (int i = 0; !rc && i < found && i < (int)area; ++i) {
+      Pos p = candidates[i];
+      if (!isViableStructurePos(Mineshaft, g, p.x, p.z, 0) ||
+          !isViableStructureTerrain(Mineshaft, g, p.x, p.z))
+        continue;
+      if (m >= capacity) {
+        rc = 2;
+        break;
+      }
+      out[m++] = (Start){region(p.x, 16), region(p.z, 16)};
+    }
+    free(candidates);
+    free(g);
+    if (rc || missing_spline)
+      return 2;
+    *written = m;
+    return 0;
+  }
   const int placements[] = {Village,        Abandoned_Camp, -1,
                             Desert_Pyramid, Jungle_Temple,  Monument,
                             Mansion,        Igloo,          Swamp_Hut,
                             Outpost,        Shipwreck,      Ancient_City,
                             Trail_Ruins,    Trial_Chambers, Treasure,
-                            Fortress,       Bastion};
+                            Fortress,       Bastion,        Mineshaft,
+                            Ocean_Ruin,     Ruined_Portal,  Ruined_Portal_N,
+                            End_City};
   int type = placements[kind];
   StructureConfig cfg;
   if (!getStructureConfig(type, mc, &cfg) || cfg.regionSize <= 0) {

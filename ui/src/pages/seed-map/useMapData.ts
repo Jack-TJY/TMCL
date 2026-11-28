@@ -33,6 +33,11 @@ export const layerKinds: SeedStructureKind[] = [
   "abandoned_camp",
   "fortress",
   "bastion",
+  "mineshaft",
+  "ocean_ruin",
+  "ruined_portal",
+  "ruined_portal_nether",
+  "end_city",
 ];
 export type World = { version: string; seed: string; dimension?: SeedDimension };
 
@@ -40,16 +45,20 @@ export type World = { version: string; seed: string; dimension?: SeedDimension }
 export function availableLayers(version: string, dimension: SeedDimension = "overworld") {
   if (dimension === "the_nether") {
     return layerKinds.filter(
-      (kind) => kind === "fortress" || (kind === "bastion" && version !== "1.12.2"),
+      (kind) =>
+        kind === "fortress" ||
+        (kind === "bastion" && version !== "1.12.2") ||
+        (kind === "ruined_portal_nether" && version !== "1.12.2"),
     );
   }
-  if (dimension === "the_end") return [];
+  if (dimension === "the_end") return layerKinds.filter((kind) => kind === "end_city");
   return layerKinds.filter(
     (kind) =>
       (kind !== "abandoned_camp" || version === "26.3") &&
       (!["pillager_outpost", "shipwreck"].includes(kind) || version !== "1.12.2") &&
       (!["ancient_city", "trail_ruins", "trial_chambers"].includes(kind) || version === "26.3") &&
-      !["fortress", "bastion"].includes(kind),
+      !["fortress", "bastion", "ruined_portal_nether"].includes(kind) &&
+      (!["ocean_ruin", "ruined_portal"].includes(kind) || version !== "1.12.2"),
   );
 }
 /** Keep decoded image URLs only for visible tiles. Revisits use the backend disk cache. */
