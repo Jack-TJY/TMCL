@@ -29,6 +29,10 @@
     "jungle_pyramid": "丛林神庙",
     "ocean_monument": "海底遗迹",
     "mansion": "林地府邸",
-    "abandoned_camp": "废弃营地"
+    "abandoned_camp": "废弃营地",
+    "igloo": "雪屋",
+    "swamp_hut": "沼泽小屋",
+    "pillager_outpost": "掠夺者前哨站",
+    "shipwreck": "沉船"
   }
 }

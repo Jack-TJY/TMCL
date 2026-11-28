@@ -4,11 +4,11 @@
 
 | 版本 | 主世界 | 下界 | 末地 | 去重定位目标 | 当前有同粒度原版起点回归的目标¹ |
 | --- | ---: | ---: | ---: | ---: | --- |
-| [1.12.2](1.12.2.json) | 6 | 1 | 1 | 8 | 3/8：Village、Stronghold、Monument；Temple 仅验证两种子类，不计为完整目标 |
-| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 6/18：village、stronghold、desert_pyramid、jungle_pyramid、monument、mansion |
-| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 5/52：stronghold、desert_pyramid、jungle_pyramid、monument、mansion；另有两种**标签级**图层 |
+| [1.12.2](1.12.2.json) | 6 | 1 | 1 | 8 | 4/8：Village、Stronghold、Monument、Mansion；Temple 仅验证两种子类，不计为完整目标 |
+| [1.18](1.18.json) | 14 | 4 | 1 | 18 | 10/18：在原有五项外新增 mansion、igloo、swamp_hut、pillager_outpost、shipwreck（后四项按抽样策略接入） |
+| [26.3](26.3.json) | 47 | 4 | 1 | 52 | 9/52：在原有五项外新增 igloo、swamp_hut、pillager_outpost、shipwreck；另有两种**标签级**图层 |
 
-¹ 这里统计与现有[有效起点回归](../../tests/backend.rs)可对应的命令目标，不保证任意种子或全部配置变体正确。林地府邸只在 1.18 与 26.3 开放：1.12.2 的府邸起点需要完整区块提供器，当前离线探针无法构造，保留为缺口而不是按未验证结果开放。三版下界、末地的产品查询能力仍为零。1.18 按“目标 × 维度”计是 **6/19** 而非 6/18，因为 ruined_portal 在两维度出现。
+¹ 这里统计与现有[有效起点回归](../../tests/backend.rs)可对应的命令目标，不保证任意种子或全部配置变体正确。2026-11-28 起按维护者决定改为**抽样验证**：以固定引擎预测为主，每批抽查代表性版本和少量结构。1.12.2 府邸由维护者用种子 −1 实机确认；26.3 的 igloo、swamp_hut、pillager_outpost、shipwreck 与官方服务端 `/locate` 一致；其余新增项为“引擎预测、未抽样”。三版下界、末地的产品查询能力仍为零。1.18 按“目标 × 维度”计是 **10/19** 而非 10/18，因为 ruined_portal 在两维度出现。手工测试不要使用种子 0：1.12.2 等版本的建世界界面会把 0 当作随机种子。
 
 ### 如何解释一行
 

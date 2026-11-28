@@ -7,6 +7,10 @@ import temple from "./icons/jungle_pyramid.svg";
 import monument from "./icons/ocean_monument.svg";
 import camp from "./icons/abandoned_camp.svg";
 import mansion from "./icons/mansion.svg";
+import igloo from "./icons/igloo.svg";
+import swampHut from "./icons/swamp_hut.svg";
+import outpost from "./icons/pillager_outpost.svg";
+import shipwreck from "./icons/shipwreck.svg";
 
 /** One asset per IPC structure ID, shared by map markers and their legend. */
 export const structureIcons = {
@@ -16,5 +20,9 @@ export const structureIcons = {
   jungle_pyramid: temple,
   ocean_monument: monument,
   mansion,
+  igloo,
+  swamp_hut: swampHut,
+  pillager_outpost: outpost,
+  shipwreck,
   abandoned_camp: camp,
 } satisfies Record<SeedStructureKind, string>;

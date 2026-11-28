@@ -127,6 +127,45 @@ fn legacy_scattered_features_keep_their_actual_subtype() {
 }
 
 #[test]
+fn sampled_26_3_structures_match_the_official_server() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server /locate structure, seed -1. Seed 0 is intentionally avoided.
+    for (kind, x, z) in [
+        (Igloo, 84, 17),
+        (SwampHut, 103, -146),
+        (PillagerOutpost, 86, -49),
+        (Shipwreck, 8, 0),
+    ] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, -1, kind, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{kind:?}"
+        );
+    }
+    for kind in [PillagerOutpost, Shipwreck] {
+        let bounds = ChunkBounds {
+            min_x: 0,
+            max_x: 0,
+            min_z: 0,
+            max_z: 0,
+        };
+        assert!(
+            structure_starts(Java1_12_2, -1, kind, bounds, &ctx).is_err(),
+            "{kind:?}"
+        );
+    }
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [
@@ -161,20 +200,19 @@ fn vanilla_mansion_starts_reject_their_failed_candidates() {
                 .is_empty()
         );
     }
-    assert!(
-        structure_starts(
-            Java1_12_2,
-            0,
-            Mansion,
-            ChunkBounds {
-                min_x: 0,
-                max_x: 0,
-                min_z: 0,
-                max_z: 0
-            },
-            &ctx
-        )
-        .is_err()
+    // Maintainer-verified in game on 1.12.2 with seed -1 (seed 0 creates a random world there).
+    let bounds = ChunkBounds {
+        min_x: 287,
+        max_x: 287,
+        min_z: 608,
+        max_z: 608,
+    };
+    assert_eq!(
+        structure_starts(Java1_12_2, -1, Mansion, bounds, &ctx).unwrap(),
+        [StructureStart {
+            chunk_x: 287,
+            chunk_z: 608
+        }]
     );
 }
 

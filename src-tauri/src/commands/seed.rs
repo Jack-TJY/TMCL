@@ -79,6 +79,10 @@ pub enum SeedStructureKind {
     JunglePyramid,
     OceanMonument,
     Mansion,
+    Igloo,
+    SwampHut,
+    PillagerOutpost,
+    Shipwreck,
 }
 impl From<SeedStructureKind> for StructureKind {
     fn from(kind: SeedStructureKind) -> Self {
@@ -90,6 +94,10 @@ impl From<SeedStructureKind> for StructureKind {
             SeedStructureKind::JunglePyramid => Self::JunglePyramid,
             SeedStructureKind::OceanMonument => Self::OceanMonument,
             SeedStructureKind::Mansion => Self::Mansion,
+            SeedStructureKind::Igloo => Self::Igloo,
+            SeedStructureKind::SwampHut => Self::SwampHut,
+            SeedStructureKind::PillagerOutpost => Self::PillagerOutpost,
+            SeedStructureKind::Shipwreck => Self::Shipwreck,
         }
     }
 }
