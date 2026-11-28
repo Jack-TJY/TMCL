@@ -127,6 +127,58 @@ fn legacy_scattered_features_keep_their_actual_subtype() {
 }
 
 #[test]
+fn vanilla_mansion_starts_reject_their_failed_candidates() {
+    let ctx = TaskCtx::noop("mansion");
+    for (version, seed, x, z, rejected) in [
+        (Java1_18, 0, -221, -52, (36, 24)),
+        (Java1_18, -1, 259, -208, (9, 21)),
+        (Java26_3, 0, -221, -52, (36, 24)),
+        (Java26_3, -1, 259, -208, (9, 21)),
+    ] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(version, seed, Mansion, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{seed}"
+        );
+        let rejected_bounds = ChunkBounds {
+            min_x: rejected.0,
+            max_x: rejected.0,
+            min_z: rejected.1,
+            max_z: rejected.1,
+        };
+        assert!(
+            structure_starts(version, seed, Mansion, rejected_bounds, &ctx)
+                .unwrap()
+                .is_empty()
+        );
+    }
+    assert!(
+        structure_starts(
+            Java1_12_2,
+            0,
+            Mansion,
+            ChunkBounds {
+                min_x: 0,
+                max_x: 0,
+                min_z: 0,
+                max_z: 0
+            },
+            &ctx
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn outer_stronghold_on_strip_boundary_is_reported_once() {
     let start = StructureStart {
         chunk_x: -1172,
