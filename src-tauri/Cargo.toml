@@ -47,6 +47,7 @@ ts-rs = { workspace = true }
 winreg = { workspace = true }
 
 [dev-dependencies]
+flate2.workspace = true
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 tmcl-net = { path = "../core/net", features = ["test-util"] }

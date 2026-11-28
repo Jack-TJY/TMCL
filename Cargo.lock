@@ -4498,6 +4498,7 @@ name = "tmcl-app"
 version = "0.2.0-beta.3"
 dependencies = [
  "embed-resource",
+ "flate2",
  "serde",
  "serde_json",
  "tauri",
@@ -4735,6 +4736,7 @@ name = "tmcl-seed"
 version = "0.2.0-beta.3"
 dependencies = [
  "cc",
+ "flate2",
  "png",
  "serde_json",
  "tempfile",

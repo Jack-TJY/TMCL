@@ -5,12 +5,14 @@
 
 mod map;
 mod native;
+mod save;
 mod structures;
 
 use std::str::FromStr;
 use tmcl_common::{AppError, AppResult, ErrorCode};
 
 pub use map::{MAX_ZOOM, TILE_SIZE, Tile, biome_at, biome_color, cached_tile_png};
+pub use save::{SaveInfo, read_level_dat};
 pub use structures::{ChunkBounds, StructureKind, StructureStart, structure_starts};
 
 const WORLD_LIMIT: i32 = 30_000_000;

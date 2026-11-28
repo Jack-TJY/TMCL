@@ -96,3 +96,42 @@ fn streams_png_and_cancellation_stops_the_rest_of_batch() {
     assert!(err.is_cancelled());
     assert_eq!(count, 1);
 }
+fn level_dat(seed: i64, name: &str) -> Vec<u8> {
+    use std::io::Write;
+    fn tag(out: &mut Vec<u8>, kind: u8, name: &str) {
+        out.push(kind);
+        out.extend_from_slice(&(name.len() as u16).to_be_bytes());
+        out.extend_from_slice(name.as_bytes());
+    }
+    let mut nbt = Vec::new();
+    tag(&mut nbt, 10, "");
+    tag(&mut nbt, 10, "Data");
+    tag(&mut nbt, 4, "RandomSeed");
+    nbt.extend_from_slice(&seed.to_be_bytes());
+    tag(&mut nbt, 8, "LevelName");
+    nbt.extend_from_slice(&(name.len() as u16).to_be_bytes());
+    nbt.extend_from_slice(name.as_bytes());
+    nbt.push(0);
+    nbt.push(0);
+    let mut out = Vec::new();
+    let mut encoder = flate2::write::GzEncoder::new(&mut out, flate2::Compression::fast());
+    encoder.write_all(&nbt).unwrap();
+    encoder.finish().unwrap();
+    out
+}
+
+#[test]
+fn lists_saved_worlds_and_skips_unreadable_ones() {
+    let dir = tempfile::tempdir().unwrap();
+    assert!(list_saves(dir.path()).is_empty());
+    let saves = dir.path().join("saves");
+    std::fs::create_dir_all(saves.join("Alpha")).unwrap();
+    std::fs::write(saves.join("Alpha/level.dat"), level_dat(-1, "Alpha")).unwrap();
+    std::fs::create_dir_all(saves.join("Broken")).unwrap();
+    std::fs::write(saves.join("Broken/level.dat"), b"not gzip").unwrap();
+    let worlds = list_saves(dir.path());
+    assert_eq!(worlds.len(), 1);
+    assert_eq!(worlds[0].dir, "Alpha");
+    assert_eq!(worlds[0].name, "Alpha");
+    assert_eq!(worlds[0].seed, "-1");
+}
