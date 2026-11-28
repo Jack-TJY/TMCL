@@ -21,7 +21,7 @@ fn vanilla_biomes() {
         (Java26_3, 12345, 608, -736, 188),
     ] {
         assert_eq!(
-            biome_at(version, seed, x, z).unwrap(),
+            biome_at(version, Dimension::Overworld, seed, x, z).unwrap(),
             expected,
             "{version:?}/{seed} at {x},{z}"
         );
@@ -341,6 +341,24 @@ fn sampled_26_3_family_structures_match_official_positions() {
 }
 
 #[test]
+fn sampled_26_3_dimension_biomes_match_the_official_server() {
+    // Official 26.3 world, seed -1, Y=64: the engine must agree with the game.
+    for (dimension, x, z, expected) in [
+        (Dimension::Nether, 0, 0, 171),    // crimson_forest
+        (Dimension::Nether, -100, 100, 8), // nether_wastes
+        (Dimension::End, 0, 0, 9),         // the_end
+        (Dimension::End, 416, 1328, 42),   // end_highlands
+        (Dimension::End, -848, -576, 41),  // end_midlands
+    ] {
+        assert_eq!(
+            biome_at(Java26_3, dimension, -1, x, z).unwrap(),
+            expected,
+            "{dimension:?} {x}/{z}"
+        );
+    }
+}
+
+#[test]
 fn sampled_26_3_mineshaft_family_matches_official_positions() {
     let ctx = TaskCtx::noop("sample");
     // Official 26.3 server /locate, seed -1: base and mesa variants both resolve.
@@ -519,8 +537,17 @@ fn tile_roundtrip_and_repair() {
         z: 0,
         zoom: 0,
     };
-    let render =
-        || cached_tile_png(dir.path(), Java1_12_2, 0, tile, &TaskCtx::noop("tile")).unwrap();
+    let render = || {
+        cached_tile_png(
+            dir.path(),
+            Java1_12_2,
+            Dimension::Overworld,
+            0,
+            tile,
+            &TaskCtx::noop("tile"),
+        )
+        .unwrap()
+    };
     let png = render();
     let mut reader = png::Decoder::new(std::io::Cursor::new(&png))
         .read_info()
@@ -531,10 +558,19 @@ fn tile_roundtrip_and_repair() {
     for (x, z) in [(0, 0), (21, 190), (255, 255)] {
         assert_eq!(
             pixels[z * 256 + x],
-            biome_at(Java1_12_2, 0, x as i32 - 256, z as i32).unwrap()
+            biome_at(
+                Java1_12_2,
+                Dimension::Overworld,
+                0,
+                x as i32 - 256,
+                z as i32
+            )
+            .unwrap()
         );
     }
-    let cache = dir.path().join("overworld-y64-v1/1.12.2/0/0/-1_0.png");
+    let cache = dir
+        .path()
+        .join("seedatlas-y64-v2/1.12.2/overworld/0/0/-1_0.png");
     assert_eq!(std::fs::read(&cache).unwrap(), png);
     let stamp = std::fs::metadata(&cache).unwrap().modified().unwrap();
     assert_eq!(render(), png);
@@ -548,11 +584,47 @@ fn tile_roundtrip_and_repair() {
 }
 
 #[test]
+fn dimension_tiles_use_separate_cache_entries() {
+    let dir = tempfile::tempdir().unwrap();
+    let tile = Tile {
+        x: 0,
+        z: 0,
+        zoom: 4,
+    };
+    let render = |dimension| {
+        cached_tile_png(
+            dir.path(),
+            Java26_3,
+            dimension,
+            -1,
+            tile,
+            &TaskCtx::noop("tile"),
+        )
+        .unwrap()
+    };
+    let nether = render(Dimension::Nether);
+    let end = render(Dimension::End);
+    let overworld = render(Dimension::Overworld);
+    assert_ne!(nether, end);
+    assert_ne!(overworld, nether);
+    for (dimension, bytes) in [
+        ("the_nether", &nether),
+        ("the_end", &end),
+        ("overworld", &overworld),
+    ] {
+        let path = dir
+            .path()
+            .join(format!("seedatlas-y64-v2/26.3/{dimension}/-1/4/0_0.png"));
+        assert_eq!(&std::fs::read(path).unwrap(), bytes);
+    }
+}
+
+#[test]
 fn rejects_out_of_profile_and_honors_cancellation() {
     assert_eq!(parse_seed("😀").unwrap(), 1772899);
     assert_eq!(parse_seed("-1").unwrap(), -1);
     assert!(parse_seed(" ").is_err());
-    assert!(biome_at(Java26_3, 0, 30_000_001, 0).is_err());
+    assert!(biome_at(Java26_3, Dimension::Overworld, 0, 30_000_001, 0).is_err());
     let ctx = TaskCtx::noop("test");
     let bounds = ChunkBounds {
         min_x: 0,

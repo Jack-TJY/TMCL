@@ -92,13 +92,10 @@ impl SeedMapArgs {
         if self.seed.len() > 1024 {
             return Err(invalid("seed"));
         }
-        if let SeedMapQuery::Tiles { tiles } = &self.query {
-            if !(1..=MAX_TILES).contains(&tiles.len()) {
-                return Err(invalid("tiles"));
-            }
-            if self.dimension.unwrap_or_default() != SeedDimension::Overworld {
-                return Err(invalid("dimension"));
-            }
+        if let SeedMapQuery::Tiles { tiles } = &self.query
+            && !(1..=MAX_TILES).contains(&tiles.len())
+        {
+            return Err(invalid("tiles"));
         }
         Ok((self.version.parse()?, tmcl_seed::parse_seed(&self.seed)?))
     }
@@ -218,6 +215,7 @@ impl SeedMapQuery {
                     let png = tmcl_seed::cached_tile_png(
                         cache,
                         version,
+                        dimension,
                         seed,
                         Tile {
                             x: tile.x,

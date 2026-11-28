@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 use tmcl_common::{AppError, AppResult, ErrorCode, ProgressUpdate, TaskCtx};
 
-use crate::{GameVersion, WORLD_LIMIT, invalid, native};
+use crate::{Dimension, GameVersion, WORLD_LIMIT, invalid, native};
 
 /// PNG width and height in pixels.
 pub const TILE_SIZE: i32 = 256;
 /// Zoom 0 samples one block per pixel; zoom N samples every 2^N blocks.
 pub const MAX_ZOOM: u8 = 12;
-const CACHE_FORMAT: &str = "overworld-y64-v1";
+const CACHE_FORMAT: &str = "seedatlas-y64-v2";
 const MAX_CACHED_BYTES: u64 = 128 * 1024;
 const STRIP_ROWS: i32 = 8;
 
@@ -40,9 +40,16 @@ impl Tile {
         Ok((axis(self.x)?, axis(self.z)?, step))
     }
 
-    fn cache_path(self, root: &Path, version: GameVersion, seed: i64) -> PathBuf {
+    fn cache_path(
+        self,
+        root: &Path,
+        version: GameVersion,
+        dimension: Dimension,
+        seed: i64,
+    ) -> PathBuf {
         root.join(CACHE_FORMAT)
             .join(version.as_str())
+            .join(dimension.as_str())
             .join(seed.to_string())
             .join(self.zoom.to_string())
             .join(format!("{}_{}.png", self.x, self.z))
@@ -50,12 +57,18 @@ impl Tile {
 }
 
 /// Get the raw biome ID at a single block in the fixed Y=64 plane.
-pub fn biome_at(version: GameVersion, seed: i64, x: i32, z: i32) -> AppResult<u8> {
+pub fn biome_at(
+    version: GameVersion,
+    dimension: Dimension,
+    seed: i64,
+    x: i32,
+    z: i32,
+) -> AppResult<u8> {
     if !(-WORLD_LIMIT..=WORLD_LIMIT).contains(&x) || !(-WORLD_LIMIT..=WORLD_LIMIT).contains(&z) {
         return Err(invalid("block"));
     }
     let mut id = [0];
-    native::biomes(version, seed, (x, z), 1, 1, &mut id)?;
+    native::biomes(version, dimension, seed, (x, z), 1, 1, &mut id)?;
     Ok(id[0])
 }
 
@@ -95,6 +108,16 @@ pub fn biome_color(id: u8) -> [u8; 3] {
         185 => [211, 157, 174],
         186 => [157, 167, 158],
         187 => [170, 153, 84],
+        8 => [96, 30, 30],
+        9 => [24, 20, 32],
+        40 => [196, 190, 150],
+        41 => [186, 180, 140],
+        42 => [208, 200, 158],
+        43 => [166, 160, 122],
+        170 => [104, 76, 58],
+        171 => [136, 40, 58],
+        172 => [38, 104, 96],
+        173 => [86, 82, 88],
         188 => [141, 151, 76],
         _ => [131, 129, 137],
     }
@@ -105,13 +128,14 @@ pub fn biome_color(id: u8) -> [u8; 3] {
 pub fn cached_tile_png(
     cache_root: &Path,
     version: GameVersion,
+    dimension: Dimension,
     seed: i64,
     tile: Tile,
     ctx: &TaskCtx,
 ) -> AppResult<Vec<u8>> {
     let (x, z, step) = tile.grid()?;
     ctx.check_cancelled()?;
-    let path = tile.cache_path(cache_root, version, seed);
+    let path = tile.cache_path(cache_root, version, dimension, seed);
     if let Some(bytes) = read_cached(&path)? {
         ctx.check_cancelled()?;
         report_rows(ctx, TILE_SIZE);
@@ -124,7 +148,15 @@ pub fn cached_tile_png(
     {
         ctx.check_cancelled()?;
         let row = index as i32 * STRIP_ROWS;
-        native::biomes(version, seed, (x, z + row * step), step, TILE_SIZE, strip)?;
+        native::biomes(
+            version,
+            dimension,
+            seed,
+            (x, z + row * step),
+            step,
+            TILE_SIZE,
+            strip,
+        )?;
         report_rows(ctx, row + STRIP_ROWS);
     }
     ctx.check_cancelled()?;

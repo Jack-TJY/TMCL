@@ -41,13 +41,14 @@ static int valid_axis(int32_t origin, int32_t n, int32_t step) {
   return n > 0 && n <= 256 && origin >= -30000000 &&
          (int64_t)origin + (int64_t)(n - 1) * step <= 30000000;
 }
-int tmcl_seed_biomes(int32_t v, int64_t seed, int32_t x, int32_t z,
+int tmcl_seed_biomes(int32_t v, int32_t dim, int64_t seed, int32_t x, int32_t z,
                      int32_t step, int32_t w, int32_t h, uint8_t *out) {
   int mc = version_id(v);
   if (mc < 0 || !out || step < 1 || step > 4096 || !valid_axis(x, w, step) ||
-      !valid_axis(z, h, step))
+      !valid_axis(z, h, step) || (dim != DIM_OVERWORLD && dim != DIM_NETHER &&
+                                 dim != DIM_END))
     return 1;
-  Generator *g = create_generator(mc, DIM_OVERWORLD, seed);
+  Generator *g = create_generator(mc, dim, seed);
   if (!g)
     return 2;
   int rc = 0;

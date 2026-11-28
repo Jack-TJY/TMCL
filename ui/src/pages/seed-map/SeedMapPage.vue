@@ -295,8 +295,7 @@ onBeforeUnmount(() => observer?.disconnect());
         {{ t(`seedMap.layer.${k}`) }}</label
       >
     </fieldset>
-    <p v-if="dimension !== 'overworld'" class="tip">{{ t("seedMap.structureOnly") }}</p>
-    <p v-if="!available.length" class="tip">{{ t("seedMap.endEmpty") }}</p>
+    <p v-if="dimension !== 'overworld'" class="tip">{{ t("seedMap.dimensionSlice") }}</p>
     <p v-if="v.w && !visible.length && dimension === 'overworld'">{{ t("seedMap.edge") }}</p>
     <p v-if="partial" class="tip">{{ t("seedMap.partial") }}</p>
     <p class="tip">{{ t("seedMap.hint") }}</p>
