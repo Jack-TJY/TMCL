@@ -12,6 +12,7 @@ import type { AppError } from "../../bindings/AppError";
 import type { SeedDimension } from "../../bindings/SeedDimension";
 import type { SeedStructureKind } from "../../bindings/SeedStructureKind";
 import type { SeedTile } from "../../bindings/SeedTile";
+import type { SeedVersionInfo } from "../../bindings/SeedVersionInfo";
 import { useStructures } from "./useStructures";
 import { runQuery } from "./request";
 import { tileKey, type View } from "./viewport";
@@ -41,25 +42,15 @@ export const layerKinds: SeedStructureKind[] = [
 ];
 export type World = { version: string; seed: string; dimension?: SeedDimension };
 
-/** Layers offered for a version and dimension; only verified combinations are listed. */
-export function availableLayers(version: string, dimension: SeedDimension = "overworld") {
-  if (dimension === "the_nether") {
-    return layerKinds.filter(
-      (kind) =>
-        kind === "fortress" ||
-        (kind === "bastion" && version !== "1.12.2") ||
-        (kind === "ruined_portal_nether" && version !== "1.12.2"),
-    );
-  }
-  if (dimension === "the_end") return layerKinds.filter((kind) => kind === "end_city");
-  return layerKinds.filter(
-    (kind) =>
-      (kind !== "abandoned_camp" || version === "26.3") &&
-      (!["pillager_outpost", "shipwreck"].includes(kind) || version !== "1.12.2") &&
-      (!["ancient_city", "trail_ruins", "trial_chambers"].includes(kind) || version === "26.3") &&
-      !["fortress", "bastion", "ruined_portal_nether"].includes(kind) &&
-      (!["ocean_ruin", "ruined_portal"].includes(kind) || version !== "1.12.2"),
-  );
+/** Layers the backend reports as predictable for this version and dimension. */
+export function availableLayers(
+  capabilities: SeedVersionInfo[],
+  version: string,
+  dimension: SeedDimension = "overworld",
+): SeedStructureKind[] {
+  const capability = capabilities.find((candidate) => candidate.version === version);
+  const group = capability?.structures.find((candidate) => candidate.dimension === dimension);
+  return group ? group.kinds : [];
 }
 /** Keep decoded image URLs only for visible tiles. Revisits use the backend disk cache. */
 export function useMapData(

@@ -3,13 +3,15 @@ import { computed, onMounted, onBeforeUnmount, ref, shallowRef } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatError } from "../../i18n";
 import { blockAt, clamp, jumpPoint, SIZE, tileKey, tilesInView, zoomAt } from "./viewport";
-import { availableLayers, useMapData, type World } from "./useMapData";
+import { availableLayers, layerKinds, useMapData, type World } from "./useMapData";
+import { seedVersions } from "../../api/seed";
+import type { SeedVersionInfo } from "../../bindings/SeedVersionInfo";
 import StructureIcon from "./StructureIcon.vue";
 import type { Pin } from "./useStructures";
 import type { SeedDimension } from "../../bindings/SeedDimension";
 import type { SeedStructureKind } from "../../bindings/SeedStructureKind";
 const { t } = useI18n();
-const versions = ["1.12.2", "1.18", "26.3"];
+const capabilities = ref<SeedVersionInfo[]>([]);
 const seed = ref("0"),
   version = ref("26.3"),
   dimension = ref<SeedDimension>("overworld"),
@@ -21,14 +23,62 @@ const seed = ref("0"),
 const v = ref({ x: 0, z: 0, zoom: 1, w: 0, h: 0 });
 const map = ref<HTMLElement | null>(null);
 const layers = ref<SeedStructureKind[]>(["village"]);
-const available = computed(() => availableLayers(world.value.version, world.value.dimension));
+const available = computed(() => {
+  const offered = availableLayers(capabilities.value, world.value.version, world.value.dimension);
+  // Before the capability list arrives, keep the full icon set so the page is
+  // usable (and SSR/test renders show a complete legend).
+  if (offered.length || capabilities.value.length) return offered;
+  return layerKinds;
+});
+const dimensions = computed<SeedDimension[]>(() => {
+  const capability = capabilities.value.find((candidate) => candidate.version === version.value);
+  return capability ? capability.structures.map((group) => group.dimension) : ["overworld"];
+});
+function dimensionLabel(value: SeedDimension) {
+  return t(
+    value === "the_nether"
+      ? "seedMap.dimensionNether"
+      : value === "the_end"
+        ? "seedMap.dimensionEnd"
+        : "seedMap.dimensionOverworld",
+  );
+}
 function switchDimension(next: SeedDimension) {
   dimension.value = next;
   // Switch the world identity first so stale query results are discarded.
   world.value = { version: version.value, seed: seed.value, dimension: next };
-  const offered = availableLayers(version.value, next);
-  layers.value = offered.slice(0, 1);
+  layers.value = availableLayers(capabilities.value, version.value, next).slice(0, 1);
   cursor.value = null;
+}
+function onVersionChange(event: Event) {
+  version.value = (event.target as HTMLSelectElement).value;
+  if (!dimensions.value.includes(dimension.value)) {
+    dimension.value = dimensions.value[0] ?? "overworld";
+  }
+  const offered = availableLayers(capabilities.value, version.value, dimension.value);
+  layers.value = layers.value.filter((kind) => offered.includes(kind));
+  if (!layers.value.length) layers.value = offered.slice(0, 1);
+  world.value = { version: version.value, seed: seed.value, dimension: dimension.value };
+  cursor.value = null;
+}
+async function loadCapabilities() {
+  try {
+    capabilities.value = await seedVersions();
+    const preferred =
+      capabilities.value.find((candidate) => candidate.version === version.value) ??
+      capabilities.value.at(-1);
+    if (!preferred) return;
+    version.value = preferred.version;
+    if (!preferred.structures.some((group) => group.dimension === dimension.value)) {
+      dimension.value = preferred.structures[0]?.dimension ?? "overworld";
+    }
+    const offered = availableLayers(capabilities.value, version.value, dimension.value);
+    layers.value = layers.value.filter((kind) => offered.includes(kind));
+    if (!layers.value.length) layers.value = offered.slice(0, 1);
+    world.value = { version: version.value, seed: seed.value, dimension: dimension.value };
+  } catch {
+    invalid.value = "seedMap.versionsFailed";
+  }
 }
 function onDimensionChange(event: Event) {
   switchDimension((event.target as HTMLSelectElement).value as SeedDimension);
@@ -166,6 +216,7 @@ function key(e: KeyboardEvent) {
 }
 let observer: ResizeObserver | undefined;
 onMounted(() => {
+  void loadCapabilities();
   const el = map.value!;
   const measure = () => {
     v.value = { ...v.value, w: el.clientWidth, h: el.clientHeight };
@@ -188,15 +239,17 @@ onBeforeUnmount(() => observer?.disconnect());
         }}<input v-model="seed" maxlength="1024" spellcheck="false" autocomplete="off" /></label
       ><label
         >{{ t("seedMap.version")
-        }}<select v-model="version">
-          <option v-for="ver in versions" :key="ver">{{ ver }}</option>
+        }}<select :value="version" @change="onVersionChange">
+          <option v-for="cap in capabilities" :key="cap.version" :value="cap.version">
+            {{ cap.label }}
+          </option>
         </select></label
       ><label
         >{{ t("seedMap.dimension")
         }}<select :value="dimension" @change="onDimensionChange">
-          <option value="overworld">{{ t("seedMap.dimensionOverworld") }}</option>
-          <option value="the_nether">{{ t("seedMap.dimensionNether") }}</option>
-          <option value="the_end">{{ t("seedMap.dimensionEnd") }}</option>
+          <option v-for="value in dimensions" :key="value" :value="value">
+            {{ dimensionLabel(value) }}
+          </option>
         </select></label
       ><button class="primary" type="submit">{{ t("seedMap.apply") }}</button>
     </form>

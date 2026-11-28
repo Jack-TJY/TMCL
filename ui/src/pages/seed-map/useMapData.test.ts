@@ -6,16 +6,40 @@ import type { SeedStructureKind } from "../../bindings/SeedStructureKind";
 const run = vi.hoisted(() => vi.fn());
 vi.mock("./request", () => ({ runQuery: run }));
 import { availableLayers, useMapData } from "./useMapData";
-it("offers only verified layers for each dimension", () => {
-  expect(availableLayers("26.3", "overworld")).toContain("village");
-  expect(availableLayers("26.3", "overworld")).not.toContain("fortress");
-  expect(availableLayers("26.3", "the_nether")).toEqual([
+import type { SeedVersionInfo } from "../../bindings/SeedVersionInfo";
+const capabilities: SeedVersionInfo[] = [
+  {
+    version: "26.3",
+    label: "26.3",
+    structures: [
+      { dimension: "overworld", kinds: ["village", "trial_chambers", "ancient_city"] },
+      { dimension: "the_nether", kinds: ["fortress", "bastion", "ruined_portal_nether"] },
+      { dimension: "the_end", kinds: ["end_city"] },
+    ],
+  },
+  {
+    version: "1.12.2",
+    label: "1.12.2",
+    structures: [
+      { dimension: "overworld", kinds: ["village", "mineshaft"] },
+      { dimension: "the_nether", kinds: ["fortress"] },
+    ],
+  },
+];
+
+it("offers only the layers the backend reports for a version and dimension", () => {
+  expect(availableLayers(capabilities, "26.3", "overworld")).toContain("village");
+  expect(availableLayers(capabilities, "26.3", "overworld")).not.toContain("fortress");
+  expect(availableLayers(capabilities, "26.3", "the_nether")).toEqual([
     "fortress",
     "bastion",
     "ruined_portal_nether",
   ]);
-  expect(availableLayers("1.12.2", "the_nether")).toEqual(["fortress"]);
-  expect(availableLayers("26.3", "the_end")).toEqual(["end_city"]);
+  expect(availableLayers(capabilities, "1.12.2", "the_nether")).toEqual(["fortress"]);
+  expect(availableLayers(capabilities, "1.12.2", "overworld")).not.toContain("trial_chambers");
+  expect(availableLayers(capabilities, "26.3", "the_end")).toEqual(["end_city"]);
+  expect(availableLayers(capabilities, "1.12.2", "the_end")).toEqual([]);
+  expect(availableLayers(capabilities, "unknown", "overworld")).toEqual([]);
 });
 
 it("batches only missing tiles and releases obsolete image URLs on pan, seed change and unmount", async () => {
