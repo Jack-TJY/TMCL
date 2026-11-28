@@ -19,7 +19,8 @@ const available = computed(() =>
   layerKinds.filter(
     (k) =>
       (k !== "abandoned_camp" || world.value.version === "26.3") &&
-      (!["pillager_outpost", "shipwreck"].includes(k) || world.value.version !== "1.12.2"),
+      (!["pillager_outpost", "shipwreck"].includes(k) || world.value.version !== "1.12.2") &&
+      (!["ancient_city", "trail_ruins"].includes(k) || world.value.version === "26.3"),
   ),
 );
 const visible = computed(() => tilesInView(v.value));
@@ -82,7 +83,8 @@ function apply() {
   layers.value = layers.value.filter(
     (k) =>
       (k !== "abandoned_camp" || version.value === "26.3") &&
-      (!["pillager_outpost", "shipwreck"].includes(k) || version.value !== "1.12.2"),
+      (!["pillager_outpost", "shipwreck"].includes(k) || version.value !== "1.12.2") &&
+      (!["ancient_city", "trail_ruins"].includes(k) || version.value === "26.3"),
   );
   world.value = { version: version.value, seed: seed.value };
   cursor.value = null;

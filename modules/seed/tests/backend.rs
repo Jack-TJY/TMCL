@@ -166,6 +166,42 @@ fn sampled_26_3_structures_match_the_official_server() {
 }
 
 #[test]
+fn sampled_26_3_deep_structures_match_the_official_server() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server /locate structure, seed -1.
+    for (kind, x, z) in [(AncientCity, 58, 5), (TrailRuins, -62, -88)] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, -1, kind, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{kind:?}"
+        );
+    }
+    for version in [Java1_18, Java1_12_2] {
+        for kind in [AncientCity, TrailRuins] {
+            let bounds = ChunkBounds {
+                min_x: 0,
+                max_x: 0,
+                min_z: 0,
+                max_z: 0,
+            };
+            assert!(
+                structure_starts(version, -1, kind, bounds, &ctx).is_err(),
+                "{version:?}/{kind:?}"
+            );
+        }
+    }
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [

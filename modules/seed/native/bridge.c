@@ -161,7 +161,7 @@ int tmcl_seed_structures(int32_t v, int64_t seed, int32_t kind, int32_t x0,
                          int32_t z0, int32_t x1, int32_t z1, Start *out,
                          size_t capacity, size_t *written) {
   int mc = version_id(v);
-  if (mc < 0 || (kind < 0 || kind > 10 || (kind == 1 && mc != MC_26_3)) ||
+  if (mc < 0 || (kind < 0 || kind > 12 || (kind == 1 && mc != MC_26_3)) ||
       !out || !written || x0 < -1875000 || z0 < -1875000 || x1 > 1875000 ||
       z1 > 1875000 || x0 > x1 || z0 > z1 || (int64_t)x1 - x0 >= 256 ||
       (int64_t)z1 - z0 >= 256)
@@ -177,7 +177,8 @@ int tmcl_seed_structures(int32_t v, int64_t seed, int32_t kind, int32_t x0,
   const int placements[] = {Village,        Abandoned_Camp, -1,
                             Desert_Pyramid, Jungle_Temple,  Monument,
                             Mansion,        Igloo,          Swamp_Hut,
-                            Outpost,        Shipwreck};
+                            Outpost,        Shipwreck,      Ancient_City,
+                            Trail_Ruins};
   int type = placements[kind];
   StructureConfig cfg;
   if (!getStructureConfig(type, mc, &cfg) || cfg.regionSize <= 0) {
