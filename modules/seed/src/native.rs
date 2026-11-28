@@ -2,6 +2,7 @@ use crate::{Dimension, GameVersion, StructureKind, StructureStart, invalid};
 use tmcl_common::{AppError, AppResult, ErrorCode};
 
 unsafe extern "C" {
+    fn tmcl_seed_supports(version: i32, kind: i32) -> i32;
     fn tmcl_seed_biomes(
         version: i32,
         dimension: i32,
@@ -26,6 +27,12 @@ unsafe extern "C" {
         capacity: usize,
         written: *mut usize,
     ) -> i32;
+}
+
+/// Whether the pinned engine models this structure for the version.
+pub(super) fn supports(version: GameVersion, kind: StructureKind) -> bool {
+    // SAFETY: both arguments are plain integers; the callee has no pointer access.
+    unsafe { tmcl_seed_supports(version.engine(), kind as i32) == 1 }
 }
 
 fn check(status: i32) -> AppResult<()> {
@@ -58,7 +65,7 @@ pub(super) fn biomes(
     // SAFETY: ids holds width * height writable bytes throughout the call.
     check(unsafe {
         tmcl_seed_biomes(
-            version as i32,
+            version.engine(),
             dimension as i32,
             seed,
             origin.0,
@@ -84,7 +91,7 @@ pub(super) fn structures(
     // The callee receives the exact allocation capacity and a live output count.
     check(unsafe {
         tmcl_seed_structures(
-            version as i32,
+            version.engine(),
             dimension as i32,
             seed,
             kind as i32,

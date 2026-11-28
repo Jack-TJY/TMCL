@@ -1,6 +1,22 @@
 use crate::{Dimension, GameVersion, WORLD_LIMIT, invalid, native};
 use tmcl_common::{AppResult, ProgressUpdate, TaskCtx};
 
+/// Whether the pinned engine supports this kind for the version.
+pub fn supports(version: GameVersion, kind: StructureKind) -> bool {
+    native::supports(version, kind)
+}
+
+/// Dimension a structure kind is placed in.
+pub fn dimension_of(kind: StructureKind) -> Dimension {
+    match kind {
+        StructureKind::Fortress | StructureKind::Bastion | StructureKind::RuinedPortalNether => {
+            Dimension::Nether
+        }
+        StructureKind::EndCity => Dimension::End,
+        _ => Dimension::Overworld,
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum StructureKind {
@@ -57,41 +73,11 @@ pub fn structure_starts(
     ctx: &TaskCtx,
 ) -> AppResult<Vec<StructureStart>> {
     ctx.check_cancelled()?;
-    let expected = match kind {
-        StructureKind::Fortress | StructureKind::Bastion | StructureKind::RuinedPortalNether => {
-            Dimension::Nether
-        }
-        StructureKind::EndCity => Dimension::End,
-        _ => Dimension::Overworld,
-    };
+    let expected = dimension_of(kind);
     if dimension != expected {
         return Err(invalid("dimension"));
     }
-    if matches!(
-        kind,
-        StructureKind::Bastion
-            | StructureKind::OceanRuin
-            | StructureKind::RuinedPortal
-            | StructureKind::RuinedPortalNether
-    ) && version == GameVersion::Java1_12_2
-    {
-        return Err(invalid("structure"));
-    }
-    if kind == StructureKind::AbandonedCamp && version != GameVersion::Java26_3 {
-        return Err(invalid("structure"));
-    }
-    if matches!(
-        kind,
-        StructureKind::PillagerOutpost | StructureKind::Shipwreck | StructureKind::BuriedTreasure
-    ) && version == GameVersion::Java1_12_2
-    {
-        return Err(invalid("structure"));
-    }
-    if matches!(
-        kind,
-        StructureKind::AncientCity | StructureKind::TrailRuins | StructureKind::TrialChambers
-    ) && version != GameVersion::Java26_3
-    {
+    if !native::supports(version, kind) {
         return Err(invalid("structure"));
     }
     let size = |min: i32, max: i32| -> AppResult<usize> {

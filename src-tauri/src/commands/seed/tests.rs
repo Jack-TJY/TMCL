@@ -121,6 +121,44 @@ fn level_dat(seed: i64, name: &str) -> Vec<u8> {
 }
 
 #[test]
+fn version_matrix_comes_from_the_engine() {
+    let versions = seed_versions();
+    assert_eq!(versions.len(), 41);
+    let newest = versions.iter().find(|v| v.version == "26.3").unwrap();
+    let overworld = newest
+        .structures
+        .iter()
+        .find(|s| s.dimension == SeedDimension::Overworld)
+        .unwrap();
+    assert!(overworld.kinds.contains(&SeedStructureKind::TrialChambers));
+    assert!(overworld.kinds.contains(&SeedStructureKind::Village));
+    let end = newest
+        .structures
+        .iter()
+        .find(|s| s.dimension == SeedDimension::TheEnd)
+        .unwrap();
+    assert_eq!(end.kinds, [SeedStructureKind::EndCity]);
+
+    let old = versions.iter().find(|v| v.version == "1.12.2").unwrap();
+    let old_overworld = old
+        .structures
+        .iter()
+        .find(|s| s.dimension == SeedDimension::Overworld)
+        .unwrap();
+    assert!(
+        !old_overworld
+            .kinds
+            .contains(&SeedStructureKind::TrialChambers)
+    );
+    assert!(old_overworld.kinds.contains(&SeedStructureKind::Mineshaft));
+    assert!(
+        old.structures
+            .iter()
+            .any(|s| s.dimension == SeedDimension::TheEnd)
+    );
+}
+
+#[test]
 fn lists_saved_worlds_and_skips_unreadable_ones() {
     let dir = tempfile::tempdir().unwrap();
     assert!(list_saves(dir.path()).is_empty());

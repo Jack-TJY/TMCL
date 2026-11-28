@@ -57,6 +57,79 @@ fn list_saves(game_dir: &Path) -> Vec<SeedSavedWorld> {
     worlds
 }
 
+/// Structures offered for one dimension, in display order.
+#[derive(Debug, Serialize, TS)]
+pub struct SeedStructureCapability {
+    pub dimension: SeedDimension,
+    pub kinds: Vec<SeedStructureKind>,
+}
+
+#[derive(Debug, Serialize, TS)]
+pub struct SeedVersionInfo {
+    pub version: String,
+    pub label: String,
+    pub structures: Vec<SeedStructureCapability>,
+}
+
+const ALL_KINDS: [SeedStructureKind; 22] = [
+    SeedStructureKind::Village,
+    SeedStructureKind::Stronghold,
+    SeedStructureKind::DesertPyramid,
+    SeedStructureKind::JunglePyramid,
+    SeedStructureKind::OceanMonument,
+    SeedStructureKind::Mansion,
+    SeedStructureKind::Igloo,
+    SeedStructureKind::SwampHut,
+    SeedStructureKind::PillagerOutpost,
+    SeedStructureKind::Shipwreck,
+    SeedStructureKind::Mineshaft,
+    SeedStructureKind::OceanRuin,
+    SeedStructureKind::RuinedPortal,
+    SeedStructureKind::BuriedTreasure,
+    SeedStructureKind::AncientCity,
+    SeedStructureKind::TrailRuins,
+    SeedStructureKind::TrialChambers,
+    SeedStructureKind::AbandonedCamp,
+    SeedStructureKind::Fortress,
+    SeedStructureKind::Bastion,
+    SeedStructureKind::RuinedPortalNether,
+    SeedStructureKind::EndCity,
+];
+
+/// Version matrix and the structure kinds each version can predict. Generated
+/// from the pinned engine, so the UI never keeps its own version table.
+#[tauri::command]
+pub fn seed_versions() -> Vec<SeedVersionInfo> {
+    tmcl_seed::GameVersion::all()
+        .iter()
+        .map(|version| {
+            let mut structures = Vec::with_capacity(3);
+            for dimension in [
+                SeedDimension::Overworld,
+                SeedDimension::TheNether,
+                SeedDimension::TheEnd,
+            ] {
+                let kinds: Vec<SeedStructureKind> = ALL_KINDS
+                    .iter()
+                    .copied()
+                    .filter(|kind| {
+                        tmcl_seed::dimension_of((*kind).into()) == dimension.into()
+                            && tmcl_seed::supports(*version, (*kind).into())
+                    })
+                    .collect();
+                if !kinds.is_empty() {
+                    structures.push(SeedStructureCapability { dimension, kinds });
+                }
+            }
+            SeedVersionInfo {
+                version: version.as_str().to_owned(),
+                label: version.label().to_owned(),
+                structures,
+            }
+        })
+        .collect()
+}
+
 #[derive(Debug, Deserialize, TS)]
 pub struct SeedMapArgs {
     version: String,
@@ -131,7 +204,7 @@ pub struct SeedStructureStart {
     chunk_x: i32,
     chunk_z: i32,
 }
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum SeedStructureKind {
     Village,

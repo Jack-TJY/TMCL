@@ -46,7 +46,10 @@ use crate::commands::sakura::{
     SakuraKeyArgs, SakuraNodeList, SakuraPing, SakuraPingArgs, SakuraStatus, SakuraTunnelArgs,
     SakuraTunnelList,
 };
-use crate::commands::seed::{SeedMapArgs, SeedMapResult, SeedSavedWorld, SeedSavesArgs};
+use crate::commands::seed::{
+    SeedMapArgs, SeedMapResult, SeedSavedWorld, SeedSavesArgs, SeedStructureCapability,
+    SeedVersionInfo,
+};
 use crate::commands::settings::{
     SettingsLanguage, SettingsSetArgs, SettingsSetLanguageArgs, SettingsSnapshot,
 };
@@ -182,6 +185,8 @@ fn export_all(dir: &Path) -> Result<(), ExportError> {
     SeedMapResult::export_all(&cfg)?;
     SeedSavedWorld::export_all(&cfg)?;
     SeedSavesArgs::export_all(&cfg)?;
+    SeedStructureCapability::export_all(&cfg)?;
+    SeedVersionInfo::export_all(&cfg)?;
     // settings
     SettingsLanguage::export_all(&cfg)?;
     SettingsSetArgs::export_all(&cfg)?;

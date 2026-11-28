@@ -3,6 +3,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+static const int placements[] = {Village,        Abandoned_Camp, -1,
+                                 Desert_Pyramid, Jungle_Temple,  Monument,
+                                 Mansion,        Igloo,          Swamp_Hut,
+                                 Outpost,        Shipwreck,      Ancient_City,
+                                 Trail_Ruins,    Trial_Chambers, Treasure,
+                                 Fortress,       Bastion,        Mineshaft,
+                                 Ocean_Ruin,     Ruined_Portal,  Ruined_Portal_N,
+                                 End_City};
+
 /* No terrain spline tables in this build. Never publish output from an
  * unsupported evaluation, nor abort the launcher process on such a query. */
 static _Thread_local int missing_spline;
@@ -16,17 +25,8 @@ float getTerrainJaggedness(int amplified, const float p[4]) {
   return getTerrainFactor(amplified, p);
 }
 
-static int version_id(int v) {
-  switch (v) {
-  case 0:
-    return MC_1_12_2;
-  case 1:
-    return MC_1_18;
-  case 2:
-    return MC_26_3;
-  default:
-    return -1;
-  }
+static int supported_mc(int v) {
+  return v >= MC_B1_7 && v <= MC_NEWEST ? v : -1;
 }
 static Generator *create_generator(int mc, int dim, int64_t seed) {
   Generator *g = malloc(sizeof(*g));
@@ -43,7 +43,7 @@ static int valid_axis(int32_t origin, int32_t n, int32_t step) {
 }
 int tmcl_seed_biomes(int32_t v, int32_t dim, int64_t seed, int32_t x, int32_t z,
                      int32_t step, int32_t w, int32_t h, uint8_t *out) {
-  int mc = version_id(v);
+  int mc = supported_mc(v);
   if (mc < 0 || !out || step < 1 || step > 4096 || !valid_axis(x, w, step) ||
       !valid_axis(z, h, step) || (dim != DIM_OVERWORLD && dim != DIM_NETHER &&
                                  dim != DIM_END))
@@ -158,10 +158,19 @@ static int stronghold_starts(Generator *g, int x0, int z0, int x1, int z1,
   *written = n;
   return 0;
 }
+int tmcl_seed_supports(int32_t v, int32_t kind) {
+  int mc = supported_mc(v);
+  if (mc < 0 || kind < 0 || kind > 21)
+    return 0;
+  if (kind == 2)
+    return 1;
+  StructureConfig cfg;
+  return getStructureConfig(placements[kind], mc, &cfg) && cfg.regionSize > 0;
+}
 int tmcl_seed_structures(int32_t v, int32_t dim, int64_t seed, int32_t kind, int32_t x0,
                          int32_t z0, int32_t x1, int32_t z1, Start *out,
                          size_t capacity, size_t *written) {
-  int mc = version_id(v);
+  int mc = supported_mc(v);
   if (mc < 0 || (kind < 0 || kind > 21 || (kind == 1 && mc != MC_26_3)) ||
       !out || !written || x0 < -1875000 || z0 < -1875000 || x1 > 1875000 ||
       z1 > 1875000 || x0 > x1 || z0 > z1 || (int64_t)x1 - x0 >= 256 ||
@@ -246,19 +255,11 @@ int tmcl_seed_structures(int32_t v, int32_t dim, int64_t seed, int32_t kind, int
     *written = m;
     return 0;
   }
-  const int placements[] = {Village,        Abandoned_Camp, -1,
-                            Desert_Pyramid, Jungle_Temple,  Monument,
-                            Mansion,        Igloo,          Swamp_Hut,
-                            Outpost,        Shipwreck,      Ancient_City,
-                            Trail_Ruins,    Trial_Chambers, Treasure,
-                            Fortress,       Bastion,        Mineshaft,
-                            Ocean_Ruin,     Ruined_Portal,  Ruined_Portal_N,
-                            End_City};
-  int type = placements[kind];
+  const int type = placements[kind];
   StructureConfig cfg;
   if (!getStructureConfig(type, mc, &cfg) || cfg.regionSize <= 0) {
     free(g);
-    return 2;
+    return 1;
   }
   size_t n = 0;
   int rc = 0;
