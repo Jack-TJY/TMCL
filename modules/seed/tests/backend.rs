@@ -380,6 +380,54 @@ fn sampled_26_3_mineshaft_family_matches_official_positions() {
 }
 
 #[test]
+fn sampled_26_3_end_city_requires_the_terrain_rule() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 /locate, seed -1: the city at chunk (26,83) is valid, while
+    // the nearby triangular-spread candidate (-53,-36) fails the rotated 5x5
+    // minimum-height rule and must not be reported.
+    let bounds = ChunkBounds {
+        min_x: 26,
+        max_x: 26,
+        min_z: 83,
+        max_z: 83,
+    };
+    assert_eq!(
+        structure_starts(Java26_3, Dimension::End, -1, EndCity, bounds, &ctx).unwrap(),
+        [StructureStart {
+            chunk_x: 26,
+            chunk_z: 83
+        }]
+    );
+    let bounds = ChunkBounds {
+        min_x: -53,
+        max_x: -53,
+        min_z: -36,
+        max_z: -36,
+    };
+    assert!(
+        structure_starts(Java26_3, Dimension::End, -1, EndCity, bounds, &ctx)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        structure_starts(
+            Java26_3,
+            Dimension::Overworld,
+            -1,
+            EndCity,
+            ChunkBounds {
+                min_x: 0,
+                max_x: 0,
+                min_z: 0,
+                max_z: 0
+            },
+            &ctx
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [

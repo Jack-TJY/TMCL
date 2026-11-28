@@ -27,6 +27,7 @@ pub enum StructureKind {
     OceanRuin = 18,
     RuinedPortal = 19,
     RuinedPortalNether = 20,
+    EndCity = 21,
 }
 
 /// Inclusive chunk bounds. A query covers at most 256 chunks on each axis.
@@ -60,6 +61,7 @@ pub fn structure_starts(
         StructureKind::Fortress | StructureKind::Bastion | StructureKind::RuinedPortalNether => {
             Dimension::Nether
         }
+        StructureKind::EndCity => Dimension::End,
         _ => Dimension::Overworld,
     };
     if dimension != expected {

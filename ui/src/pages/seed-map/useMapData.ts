@@ -37,6 +37,7 @@ export const layerKinds: SeedStructureKind[] = [
   "ocean_ruin",
   "ruined_portal",
   "ruined_portal_nether",
+  "end_city",
 ];
 export type World = { version: string; seed: string; dimension?: SeedDimension };
 
@@ -50,7 +51,7 @@ export function availableLayers(version: string, dimension: SeedDimension = "ove
         (kind === "ruined_portal_nether" && version !== "1.12.2"),
     );
   }
-  if (dimension === "the_end") return [];
+  if (dimension === "the_end") return layerKinds.filter((kind) => kind === "end_city");
   return layerKinds.filter(
     (kind) =>
       (kind !== "abandoned_camp" || version === "26.3") &&

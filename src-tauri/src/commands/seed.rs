@@ -118,6 +118,7 @@ pub enum SeedStructureKind {
     OceanRuin,
     RuinedPortal,
     RuinedPortalNether,
+    EndCity,
 }
 impl From<SeedStructureKind> for StructureKind {
     fn from(kind: SeedStructureKind) -> Self {
@@ -143,6 +144,7 @@ impl From<SeedStructureKind> for StructureKind {
             SeedStructureKind::OceanRuin => Self::OceanRuin,
             SeedStructureKind::RuinedPortal => Self::RuinedPortal,
             SeedStructureKind::RuinedPortalNether => Self::RuinedPortalNether,
+            SeedStructureKind::EndCity => Self::EndCity,
         }
     }
 }
