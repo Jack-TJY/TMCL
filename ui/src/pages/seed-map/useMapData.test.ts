@@ -42,6 +42,41 @@ it("offers only the layers the backend reports for a version and dimension", () 
   expect(availableLayers(capabilities, "unknown", "overworld")).toEqual([]);
 });
 
+it("requests biome tiles for every dimension, not only the overworld", async () => {
+  vi.useFakeTimers();
+  const scope = effectScope();
+  const create = vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:dim");
+  try {
+    run.mockReset();
+    run.mockImplementation(
+      async (a: SeedMapArgs, _signal: AbortSignal, apply: (m: SeedMapResult) => void) => {
+        if (a.query.type === "tiles")
+          for (const tile of a.query.tiles) apply({ type: "tile", tile, png: [0] });
+      },
+    );
+    for (const dimension of ["the_nether", "the_end"] as const) {
+      const world = ref({ version: "26.3", seed: "0", dimension });
+      const data = scope.run(() =>
+        useMapData(
+          world,
+          computed(() => [{ x: 0, z: 0, zoom: 0 }]),
+          ref<SeedStructureKind[]>([]),
+          ref({ x: 0, z: 0, w: 800, h: 420, zoom: 0 }),
+        ),
+      )!;
+      await vi.runAllTimersAsync();
+      expect(run).toHaveBeenCalled();
+      expect(run.mock.calls.at(-1)![0].dimension).toBe(dimension);
+      expect(data.urls.size).toBe(1);
+    }
+  } finally {
+    scope.stop();
+    create.mockRestore();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  }
+});
+
 it("batches only missing tiles and releases obsolete image URLs on pan, seed change and unmount", async () => {
   vi.useFakeTimers();
   const scope = effectScope();

@@ -72,16 +72,9 @@ export function useMapData(
         URL.revokeObjectURL(url);
       }
   };
-  const overworld = computed(() => (world.value.dimension ?? "overworld") === "overworld");
   watch(
     [world, tileSet, retry],
     ([w], [previous], cleanup) => {
-      if (!overworld.value) {
-        clear();
-        loadingTiles.value = false;
-        tileError.value = null;
-        return;
-      }
       const list = tiles.value;
       clear(w === previous ? new Set(list.map(tileKey)) : undefined);
       const missing = list.filter((t) => !urls.has(tileKey(t)));
