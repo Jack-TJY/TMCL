@@ -23,6 +23,7 @@ pub enum StructureKind {
     BuriedTreasure = 14,
     Fortress = 15,
     Bastion = 16,
+    Mineshaft = 17,
     OceanRuin = 18,
     RuinedPortal = 19,
     RuinedPortalNether = 20,

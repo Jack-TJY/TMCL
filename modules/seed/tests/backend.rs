@@ -341,6 +341,45 @@ fn sampled_26_3_family_structures_match_official_positions() {
 }
 
 #[test]
+fn sampled_26_3_mineshaft_family_matches_official_positions() {
+    let ctx = TaskCtx::noop("sample");
+    // Official 26.3 server /locate, seed -1: base and mesa variants both resolve.
+    for (x, z) in [(25, 25), (-58, -23)] {
+        let bounds = ChunkBounds {
+            min_x: x,
+            max_x: x,
+            min_z: z,
+            max_z: z,
+        };
+        assert_eq!(
+            structure_starts(Java26_3, Dimension::Overworld, -1, Mineshaft, bounds, &ctx).unwrap(),
+            [StructureStart {
+                chunk_x: x,
+                chunk_z: z
+            }],
+            "{x}/{z}"
+        );
+    }
+    let bounds = ChunkBounds {
+        min_x: 0,
+        max_x: 0,
+        min_z: 0,
+        max_z: 0,
+    };
+    assert!(
+        structure_starts(
+            Java1_12_2,
+            Dimension::Overworld,
+            -1,
+            Mineshaft,
+            bounds,
+            &ctx
+        )
+        .is_ok()
+    );
+}
+
+#[test]
 fn vanilla_mansion_starts_reject_their_failed_candidates() {
     let ctx = TaskCtx::noop("mansion");
     for (version, seed, x, z, rejected) in [

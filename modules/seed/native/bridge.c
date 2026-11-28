@@ -179,12 +179,40 @@ int tmcl_seed_structures(int32_t v, int32_t dim, int64_t seed, int32_t kind, int
     free(g);
     return rc;
   }
+  if (kind == 17) {
+    // Mineshafts use a per-chunk RNG instead of a region grid.
+    size_t area = (size_t)(x1 - x0 + 1) * (size_t)(z1 - z0 + 1);
+    Pos *candidates = malloc(sizeof(Pos) * area);
+    size_t m = 0;
+    int rc = candidates ? 0 : 2;
+    int found = 0;
+    if (candidates)
+      found = getMineshafts(mc, (uint64_t)seed, x0, z0, x1, z1, candidates,
+                            (int)area);
+    for (int i = 0; !rc && i < found && i < (int)area; ++i) {
+      Pos p = candidates[i];
+      if (!isViableStructurePos(Mineshaft, g, p.x, p.z, 0) ||
+          !isViableStructureTerrain(Mineshaft, g, p.x, p.z))
+        continue;
+      if (m >= capacity) {
+        rc = 2;
+        break;
+      }
+      out[m++] = (Start){region(p.x, 16), region(p.z, 16)};
+    }
+    free(candidates);
+    free(g);
+    if (rc || missing_spline)
+      return 2;
+    *written = m;
+    return 0;
+  }
   const int placements[] = {Village,        Abandoned_Camp, -1,
                             Desert_Pyramid, Jungle_Temple,  Monument,
                             Mansion,        Igloo,          Swamp_Hut,
                             Outpost,        Shipwreck,      Ancient_City,
                             Trail_Ruins,    Trial_Chambers, Treasure,
-                            Fortress,       Bastion,        -1,
+                            Fortress,       Bastion,        Mineshaft,
                             Ocean_Ruin,     Ruined_Portal,  Ruined_Portal_N};
   int type = placements[kind];
   StructureConfig cfg;

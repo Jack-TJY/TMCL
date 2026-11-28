@@ -33,6 +33,7 @@ export const layerKinds: SeedStructureKind[] = [
   "abandoned_camp",
   "fortress",
   "bastion",
+  "mineshaft",
   "ocean_ruin",
   "ruined_portal",
   "ruined_portal_nether",
