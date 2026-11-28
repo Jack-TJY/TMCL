@@ -1,8 +1,15 @@
 use tmcl_common::TaskCtx;
 use tmcl_seed::{
-    ChunkBounds, Dimension, GameVersion::*, StructureKind::*, StructureStart, Tile, biome_at,
+    ChunkBounds, Dimension, GameVersion, StructureKind::*, StructureStart, Tile, biome_at,
     cached_tile_png, parse_seed, structure_starts,
 };
+
+#[allow(non_upper_case_globals)]
+const Java1_12_2: GameVersion = GameVersion::Java1_12_2;
+#[allow(non_upper_case_globals)]
+const Java1_18: GameVersion = GameVersion::Java1_18;
+#[allow(non_upper_case_globals)]
+const Java26_3: GameVersion = GameVersion::Java26_3;
 
 #[test]
 fn vanilla_biomes() {
@@ -338,6 +345,29 @@ fn sampled_26_3_family_structures_match_official_positions() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn version_registry_matches_the_engine_matrix() {
+    assert_eq!(GameVersion::all().len(), 41);
+    assert_eq!("1.18".parse::<GameVersion>().unwrap(), Java1_18);
+    assert_eq!("1.18.2".parse::<GameVersion>().unwrap(), Java1_18);
+    assert_eq!("1.12".parse::<GameVersion>().unwrap(), Java1_12_2);
+    assert_eq!(
+        "1.16".parse::<GameVersion>().unwrap(),
+        "1.16.5".parse::<GameVersion>().unwrap()
+    );
+    assert!("0.9".parse::<GameVersion>().is_err());
+    assert!(Java26_3.at_least(Java1_18));
+    assert!(Java1_18.at_least(Java1_12_2));
+    assert!(!Java1_12_2.at_least(Java1_18));
+
+    // The engine's own version matrix decides what a release can predict.
+    assert!(!tmcl_seed::supports(Java1_12_2, TrialChambers));
+    assert!(tmcl_seed::supports(Java26_3, TrialChambers));
+    assert!(tmcl_seed::supports(Java1_18, Bastion));
+    assert!(!tmcl_seed::supports(Java1_12_2, Bastion));
+    assert!(tmcl_seed::supports(Java1_18, EndCity));
 }
 
 #[test]

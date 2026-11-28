@@ -108,6 +108,7 @@ fn handlers<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static 
         // seed
         commands::seed::seed_list_saves,
         commands::seed::seed_map_query,
+        commands::seed::seed_versions,
         // settings
         commands::settings::settings_get,
         commands::settings::settings_get_language,
