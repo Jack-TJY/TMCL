@@ -1,4 +1,4 @@
-use crate::{GameVersion, WORLD_LIMIT, invalid, native};
+use crate::{Dimension, GameVersion, WORLD_LIMIT, invalid, native};
 use tmcl_common::{AppResult, ProgressUpdate, TaskCtx};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,6 +21,8 @@ pub enum StructureKind {
     TrailRuins = 12,
     TrialChambers = 13,
     BuriedTreasure = 14,
+    Fortress = 15,
+    Bastion = 16,
 }
 
 /// Inclusive chunk bounds. A query covers at most 256 chunks on each axis.
@@ -43,12 +45,23 @@ pub struct StructureStart {
 /// Return valid structure starts within bounds, in deterministic Z/X order.
 pub fn structure_starts(
     version: GameVersion,
+    dimension: Dimension,
     seed: i64,
     kind: StructureKind,
     bounds: ChunkBounds,
     ctx: &TaskCtx,
 ) -> AppResult<Vec<StructureStart>> {
     ctx.check_cancelled()?;
+    let expected = match kind {
+        StructureKind::Fortress | StructureKind::Bastion => Dimension::Nether,
+        _ => Dimension::Overworld,
+    };
+    if dimension != expected {
+        return Err(invalid("dimension"));
+    }
+    if kind == StructureKind::Bastion && version == GameVersion::Java1_12_2 {
+        return Err(invalid("structure"));
+    }
     if kind == StructureKind::AbandonedCamp && version != GameVersion::Java26_3 {
         return Err(invalid("structure"));
     }
@@ -91,7 +104,7 @@ pub fn structure_starts(
             max_z: min_z + rows as i32 - 1,
             ..bounds
         };
-        let count = native::structures(version, seed, kind, strip, &mut buffer)?;
+        let count = native::structures(version, dimension, seed, kind, strip, &mut buffer)?;
         starts.extend_from_slice(&buffer[..count]);
         ctx.report(
             ProgressUpdate::new("seed_structures").items((offset + rows) as u64, height as u64),

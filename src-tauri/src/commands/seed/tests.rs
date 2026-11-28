@@ -32,10 +32,17 @@ fn returns_real_structure_chunk_and_refuses_unsupported_kind() {
     let mut hits = vec![];
     args(q.clone())
         .query
-        .run(dir.path(), GameVersion::Java26_3, 0, &ctx, |msg| {
-            hits.push(serde_json::to_value(msg).unwrap());
-            Ok(())
-        })
+        .run(
+            dir.path(),
+            GameVersion::Java26_3,
+            tmcl_seed::Dimension::Overworld,
+            0,
+            &ctx,
+            |msg| {
+                hits.push(serde_json::to_value(msg).unwrap());
+                Ok(())
+            },
+        )
         .unwrap();
     assert_eq!(
         hits,
@@ -46,7 +53,14 @@ fn returns_real_structure_chunk_and_refuses_unsupported_kind() {
     assert_eq!(
         args(q)
             .query
-            .run(dir.path(), GameVersion::Java1_18, 0, &ctx, |_| panic!())
+            .run(
+                dir.path(),
+                GameVersion::Java1_18,
+                tmcl_seed::Dimension::Overworld,
+                0,
+                &ctx,
+                |_| panic!()
+            )
             .unwrap_err()
             .code,
         ErrorCode::SeedInvalidInput
@@ -61,16 +75,23 @@ fn streams_png_and_cancellation_stops_the_rest_of_batch() {
     let mut count = 0;
     let err = a
         .query
-        .run(dir.path(), GameVersion::Java1_12_2, 0, &ctx, |result| {
-            let SeedMapResult::Tile { tile, png } = result else {
-                panic!()
-            };
-            assert_eq!(tile.x, -1);
-            assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"));
-            count += 1;
-            ctx.cancel.cancel();
-            Ok(())
-        })
+        .run(
+            dir.path(),
+            GameVersion::Java1_12_2,
+            tmcl_seed::Dimension::Overworld,
+            0,
+            &ctx,
+            |result| {
+                let SeedMapResult::Tile { tile, png } = result else {
+                    panic!()
+                };
+                assert_eq!(tile.x, -1);
+                assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"));
+                count += 1;
+                ctx.cancel.cancel();
+                Ok(())
+            },
+        )
         .unwrap_err();
     assert!(err.is_cancelled());
     assert_eq!(count, 1);

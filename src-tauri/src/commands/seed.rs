@@ -5,7 +5,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime, State, ipc::Channel};
 use tmcl_common::{AppError, AppResult, ErrorCode, TaskCtx};
-use tmcl_seed::{ChunkBounds, GameVersion, StructureKind, Tile};
+use tmcl_seed::{ChunkBounds, Dimension, GameVersion, StructureKind, Tile};
 use tokio::sync::Semaphore;
 use ts_rs::TS;
 
@@ -21,7 +21,29 @@ static WORKERS: Semaphore = Semaphore::const_new(2);
 pub struct SeedMapArgs {
     version: String,
     seed: String,
+    #[serde(default)]
+    #[ts(optional)]
+    dimension: Option<SeedDimension>,
     query: SeedMapQuery,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum SeedDimension {
+    #[default]
+    Overworld,
+    TheNether,
+    TheEnd,
+}
+
+impl From<SeedDimension> for Dimension {
+    fn from(dimension: SeedDimension) -> Self {
+        match dimension {
+            SeedDimension::Overworld => Self::Overworld,
+            SeedDimension::TheNether => Self::Nether,
+            SeedDimension::TheEnd => Self::End,
+        }
+    }
 }
 
 impl SeedMapArgs {
@@ -30,10 +52,13 @@ impl SeedMapArgs {
         if self.seed.len() > 1024 {
             return Err(invalid("seed"));
         }
-        if let SeedMapQuery::Tiles { tiles } = &self.query
-            && !(1..=MAX_TILES).contains(&tiles.len())
-        {
-            return Err(invalid("tiles"));
+        if let SeedMapQuery::Tiles { tiles } = &self.query {
+            if !(1..=MAX_TILES).contains(&tiles.len()) {
+                return Err(invalid("tiles"));
+            }
+            if self.dimension.unwrap_or_default() != SeedDimension::Overworld {
+                return Err(invalid("dimension"));
+            }
         }
         Ok((self.version.parse()?, tmcl_seed::parse_seed(&self.seed)?))
     }
@@ -87,6 +112,8 @@ pub enum SeedStructureKind {
     TrailRuins,
     TrialChambers,
     BuriedTreasure,
+    Fortress,
+    Bastion,
 }
 impl From<SeedStructureKind> for StructureKind {
     fn from(kind: SeedStructureKind) -> Self {
@@ -106,6 +133,8 @@ impl From<SeedStructureKind> for StructureKind {
             SeedStructureKind::TrailRuins => Self::TrailRuins,
             SeedStructureKind::TrialChambers => Self::TrialChambers,
             SeedStructureKind::BuriedTreasure => Self::BuriedTreasure,
+            SeedStructureKind::Fortress => Self::Fortress,
+            SeedStructureKind::Bastion => Self::Bastion,
         }
     }
 }
@@ -128,6 +157,7 @@ impl SeedMapQuery {
         self,
         cache: &Path,
         version: GameVersion,
+        dimension: Dimension,
         seed: i64,
         ctx: &TaskCtx,
         mut send: impl FnMut(SeedMapResult) -> AppResult<()>,
@@ -153,6 +183,7 @@ impl SeedMapQuery {
             Self::Structures { kind, bounds } => {
                 let starts = tmcl_seed::structure_starts(
                     version,
+                    dimension,
                     seed,
                     kind.into(),
                     ChunkBounds {
@@ -195,9 +226,14 @@ pub async fn seed_map_query<R: Runtime>(
         };
         tokio::task::spawn_blocking(move || {
             let _permit = permit;
-            args.query.run(&cache, version, seed, &ctx, |msg| {
-                results.send(msg).map_err(|_| AppError::cancelled())
-            })
+            args.query.run(
+                &cache,
+                version,
+                args.dimension.unwrap_or_default().into(),
+                seed,
+                &ctx,
+                |msg| results.send(msg).map_err(|_| AppError::cancelled()),
+            )
         })
         .await
         .map_err(|e| AppError::new(ErrorCode::CommonInternal).with_detail(e.to_string()))?

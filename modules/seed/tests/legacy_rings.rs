@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use tmcl_common::TaskCtx;
-use tmcl_seed::{ChunkBounds, GameVersion, StructureKind, structure_starts};
+use tmcl_seed::{ChunkBounds, Dimension, GameVersion, StructureKind, structure_starts};
 
 #[test]
 fn all_legacy_rings_match_vanilla_without_duplicates() {
@@ -33,10 +33,17 @@ fn all_legacy_rings_match_vanilla_without_duplicates() {
                         max_z: z + 255,
                     };
                     actual.extend(
-                        structure_starts(version, seed, StructureKind::Stronghold, bounds, &ctx)
-                            .unwrap()
-                            .iter()
-                            .map(|p| (p.chunk_x, p.chunk_z)),
+                        structure_starts(
+                            version,
+                            Dimension::Overworld,
+                            seed,
+                            StructureKind::Stronghold,
+                            bounds,
+                            &ctx,
+                        )
+                        .unwrap()
+                        .iter()
+                        .map(|p| (p.chunk_x, p.chunk_z)),
                     );
                 }
             }

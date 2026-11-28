@@ -28,12 +28,12 @@ static int version_id(int v) {
     return -1;
   }
 }
-static Generator *create_generator(int mc, int64_t seed) {
+static Generator *create_generator(int mc, int dim, int64_t seed) {
   Generator *g = malloc(sizeof(*g));
   if (g) {
     missing_spline = 0;
     setupGenerator(g, mc, 0);
-    applySeed(g, DIM_OVERWORLD, (uint64_t)seed);
+    applySeed(g, dim, (uint64_t)seed);
   }
   return g;
 }
@@ -47,7 +47,7 @@ int tmcl_seed_biomes(int32_t v, int64_t seed, int32_t x, int32_t z,
   if (mc < 0 || !out || step < 1 || step > 4096 || !valid_axis(x, w, step) ||
       !valid_axis(z, h, step))
     return 1;
-  Generator *g = create_generator(mc, seed);
+  Generator *g = create_generator(mc, DIM_OVERWORLD, seed);
   if (!g)
     return 2;
   int rc = 0;
@@ -157,16 +157,21 @@ static int stronghold_starts(Generator *g, int x0, int z0, int x1, int z1,
   *written = n;
   return 0;
 }
-int tmcl_seed_structures(int32_t v, int64_t seed, int32_t kind, int32_t x0,
+int tmcl_seed_structures(int32_t v, int32_t dim, int64_t seed, int32_t kind, int32_t x0,
                          int32_t z0, int32_t x1, int32_t z1, Start *out,
                          size_t capacity, size_t *written) {
   int mc = version_id(v);
-  if (mc < 0 || (kind < 0 || kind > 14 || (kind == 1 && mc != MC_26_3)) ||
+  if (mc < 0 || (kind < 0 || kind > 16 || (kind == 1 && mc != MC_26_3)) ||
       !out || !written || x0 < -1875000 || z0 < -1875000 || x1 > 1875000 ||
       z1 > 1875000 || x0 > x1 || z0 > z1 || (int64_t)x1 - x0 >= 256 ||
       (int64_t)z1 - z0 >= 256)
     return 1;
-  Generator *g = create_generator(mc, seed);
+  const int expected_dim =
+      (kind == 15 || kind == 16) ? DIM_NETHER : DIM_OVERWORLD;
+  if ((dim != DIM_OVERWORLD && dim != DIM_NETHER && dim != DIM_END) ||
+      dim != expected_dim)
+    return 1;
+  Generator *g = create_generator(mc, dim, seed);
   if (!g)
     return 2;
   if (kind == 2) {
@@ -178,7 +183,8 @@ int tmcl_seed_structures(int32_t v, int64_t seed, int32_t kind, int32_t x0,
                             Desert_Pyramid, Jungle_Temple,  Monument,
                             Mansion,        Igloo,          Swamp_Hut,
                             Outpost,        Shipwreck,      Ancient_City,
-                            Trail_Ruins,    Trial_Chambers, Treasure};
+                            Trail_Ruins,    Trial_Chambers, Treasure,
+                            Fortress,       Bastion};
   int type = placements[kind];
   StructureConfig cfg;
   if (!getStructureConfig(type, mc, &cfg) || cfg.regionSize <= 0) {

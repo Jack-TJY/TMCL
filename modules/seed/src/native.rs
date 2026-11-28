@@ -1,4 +1,4 @@
-use crate::{GameVersion, StructureKind, StructureStart, invalid};
+use crate::{Dimension, GameVersion, StructureKind, StructureStart, invalid};
 use tmcl_common::{AppError, AppResult, ErrorCode};
 
 unsafe extern "C" {
@@ -14,6 +14,7 @@ unsafe extern "C" {
     ) -> i32;
     fn tmcl_seed_structures(
         version: i32,
+        dimension: i32,
         seed: i64,
         kind: i32,
         min_cx: i32,
@@ -69,6 +70,7 @@ pub(super) fn biomes(
 
 pub(super) fn structures(
     version: GameVersion,
+    dimension: Dimension,
     seed: i64,
     kind: StructureKind,
     bounds: crate::ChunkBounds,
@@ -80,6 +82,7 @@ pub(super) fn structures(
     check(unsafe {
         tmcl_seed_structures(
             version as i32,
+            dimension as i32,
             seed,
             kind as i32,
             bounds.min_x,

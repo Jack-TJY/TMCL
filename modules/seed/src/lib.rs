@@ -15,6 +15,39 @@ pub use structures::{ChunkBounds, StructureKind, StructureStart, structure_start
 
 const WORLD_LIMIT: i32 = 30_000_000;
 
+/// Default Java Edition dimension for structure placement.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(i32)]
+pub enum Dimension {
+    Nether = -1,
+    Overworld = 0,
+    End = 1,
+}
+
+impl Dimension {
+    /// Identifier used in the IPC layer.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Overworld => "overworld",
+            Self::Nether => "the_nether",
+            Self::End => "the_end",
+        }
+    }
+}
+
+impl FromStr for Dimension {
+    type Err = AppError;
+
+    fn from_str(dimension: &str) -> AppResult<Self> {
+        match dimension {
+            "overworld" => Ok(Self::Overworld),
+            "the_nether" => Ok(Self::Nether),
+            "the_end" => Ok(Self::End),
+            _ => Err(AppError::new(ErrorCode::SeedInvalidInput).with_param("dimension", dimension)),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(i32)]
 pub enum GameVersion {
